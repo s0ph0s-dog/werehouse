@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Login</title>
+  </head>
+  <body>
+    <h1>Login</h1>
+    <hr />
+    {% if error then %}
+    <p style="color: red">{%& error %}</p>
+    {% end %}
+    <form method="POST">
+      <label
+        >Username:
+        <input type="text" minlength="2" maxlength="128" name="username"
+      /></label>
+      <label
+        >Password:
+        <input type="password" minlength="16" maxlength="128" name="password"
+      /></label>
+      <input type="submit" />
+    </form>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Accept Invitation</title>
+  </head>
+  <body>
+    <h1>Accept Invitation</h1>
+    <hr />
+    <p>You have been invited to use Hyperphantasia. Create your account:</p>
+    <form method="POST">
+      <label
+        >Username:
+        <input type="text" minlength="2" maxlength="128" name="username"
+      /></label>
+      <label
+        >Password:
+        <input type="password" minlength="16" maxlength="128" name="password"
+      /></label>
+      <label
+        >Password (again):
+        <input
+          type="password"
+          minlength="16"
+          maxlength="128"
+          name="password_confirm"
+      /></label>
+      <input type="reset" />
+      <input type="submit" value="Accept Invite" />
+    </form>
+  </body>
+</html>

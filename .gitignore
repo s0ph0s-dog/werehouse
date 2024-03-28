@@ -1,0 +1,7 @@
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.com
+.nova/*
+*.ducklet/*
+srv/*
