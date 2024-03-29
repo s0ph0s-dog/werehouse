@@ -8,6 +8,9 @@
     <h1>Accept Invitation</h1>
     <hr />
     <p>You have been invited to use Hyperphantasia. Create your account:</p>
+    {% if type(error) == "string" then %}
+    <p style="color: red">{%& error %}</p>
+    {% end %}
     <form method="POST">
       <label
         >Username:

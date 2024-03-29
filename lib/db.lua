@@ -185,6 +185,8 @@ local queries = {
             WHERE "username" = ?;]],
         insert_session = [[INSERT INTO "sessions" ("session_id", "user_id", "created")
             VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));]],
+        get_session = [[SELECT "created", "user_id" from "sessions"
+            WHERE "session_id" = ?;]],
     }
 }
 
@@ -247,6 +249,10 @@ function Accounts:createSessionForUser(user_id)
     else
         return session_id
     end
+end
+
+function Accounts:findSessionById(session_id)
+    return self.conn:fetchOne(queries.accounts.get_session, session_id)
 end
 
 return {

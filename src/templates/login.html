@@ -7,7 +7,7 @@
   <body>
     <h1>Login</h1>
     <hr />
-    {% if error then %}
+    {% if type(error) == "string" then %}
     <p style="color: red">{%& error %}</p>
     {% end %}
     <form method="POST">

@@ -1,33 +1,32 @@
 
 local function render_invite(r)
-    if not r.params.invite_code then
-        return 404
-    end
     local invite_record = Accounts:findInvite(r.params.invite_code)
     if not invite_record then
         return 404
     end
-    return Fm.render("accept_invite", { invite_record = invite_record })
+    return Fm.render("accept_invite", { error = r.session.error, invite_record = invite_record })
 end
 
+local username_validator_rule =  {"username", minlen = 2, maxlen = 128, msg = "%s must be between 2 and 128 characters"}
+local password_validator_rule = {"password", minlen = 16, maxlen = 128, msg = "%s must be between 16 and 128 characters"}
+local invite_validator_rule = {"invite_code", minlen = 36, maxlen = 36}
+
 local invite_validator = Fm.makeValidator{
-    {"username", minlen = 2, maxlen = 128, msg = "%s must be between 2 and 128 characters"},
-    {"password", minlen = 16, maxlen = 128, msg = "%s must be between 16 and 128 characters"},
+    invite_validator_rule,
+    username_validator_rule,
+    password_validator_rule,
     {"password_confirm", minlen = 16, maxlen = 128, msg = "%s must be between 16 and 128 characters"},
     all = true,
 }
 
 local login_validator = Fm.makeValidator{
-    {"username", minlen = 2, maxlen = 128, msg = "%s must be between 2 and 128 characters"},
-    {"password", minlen = 16, maxlen = 128, msg = "%s must be between 16 and 128 characters"},
+    username_validator_rule,
+    password_validator_rule,
     all = true,
 }
 
 local function accept_invite(r)
-    if not r.params.invite_code then
-        Log(kLogInfo, "No invite code in URL")
-        return 404
-    end
+    r.session.error = nil
     local invite_record = Accounts:findInvite(r.params.invite_code)
     if not invite_record then
         Log(kLogInfo, "No invite records in database for %s" % {r.params.invite_code})
@@ -35,8 +34,8 @@ local function accept_invite(r)
     end
     if r.params.password ~= r.params.password_confirm then
         -- TODO: password mismatch
-        Log(kLogInfo, "Passwords did not match")
-        return 400
+        r.session.error = "Passwords do not match."
+        return Fm.serveRedirect(r.path, 302)
     end
     local pw_hash = argon2.hash_encoded(r.params.password, GetRandomBytes(32), {
         m_cost = 65536,
@@ -56,7 +55,23 @@ local function render_login(r)
     return Fm.serveContent("login", { error = r.session.error })
 end
 
+local function login_required(handler)
+    return function (r)
+        if not r.session.token then
+            return Fm.serve401()
+        end
+        local session, errmsg = Accounts:findSessionById(r.session.token)
+        if not session then
+            return Fm.serve401()
+        end
+        -- TODO: enforce session expiry
+        Model = DbUtil.Model:new(nil, session.user_id)
+        return handler(r)
+    end
+end
+
 local function accept_login(r)
+    r.session.error = nil
     local user_record, errmsg = Accounts:findUser(r.params.username)
     if not user_record then
         -- Resist timing-based oracle attack for username discovery.
@@ -73,11 +88,7 @@ local function accept_login(r)
         r.session.error = errmsg
         return Fm.serveRedirect("/login", 302)
     end
-    r.cookies.session = {
-        session_id,
-        samesite = "Strict",
-        httponly = true,
-    }
+    r.session.token = session_id
     return Fm.serveRedirect("/home", 302)
 end
 
@@ -87,9 +98,9 @@ local function setup()
     -- User-facing routes
     Fm.setRoute(Fm.GET{"/accept-invite/:invite_code"}, render_invite)
     Fm.setRoute(Fm.POST{"/accept-invite/:invite_code", _ = invite_validator}, accept_invite)
-    Fm.setRoute(Fm.GET{"/login"}, Fm.serveContent("login"))
+    Fm.setRoute(Fm.GET{"/login"}, render_login)
     Fm.setRoute(Fm.POST{"/login", _ = login_validator}, accept_login)
-    Fm.setRoute("/home", function (r) return "todo: put something useful here" end)
+    Fm.setRoute("/home", login_required(function (r) return "todo: put something useful here" end))
     -- API routes
     -- Fm.setRoute("/api/telegram-webhook")
     -- Fm.setRoute("/api/enqueue")
