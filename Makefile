@@ -6,10 +6,15 @@ SRV_DIR := srv
 LIBS := lib/third_party/fullmoon.lua \
     lib/third_party/uuid.lua \
     lib/db.lua \
+	lib/functools.lua \
+	lib/scraper_pipeline.lua \
+	lib/scrapers/bluesky.lua \
+	lib/network_utils.lua \
 	lib/web.lua
 SRCS := src/.init.lua \
     src/templates/accept_invite.html \
-    src/templates/login.html
+    src/templates/login.html \
+	src/templates/home.html
 TEST_LIBS := lib/third_party/luaunit.lua
 
 # Infrastructure variables here

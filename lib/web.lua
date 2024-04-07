@@ -62,6 +62,7 @@ local function login_required(handler)
         end
         local session, errmsg = Accounts:findSessionById(r.session.token)
         if not session then
+            Log(kLogDebug, errmsg)
             return Fm.serve401()
         end
         -- TODO: enforce session expiry
@@ -74,23 +75,80 @@ local function accept_login(r)
     r.session.error = nil
     local user_record, errmsg = Accounts:findUser(r.params.username)
     if not user_record then
+        Log(kLogDebug, errmsg)
         -- Resist timing-based oracle attack for username discovery.
         argon2.verify("foobar", r.params.password)
         r.session.error = "Invalid credentials"
         return Fm.serveRedirect("/login", 302)
     end
+    Log(kLogDebug, EncodeJson(user_record))
     if not argon2.verify(user_record.password, r.params.password) then
         r.session.error = "Invalid credentials"
         return Fm.serveRedirect("/login", 302)
     end
-    local session_id, errmsg = Accounts:createSessionForUser(user_record.user_id)
+    local session_id, errmsg2 = Accounts:createSessionForUser(user_record.user_id)
     if not session_id then
+        Log(kLogDebug, errmsg2)
         r.session.error = errmsg
         return Fm.serveRedirect("/login", 302)
     end
     r.session.token = session_id
     return Fm.serveRedirect("/home", 302)
 end
+
+local render_home = login_required(function (r)
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    local queue_records, errmsg2 = Model:getRecentQueueEntries()
+    Log(kLogInfo, EncodeJson(queue_records))
+    if not queue_records then
+        Log(kLogDebug, errmsg2)
+        return Fm.serve500()
+    end
+    return Fm.serveContent("home", {
+        user = user_record,
+        queued_posts = queue_records,
+    })
+end)
+
+local render_queue_image = login_required(function (r)
+    local result, errmsg = Model:getQueueImageById(r.params.id)
+    if not result then
+        Log(kLogDebug, errmsg)
+        return Fm.serve404()
+    end
+    r.headers.ContentType = result.image_mime_type
+    return result.image
+end)
+
+local allowed_image_types = {
+    ["image/png"] = true,
+    ["image/jpeg"] = true,
+    ["image/webp"] = true,
+}
+
+local accept_enqueue = login_required(function (r)
+    if r.params.link then
+        local result, errmsg = Model:enqueueLink(r.params.link)
+        if not result then
+            Log(kLogWarn, errmsg)
+        end
+        -- TODO: check errors
+        return Fm.serve204()
+    elseif allowed_image_types[r.headers["Content-Type"]] then
+        local result, errmsg = Model:enqueueImage(r.headers["Content-Type"], r.body)
+        if not result then
+            Log(kLogWarn, errmsg)
+        end
+        return Fm.serve204()
+    else
+        return Fm.serve400("Must provide link or PNG/JPEG image file.")
+    end
+    return Fm.serve500("This should have been unreachable")
+end)
 
 local function setup()
     Fm.setTemplate({"/templates/", html = "fmt"})
@@ -100,10 +158,11 @@ local function setup()
     Fm.setRoute(Fm.POST{"/accept-invite/:invite_code", _ = invite_validator}, accept_invite)
     Fm.setRoute(Fm.GET{"/login"}, render_login)
     Fm.setRoute(Fm.POST{"/login", _ = login_validator}, accept_login)
-    Fm.setRoute("/home", login_required(function (r) return "todo: put something useful here" end))
+    Fm.setRoute("/home", render_home)
     -- API routes
+    Fm.setRoute(Fm.GET{"/api/queue-image/:id"}, render_queue_image)
     -- Fm.setRoute("/api/telegram-webhook")
-    -- Fm.setRoute("/api/enqueue")
+    Fm.setRoute(Fm.POST{"/api/enqueue"}, accept_enqueue)
 end
 
 local function run()

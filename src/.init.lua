@@ -2,8 +2,11 @@ Sqlite3 = require "lsqlite3"
 Uuid = require "third_party.uuid"
 Fm = require "third_party.fullmoon"
 DbUtil = require "db"
+local network_utils = require "network_utils"
 local about = require "about"
 local web = require "web"
+local _ = require "functools"
+local scraper_pipeline = require "scraper_pipeline"
 
 ServerVersion = string.format(
     "%s/%s; redbean/%s",
@@ -25,12 +28,16 @@ Accounts:bootstrapInvites()
 function OnWorkerStart()
     Accounts = DbUtil.Accounts:new()
 
-    unix.setrlimit(unix.RLIMIT_AS, 16*1024*1024)
+    unix.setrlimit(unix.RLIMIT_AS, 20*1024*1024)
     unix.setrlimit(unix.RLIMIT_CPU, 2)
 
     assert(unix.unveil(".", "rw"))
     assert(unix.unveil(nil, nil))
 end
+-- 10MB, a reasonable limit for images.
+ProgramMaxPayloadSize(10*1024*1024)
+
+Fm.setSchedule("* * * * *", scraper_pipeline.process_all_queues)
 
 web.setup()
 web.run()

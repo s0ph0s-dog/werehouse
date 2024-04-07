@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Home</title>
+  </head>
+  <body>
+    <h1>Home</h1>
+    <hr />
+    <p>Logged in as {%& user.username %}</p>
+    <h2>Recently Queued Posts</h2>
+    {% if #queued_posts == 0 then %}
+    <p>Nothing queued</p>
+    {% else %}
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Link</th>
+          <th>Image</th>
+          <th>Tombstone Flag</th>
+          <th>Added</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      {% for _, post in ipairs(queued_posts) do %}
+      <tr>
+        <td>{%& post.qid %}</td>
+        <td>{% if post.link then %}{%& post.link %}{% else %}N/A{% end %}</td>
+        <td>
+          {% if not post.link then %}<img
+            width="200"
+            src="/api/queue-image/{%& post.qid %}"
+          />{% else %}N/A{% end %}
+        </td>
+        <td>{%& post.tombstone %}</td>
+        <td>{%& post.added %}</td>
+        <td>{%& post.status %}</td>
+      </tr>
+      {% end %}
+    </table>
+    {% end %}
+    <footer>Some kind of copyright/source/license notice</footer>
+  </body>
+</html>

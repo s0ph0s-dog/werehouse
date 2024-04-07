@@ -4,6 +4,7 @@ local USER_DB_FILE_TEMPLATE = "hyperphantasia-%s.sqlite3"
 
 local accounts_setup = [[
     PRAGMA journal_mode=WAL;
+    PRAGMA busy_timeout = 5000;
     PRAGMA synchronous=NORMAL;
     PRAGMA foreign_keys=ON;
     CREATE TABLE IF NOT EXISTS "users" (
@@ -41,13 +42,18 @@ local accounts_setup = [[
 ]]
 
 local user_setup = [[
+    PRAGMA journal_mode=WAL;
+    PRAGMA busy_timeout = 5000;
+    PRAGMA synchronous=NORMAL;
+    PRAGMA foreign_keys=ON;
     CREATE TABLE IF NOT EXISTS "images" (
         "image_id" INTEGER NOT NULL UNIQUE,
         "file" TEXT NOT NULL,
+        "mime_type" TEXT NOT NULL,
         "category" INTEGER,
         "saved_at" TEXT NOT NULL,
-        "rating" INTEGER NOT NULL,
-        "kind" INTEGER NOT NULL,
+        "rating" INTEGER,
+        "kind" INTEGER,
         PRIMARY KEY("image_id")
     );
 
@@ -157,8 +163,9 @@ local user_setup = [[
 
     CREATE TABLE IF NOT EXISTS "queue" (
         "qid" INTEGER NOT NULL UNIQUE,
-        "link" TEXT,
+        "link" TEXT UNIQUE,
         "image" BLOB,
+        "image_mime_type" TEXT,
         "tombstone" INTEGER NOT NULL,
         "added_on" TEXT NOT NULL,
         "status" TEXT NOT NULL,
@@ -187,6 +194,37 @@ local queries = {
             VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));]],
         get_session = [[SELECT "created", "user_id" from "sessions"
             WHERE "session_id" = ?;]],
+        get_user_by_session = [[SELECT u.user_id, u.username FROM "users" AS u
+            INNER JOIN "sessions" on u.user_id = sessions.user_id
+            WHERE sessions.session_id = ?;]],
+        get_all_user_ids = [[SELECT user_id FROM "users";]],
+    },
+    model = {
+        get_recent_queue_entries = [[SELECT qid, link, tombstone, added_on, status
+            FROM queue
+            ORDER BY added_on DESC
+            LIMIT 20;]],
+        get_all_queue_entries = [[SELECT qid, link, tombstone, added_on, status
+            FROM queue
+            ORDER BY added_on DESC;]],
+        get_all_active_queue_entries = [[SELECT qid, link, added_on, status
+            FROM queue
+            WHERE tombstone = 0
+            ORDER BY added_on DESC;]],
+        get_queue_image_by_id = [[SELECT image, image_mime_type FROM queue
+            WHERE qid = ?;]],
+        insert_link_into_queue = [[INSERT INTO
+            "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
+            VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
+        insert_image_into_queue = [[INSERT INTO
+            "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
+            VALUES (NULL, ?, ?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
+        insert_image_into_images = [[INSERT INTO
+            "images" ("file", "mime_type", "saved_at")
+            VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));]],
+        delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
+        update_queue_item_status = [[UPDATE "queue" SET "status" = ?
+            WHERE qid = ?;]],
     }
 }
 
@@ -196,9 +234,41 @@ function Model:new(o, user_id)
     o = o or {}
     local filename = USER_DB_FILE_TEMPLATE % {user_id}
     o.conn = Fm.makeStorage(filename, user_setup)
+    o.user_id = user_id
     setmetatable(o, self)
     self.__index = self
     return o
+end
+
+function Model:getRecentQueueEntries()
+    return self.conn:fetchAll(queries.model.get_recent_queue_entries)
+end
+
+function Model:getAllActiveQueueEntries()
+    return self.conn:fetchAll(queries.model.get_all_active_queue_entries)
+end
+
+function Model:getQueueImageById(qid)
+    return self.conn:fetchOne(queries.model.get_queue_image_by_id, qid)
+end
+
+function Model:enqueueLink(link)
+    return self.conn:execute(queries.model.insert_link_into_queue, link)
+end
+
+function Model:enqueueImage(mime_type, image_data)
+    return self.conn:execute(queries.model.insert_image_into_queue, image_data, mime_type)
+end
+
+function Model:setQueueItemStatus(queue_id, new_status)
+    return self.conn:execute(queries.model.update_queue_item_status, new_status, queue_id)
+end
+
+function Model:insertImageAndRemoveFromQueue(queue_id, image_file, mime_type)
+    return self.conn:execute{
+        {queries.model.insert_image_into_images, image_file, mime_type},
+        {queries.model.delete_item_from_queue, queue_id},
+    }
 end
 
 local Accounts = {}
@@ -233,7 +303,7 @@ function Accounts:acceptInvite(invite_id, username, password_hash)
         {queries.accounts.insert_user, user_id, username, password_hash},
         {queries.accounts.assign_invite, user_id, invite_id},
     }
-    local model = Model:new(nil, user_id)
+    Model:new(nil, user_id)
     return result, errmsg
 end
 
@@ -253,6 +323,14 @@ end
 
 function Accounts:findSessionById(session_id)
     return self.conn:fetchOne(queries.accounts.get_session, session_id)
+end
+
+function Accounts:findUserBySessionId(session_id)
+    return self.conn:fetchOne(queries.accounts.get_user_by_session, session_id)
+end
+
+function Accounts:getAllUserIds()
+    return self.conn:fetchAll(queries.accounts.get_all_user_ids)
 end
 
 return {
