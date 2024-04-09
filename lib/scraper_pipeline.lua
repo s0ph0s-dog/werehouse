@@ -1,18 +1,6 @@
+require "scraper_types"
 
 local FUZZYSEARCH_API_KEY = os.getenv("FUZZYSEARCH_API_KEY")
---- The data produced by a scraper.
----@alias ScrapedSourceData { raw_image_uri: string, mime_type: string, width: integer, height: integer }
-
---- ScraperProcess function: given a URI, scrape whatever info is needed for archiving
---- from that website.
----@alias ScraperProcess fun(uri: string): Result<ScrapedSourceData, string>
-
---- ScraperCanProcess: given a URI, inform the pipeline whether the associated
---- scraper is able to process that URI.
----@alias ScraperCanProcess fun(uri: string): boolean
-
----@alias Scraper {process_uri: ScraperProcess, can_process_uri: ScraperCanProcess}
-
 local function require_only(path)
     local result = require(path)
     return result
@@ -31,7 +19,7 @@ local MIME_TO_EXT = {
 }
 
 local function multipart_body(boundary, image_data, content_type)
-    local result = [[--%s\r\nContent-Disposiiton: form-data; name="image"\r\nContent-Type: %s\r\n\r\n%s\r\n--%s--\r\n\r\n]] % {
+    local result = [[--%s\r\nContent-Disposition: form-data; name="image"\r\nContent-Type: %s\r\n\r\n%s\r\n--%s--\r\n\r\n]] % {
         boundary,
         content_type,
         image_data,
@@ -41,8 +29,9 @@ local function multipart_body(boundary, image_data, content_type)
 end
 
 local function transform_fuzzysearch_response(json)
-    return table.map(
-        table.filter(json, function (result) return result.distance < 10 end),
+    return table.filtermap(
+        json,
+        function (result) return result.distance < 10 end,
         function (result) return result.url end
     )
 end
@@ -110,21 +99,43 @@ local function save_image(image_data, image_mime_type)
 end
 
 ---@param uri (string) A single URI pointing to a webpage on an art gallery or social media site at which an artist has posted an image.
----@return ScrapedSourceData? # All of the scraped data objects from the scrapers that could process the URI, or nil if there was an error.
----@return string? # Error message suitable for user display explaining what went wrong while fetching the image and its metadata.
+---@return Result<ScrapedSourceData, ScraperError> # All of the scraped data objects from the first scraper that could process the URI.
 local function process_source_uri(uri)
-    local results = table.filtermap(scrapers,
-        ---@param e Scraper
-        ---@return boolean
-        function (e) return e.can_process_uri(uri) end,
-        ---@param e Scraper
-        ---@return Result<ScrapedSourceData, string>
-        function (e) return e.process_uri(uri) end
-    )
-    if #results < 1 then
-        return nil, "I don't know how to extract data from '%s' yet. You can sumbit a feature request for it though!" % {uri}
+    for _, scraper in ipairs(scrapers) do
+        if scraper.can_process_uri(uri) then
+            return scraper.process_uri(uri)
+        end
     end
-    return results
+    return Err(PermScraperError("No scrapers could process %s" % {uri}))
+end
+
+
+---@param model Model
+---@param data ScrapedSourceData
+---@param queue_entry
+---@return Result<boolean, ScraperError>
+local function save_source(model, queue_entry, data)
+    Log(kLogInfo, "data: %s" % {EncodeJson(data)})
+    local status, headers, body = Fetch(data.raw_image_uri)
+    if status ~= 200 then
+        return Err(TempScraperError("I got a %d (%s) error when trying to download the image from '%s'." % {status, headers, data.raw_image_uri}))
+    end
+    if #body < 1024 then
+        return Err(TempScraperError("I got an image file that was too small to be real from '%s'." % {data.raw_image_uri}))
+    end
+    if not headers["Content-Type"] then
+        return Err(PermScraperError("%s didn't tell me what kind of image they sent." % {data.raw_image_uri}))
+    end
+    local content_type = headers["Content-Type"]
+    local filename = save_image(body, content_type)
+    Log(kLogInfo, "Saved image to disk")
+    local result, errmsg2 = model:insertImageAndRemoveFromQueue(queue_entry.qid, filename, content_type)
+    if not result then
+        Log(kLogInfo, "Database error: %s" % {errmsg2})
+        return Err(TempScraperError(errmsg2))
+    end
+    Log(kLogInfo, "Inserted image record into database (result: %d)" % {result})
+    return Ok(true)
 end
 
 local function get_sources_for_entry(model, queue_entry)
@@ -164,61 +175,77 @@ local function get_sources_for_entry(model, queue_entry)
 end
 
 local function process_entry(model, queue_entry)
+    if queue_entry.disambiguation_results then
+        -- TODO: implement disambiguation.
+        return true
+    end
+    if queue_entry.disambiguation_request then
+        -- Do nothing here because we're waiting for the user to disambiguate.
+        return true
+    end
     local source_links, errmsg1 = get_sources_for_entry(model, queue_entry)
     if not source_links or (type(source_links) == "table" and #source_links < 1) then
-        return nil, "I couldn't find sources for %s: %s" % {queue_entry.qid, errmsg1}
+        return nil, TempScraperError("I couldn't find sources for %s: %s" % {queue_entry.qid, errmsg1})
     end
+    ---@cast source_links string[]
     Log(kLogInfo, "source_links: %s" % {EncodeJson(source_links)})
-    ---@cast Result<ScrapedSourceData, string>
-    local scraped = table.flatten(table.map(source_links, process_source_uri))
+    local scraped = table.map(source_links, process_source_uri)
+    if #scraped < 1 then
+        return nil, PermScraperError("I don't know how to scrape data from any of these sources: %s." % {EncodeJson(source_links)})
+    end
     Log(kLogInfo, "scraped: %s" % {EncodeJson(scraped)})
-    local scraped_no_errors = table.flatten(table.filtermap(
-        scraped,
-        function (item) return item.is_ok end,
+    local scraped_no_errors = table.filtermap(
+        table.flatten(scraped),
+        function (item) return item.err == nil end,
         function (item) return item.result end
-    ))
+    )
     Log(kLogInfo, "scraped_no_errors: %s" % {EncodeJson(scraped_no_errors)})
     if #scraped_no_errors < 1 then
-        return nil, "I don't know how to scrape data from this website."
+        return nil, TempScraperError("All of the scrapers failed to scrape from these sources: %s" % {EncodeJson(source_links)})
     end
-    -- TODO: this doesn't work for saving posts with multiple images attached. Think about solution. Maybe find largest image among sources (but how?)?
-    local largest_source = table.reduce(scraped_no_errors,
-        ---@param acc ScrapedSourceData
-        ---@param next ScrapedSourceData
-        ---@return ScrapedSourceData
-        function (acc, next)
-        if acc == nil then
-            return next
+    if #scraped == 1 then
+        for _, data in ipairs(scraped[1]) do
+            local result = save_source(model, queue_entry, data)
+            if result:is_err() then
+                return nil, result.err.description
+            end
         end
-        if next.width > acc.width and next.height > acc.height then
-            return next
+    else
+        local max_results = math.max(
+            table.unpack(table.map(
+                scraped,
+                function (item) return #item end
+            ))
+        )
+        if max_results == 1 then
+            local largest_source = table.reduce(scraped_no_errors,
+                ---@param acc ScrapedSourceData
+                ---@param next ScrapedSourceData
+                ---@return ScrapedSourceData
+                function (acc, next)
+                if acc == nil then
+                    return next
+                end
+                if next.width > acc.width and next.height > acc.height then
+                    return next
+                else
+                    return acc
+                end
+            end)
+            if not largest_source then
+                return nil, "I couldn't figure out which source had the largest version of the image. It's possible that they're down."
+            end
+            local result = save_source(model, queue_entry, largest_source)
+            if result.is_err then
+                return nil, result.err
+            end
         else
-            return acc
+            local ok, errmsg2 = model:updateDisambiguationRequestForQueueItem(queue_entry.qid)
+            if not ok then
+                return nil, TempScraperError(errmsg2)
+            end
         end
-    end)
-    if not largest_source then
-        return nil, "I couldn't figure out which source had the largest version of the image. It's possible that they're down."
     end
-    local status, headers, body = Fetch(largest_source.raw_image_uri)
-    if status ~= 200 then
-        return nil, "I got a %d (%s) error when trying to download the image from '%s'." % {status, headers, largest_source.raw_image_uri}
-    end
-    if #body < 1024 then
-        return nil, "I got an image file that was too small to be real from '%s'." % {largest_source.raw_image_uri}
-    end
-    if not headers["Content-Type"] then
-        return nil, "%s didn't tell me what kind of image they sent." % {largest_source.raw_image_uri}
-    end
-    local content_type = headers["Content-Type"]
-    local filename = save_image(body, content_type)
-    Log(kLogInfo, "Saved image to disk")
-    local result, errmsg2 = model:insertImageAndRemoveFromQueue(queue_entry.qid, filename, content_type)
-    if not result then
-        Log(kLogInfo, "Database error: %s" % {errmsg2})
-        return nil, errmsg2
-    end
-    Log(kLogInfo, "Inserted image record into database (result: %d)" % {result})
-    return true
 end
 
 local function process_queue(model, queue_records)

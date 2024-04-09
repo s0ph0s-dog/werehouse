@@ -8,6 +8,7 @@ LIBS := lib/third_party/fullmoon.lua \
     lib/db.lua \
 	lib/functools.lua \
 	lib/scraper_pipeline.lua \
+	lib/scraper_types.lua \
 	lib/scrapers/bluesky.lua \
 	lib/network_utils.lua \
 	lib/web.lua

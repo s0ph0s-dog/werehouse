@@ -54,7 +54,7 @@ end
 local function process_uri(uri)
     local handle_or_did, post_id = parse_bsky_uri(uri)
     if not handle_or_did or type(post_id) == "re.Errno" then
-        return Error("Invalid Bluesky post URI")
+        return Err(PermScraperError("Invalid Bluesky post URI"))
     end
     local xrpc_uri = EncodeUrl{
         scheme = "https",
@@ -68,11 +68,11 @@ local function process_uri(uri)
     }
     local json, errmsg = FetchJson(xrpc_uri)
     if not json then
-        return Error(errmsg)
+        return Err(TempScraperError(errmsg))
     end
     local images = extract_image_embeds(json)
     if not images then
-        return Error("Post had no images")
+        return Err(PermScraperError("Post had no images"))
     end
     local results = table.map(images,
         ---@return ScrapedSourceData

@@ -91,22 +91,39 @@ function table.flatten(sequence, result)
     return myResult
 end
 
+local Result = {}
+function Result:is_ok()
+    return not (not self.result)
+end
+function Result:is_err()
+    return not self.result
+end
+function Result:unwrap()
+    if self.is_ok then
+        return self.result
+    else
+        error("tried to unwrap an Err")
+    end
+end
+
 ---@class Ok<T> { result: T }
 
 ---@generic T
 ---@param t `T`
 ---@return Ok<T>
 function Ok(t)
-    return { is_ok = true, is_error = false, result = t }
+    local r = { result = t }
+    return setmetatable(r, Result)
 end
 
----@class Error<E> { error: E }
+---@class Err<E> { err: E }
 
 ---@generic E
 ---@param e `E`
----@return Error<E>
-function Error(e)
-    return { is_ok = false, is_error = true, error = e }
+---@return Err<E>
+function Err(e)
+    local r = { err = e }
+    return setmetatable(r, Result)
 end
 
----@alias Result<T, E> (Ok<T>|Error<E>)
+---@alias Result<T, E> (Ok<T>|Err<E>)

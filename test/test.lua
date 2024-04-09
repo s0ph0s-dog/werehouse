@@ -56,4 +56,15 @@ TestFunctools = {}
         luaunit.assertEquals(result, expected)
     end
 
+    function TestFunctools:testFiltermapWorks()
+        local seq = { 0, 1, 4, 0, 6, 10, 0 }
+        local expected = { 2, 5, 7, 11 }
+        local result = table.filtermap(
+            seq,
+            function (item) return item ~= 0 end,
+            function (item) return item + 1 end
+        )
+        luaunit.assertEquals(result, expected)
+    end
+
 luaunit.run()

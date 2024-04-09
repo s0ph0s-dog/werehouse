@@ -228,6 +228,7 @@ local queries = {
     }
 }
 
+---@class Model
 local Model = {}
 
 function Model:new(o, user_id)
