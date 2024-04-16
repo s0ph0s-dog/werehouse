@@ -86,7 +86,8 @@ local function process_uri(uri)
     if #body < 100 then
         return Err(PermScraperError("The response from FA was too short."))
     end
-    local root = HtmlParser.parse(body)
+    -- Increase loop limit from default 1000 to 10,000 because FA's html is bloated.
+    local root = HtmlParser.parse(body, 10000)
     if not root then
         return Err(PermScraperError("FA returned invalid HTML."))
     end

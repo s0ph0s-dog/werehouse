@@ -163,13 +163,13 @@ local function process_entry(queue_entry)
         return nil, TempScraperError("I couldn't find sources for %s: %s" % {queue_entry.qid, errmsg1})
     end
     ---@cast source_links string[]
-    Log(kLogInfo, "source_links: %s" % {EncodeJson(source_links)})
+    -- Log(kLogInfo, "source_links: %s" % {EncodeJson(source_links)})
     -- a list containing [ a result containing [ a list containing [ scraped data for one image at the source ] ] ]
     local scraped = table.map(source_links, process_source_uri)
     if #scraped < 1 then
         return nil, PermScraperError("I don't know how to scrape data from any of these sources: %s." % {EncodeJson(source_links)})
     end
-    Log(kLogInfo, "scraped: %s" % {EncodeJson(scraped)})
+    -- Log(kLogInfo, "scraped: %s" % {EncodeJson(scraped)})
     -- a list containing [ a list containing [ scraped data for one image at the source ] ]. The outer list has one item per source link in `sources`. The inner arrays are not necessarily all the same size (e.g. FA only ever has one image per link, but Twitter can have up to 4 and Cohost is effectively unlimited.)
     local scraped_no_errors = table.map(
         scraped,
@@ -180,7 +180,7 @@ local function process_entry(queue_entry)
         function(item) return item:unwrap_or{} end
     )
     ---@cast scraped_no_errors ScrapedSourceData[][]
-    Log(kLogInfo, "scraped_no_errors: %s" % {EncodeJson(scraped_no_errors)})
+    -- Log(kLogInfo, "scraped_no_errors: %s" % {EncodeJson(scraped_no_errors)})
     local result_count = table.reduce(
         table.map(
             scraped_no_errors,
