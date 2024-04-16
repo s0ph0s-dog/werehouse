@@ -69,6 +69,22 @@ TestFunctools = {}
         luaunit.assertEquals(result, expected)
     end
 
+local function fetch_mock(data)
+    local orig = Fetch
+    Fetch = function(url, opts)
+        for _, item in ipairs(data) do
+            if type(item.whenCalledWith) == "string" then
+                if item.whenCalledWith == url then
+                    return table.unpack(item.thenReturn)
+                end
+            end
+        end
+        Log(kLogWarn, "No mock match for URL(%s), Options(%s)" % {url, EncodeJson(opts)})
+    end
+    return orig
+end
+
+
 TestScraperPipeline = {}
 
     function TestScraperPipeline:testUnansweredDisambiguationRequestIsSkipped()
@@ -82,14 +98,31 @@ TestScraperPipeline = {}
         TestScraperProcessUri = function()
             return nil, PermScraperError("404")
         end
+        local original = fetch_mock{
+            {whenCalledWith = "test://shouldFailPermanently", thenReturn={200, {}, ""}},
+        }
         local result, error = pipeline.process_entry(input)
+        Fetch = original
         luaunit.assertIsNil(result)
-        -- TODO: also check error
+        luaunit.assertNotIsNil(error)
+        ---@cast error ScraperError
+        luaunit.assertEquals(error.type, 1)
     end
 
     function TestScraperPipeline:testValidBskyLink()
         local input = { link = "https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz/post/3kphxqgx6iv2b" }
+        local original = fetch_mock{
+            {
+                whenCalledWith="https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz/post/3kphxqgx6iv2b",
+                thenReturn={200, {}, ""}
+            },
+            {
+                whenCalledWith="https://bsky.social/xrpc/com.atproto.repo.getRecord?repo=did%3Aplc%3A4gjc5765wbtvrkdxysyvaewz&collection=app.bsky.feed.post&rkey=3kphxqgx6iv2b",
+                thenReturn={200, {}, [[{"uri":"at://did:plc:4gjc5765wbtvrkdxysyvaewz/app.bsky.feed.post/3kphxqgx6iv2b","cid":"bafyreiaawqoyfcyqd34vybfq3lvwb7luew3rijslyjmfquoy3m2lnvzaqu","value":{"text":"People often ask Pastel how he knows that Constellation actually exists. Though they often don't accept \"I personally know her\" as an answer.","$type":"app.bsky.feed.post","embed":{"$type":"app.bsky.embed.images","images":[{"alt":"Constellation, the god of the universe pastel lives in, and Pastel having sex outside at some ruins.","image":{"$type":"blob","ref":{"$link":"bafkreib2v6upf5gz7q22jpdnrh2fwhtn6yexrsnbp6uh7ythgq3obhf7ia"},"mimeType":"image/jpeg","size":523864},"aspectRatio":{"width":1905,"height":2000}},{"alt":"Same as before but pastel is cumming.","image":{"$type":"blob","ref":{"$link":"bafkreidjkqudkq2m6pojavuelcud2fez2eojxiflnxedimplumiygu76pe"},"mimeType":"image/jpeg","size":523698},"aspectRatio":{"width":1905,"height":2000}}]},"langs":["en"],"labels":{"$type":"com.atproto.label.defs#selfLabels","values":[{"val":"porn"}]},"createdAt":"2024-04-06T15:42:51.710Z"}}]]}
+            }
+        }
         local result = pipeline.process_entry(input)
+        Fetch = original
         local expected = { archive = {
                 {
                     height=2000,

@@ -205,15 +205,16 @@ local function process_entry(queue_entry)
                 ---@param next ScrapedSourceData
                 ---@return ScrapedSourceData
                 function (acc, next)
-                if acc == nil then
-                    return next
+                    if acc == nil then
+                        return next
+                    end
+                    if next.width > acc.width and next.height > acc.height then
+                        return next
+                    else
+                        return acc
+                    end
                 end
-                if next.width > acc.width and next.height > acc.height then
-                    return next
-                else
-                    return acc
-                end
-            end)
+            )
             if not largest_source then
                 return nil, TempScraperError("I couldn't figure out which source had the largest version of the image. It's possible that they're down.")
             end
@@ -222,6 +223,7 @@ local function process_entry(queue_entry)
             return RequestHelpEntryTask(scraped)
         end
     end
+    return nil, PermScraperError("This should be unreachable")
 end
 
 ---@param model Model

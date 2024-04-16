@@ -24,9 +24,10 @@ end
 NoopEntryTask = { noop = true }
 ---@alias EntryTask (ArchiveEntryTask|RequestHelpEntryTask|NoopEntryTask)
 
----@class ScraperError {description: string}
+---@class ScraperError {description: string, type: integer}
 ScraperError = {
-    description = "Something went so wrong that I couldn't even describe it."
+    description = "Something went so wrong that I couldn't even describe it.",
+    type = -1,
 }
 
 ---@class TempScraperError : ScraperError
@@ -35,7 +36,8 @@ function TempScraperError(description)
         description = description,
         type = 0
     }
-    setmetatable(result, ScraperError)
+    setmetatable(result, {__index = ScraperError})
+    return result
 end
 ---@class PermScraperError : ScraperError
 function PermScraperError(description)
@@ -43,5 +45,6 @@ function PermScraperError(description)
         description = description,
         type = 1
     }
-    setmetatable(result, ScraperError)
+    setmetatable(result, {__index = ScraperError})
+    return result
 end
