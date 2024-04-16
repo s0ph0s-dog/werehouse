@@ -10,6 +10,7 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/scraper_pipeline.lua \
 	lib/scraper_types.lua \
 	lib/scrapers/bluesky.lua \
+	lib/scrapers/twitter.lua \
 	lib/scrapers/test.lua \
 	lib/network_utils.lua \
 	lib/web.lua

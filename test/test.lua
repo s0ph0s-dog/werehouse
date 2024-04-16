@@ -121,7 +121,7 @@ TestScraperPipeline = {}
                 thenReturn={200, {}, [[{"uri":"at://did:plc:4gjc5765wbtvrkdxysyvaewz/app.bsky.feed.post/3kphxqgx6iv2b","cid":"bafyreiaawqoyfcyqd34vybfq3lvwb7luew3rijslyjmfquoy3m2lnvzaqu","value":{"text":"People often ask Pastel how he knows that Constellation actually exists. Though they often don't accept \"I personally know her\" as an answer.","$type":"app.bsky.feed.post","embed":{"$type":"app.bsky.embed.images","images":[{"alt":"Constellation, the god of the universe pastel lives in, and Pastel having sex outside at some ruins.","image":{"$type":"blob","ref":{"$link":"bafkreib2v6upf5gz7q22jpdnrh2fwhtn6yexrsnbp6uh7ythgq3obhf7ia"},"mimeType":"image/jpeg","size":523864},"aspectRatio":{"width":1905,"height":2000}},{"alt":"Same as before but pastel is cumming.","image":{"$type":"blob","ref":{"$link":"bafkreidjkqudkq2m6pojavuelcud2fez2eojxiflnxedimplumiygu76pe"},"mimeType":"image/jpeg","size":523698},"aspectRatio":{"width":1905,"height":2000}}]},"langs":["en"],"labels":{"$type":"com.atproto.label.defs#selfLabels","values":[{"val":"porn"}]},"createdAt":"2024-04-06T15:42:51.710Z"}}]]}
             }
         }
-        local result = pipeline.process_entry(input)
+        local result, errmsg = pipeline.process_entry(input)
         Fetch = original
         local expected = { archive = {
                 {
@@ -138,6 +138,68 @@ TestScraperPipeline = {}
                 }
         }}
         luaunit.assertEquals(result, expected)
+        luaunit.assertIsNil(errmsg)
+    end
+
+    function TestScraperPipeline:testValidTwitterLinks()
+        local tweetTrackingParams = "https://twitter.com/thatFunkybun/status/1778885919572979806?s=19"
+        local tweetVxtwitter = "https://vxtwitter.com/thatFunkybun/status/1778885919572979806"
+        local tweetNitter = "https://nitter.privacydev.net/thatFunkybun/status/1778885919572979806#m"
+        local inputs = table.map(
+            {tweetTrackingParams, tweetVxtwitter, tweetNitter},
+            function (i) return { link = i } end
+        )
+        local original = fetch_mock{
+            {
+                whenCalledWith = tweetTrackingParams,
+                thenReturn = {200, {}, ""},
+            },
+            {
+                whenCalledWith = tweetVxtwitter,
+                thenReturn = {200, {}, ""},
+            },
+            {
+                whenCalledWith = tweetNitter,
+                thenReturn = {200, {}, ""},
+            },
+            {
+                whenCalledWith = "https://api.fxtwitter.com/status/1778885919572979806",
+                thenReturn = {200, {}, [[{"code":200,"message":"OK","tweet":{"url":"https://twitter.com/thatFunkybun/status/1778885919572979806","id":"1778885919572979806","text":"each second month I spend some time making an exclusive project for the €5 patrons, and this is that project from november! now released for the public.\nsorry I took so long on this month's exclusive X) it's only 14 pages but still took me 3 weeks","author":{"id":"986175872515362816","name":"Funkybun","screen_name":"thatFunkybun","avatar_url":"https://pbs.twimg.com/profile_images/1466055016880422925/TrD9-bqQ_200x200.jpg","banner_url":"https://pbs.twimg.com/profile_banners/986175872515362816/1638369730","description":"I am Funkybun (she/her), making NSFW exhibitionism art for all of you! \nyou can find my art over at:\nhttp://patreon.com/funkybun","location":"","url":"https://twitter.com/thatFunkybun","followers":77430,"following":31,"joined":"Tue Apr 17 09:33:45 +0000 2018","likes":2606,"website":{"url":"https://www.patreon.com/funkybun","display_url":"patreon.com/funkybun"},"tweets":828,"avatar_color":null},"replies":34,"retweets":690,"likes":4048,"created_at":"Fri Apr 12 20:40:27 +0000 2024","created_timestamp":1712954427,"possibly_sensitive":true,"views":80815,"is_note_tweet":false,"lang":"en","replying_to":null,"replying_to_status":null,"media":{"all":[{"type":"photo","url":"https://pbs.twimg.com/media/GK_fDarXQAE6yBj.jpg","width":1600,"height":2300,"altText":""},{"type":"photo","url":"https://pbs.twimg.com/media/GK_fDaaXsAATM_X.jpg","width":1600,"height":2300,"altText":""},{"type":"photo","url":"https://pbs.twimg.com/media/GK_fDaUWYAABb40.jpg","width":1600,"height":2300,"altText":""},{"type":"photo","url":"https://pbs.twimg.com/media/GK_fDaUXsAAGJng.jpg","width":1600,"height":2300,"altText":""}],"photos":[{"type":"photo","url":"https://pbs.twimg.com/media/GK_fDarXQAE6yBj.jpg","width":1600,"height":2300,"altText":""},{"type":"photo","url":"https://pbs.twimg.com/media/GK_fDaaXsAATM_X.jpg","width":1600,"height":2300,"altText":""},{"type":"photo","url":"https://pbs.twimg.com/media/GK_fDaUWYAABb40.jpg","width":1600,"height":2300,"altText":""},{"type":"photo","url":"https://pbs.twimg.com/media/GK_fDaUXsAAGJng.jpg","width":1600,"height":2300,"altText":""}],"mosaic":{"type":"mosaic_photo","formats":{"jpeg":"https://mosaic.fxtwitter.com/jpeg/1778885919572979806/GK_fDarXQAE6yBj/GK_fDaaXsAATM_X/GK_fDaUWYAABb40/GK_fDaUXsAAGJng","webp":"https://mosaic.fxtwitter.com/webp/1778885919572979806/GK_fDarXQAE6yBj/GK_fDaaXsAATM_X/GK_fDaUWYAABb40/GK_fDaUXsAAGJng"}}},"source":"Twitter Web App","twitter_card":"summary_large_image","color":null}}]]}}
+        }
+        local expected = {
+            archive = {
+                {
+                    height=2300,
+                    mime_type="image/jpeg",
+                    raw_image_uri="https://pbs.twimg.com/media/GK_fDarXQAE6yBj.jpg",
+                    width=1600
+                },
+                {
+                    height=2300,
+                    mime_type="image/jpeg",
+                    raw_image_uri="https://pbs.twimg.com/media/GK_fDaaXsAATM_X.jpg",
+                    width=1600
+                },
+                {
+                    height=2300,
+                    mime_type="image/jpeg",
+                    raw_image_uri="https://pbs.twimg.com/media/GK_fDaUWYAABb40.jpg",
+                    width=1600
+                },
+                {
+                    height=2300,
+                    mime_type="image/jpeg",
+                    raw_image_uri="https://pbs.twimg.com/media/GK_fDaUXsAAGJng.jpg",
+                    width=1600
+                },
+            }
+        }
+        for _, input in ipairs(inputs) do
+            local result, errmsg = pipeline.process_entry(input)
+            luaunit.assertEquals(result, expected)
+            luaunit.assertIsNil(errmsg)
+        end
+        Fetch = original
     end
 
 luaunit.run()

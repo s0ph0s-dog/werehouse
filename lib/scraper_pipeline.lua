@@ -10,6 +10,7 @@ end
 ---@type Scraper[]
 local scrapers = {
     require_only("scrapers.bluesky"),
+    require_only("scrapers.twitter"),
     require_only("scrapers.test"),
 }
 
