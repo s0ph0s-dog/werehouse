@@ -12,6 +12,18 @@
 
 ---@alias Scraper {process_uri: ScraperProcess, can_process_uri: ScraperCanProcess}
 
+---@alias ArchiveEntryTask { archive: ScrapedSourceData[] }
+function ArchiveEntryTask(data)
+    return { archive = data }
+end
+---@alias RequestHelpEntryTask { help: ScrapedSourceData[][] }
+function RequestHelpEntryTask(data)
+    return { help = data }
+end
+---@alias NoopEntryTask { noop: true }
+NoopEntryTask = { noop = true }
+---@alias EntryTask (ArchiveEntryTask|RequestHelpEntryTask|NoopEntryTask)
+
 ---@class ScraperError {description: string}
 ScraperError = {
     description = "Something went so wrong that I couldn't even describe it."

@@ -91,39 +91,62 @@ function table.flatten(sequence, result)
     return myResult
 end
 
-local Result = {}
+---@generic T
+---@generic E
+---@class ResultInternal<T, E>
+---@field result `T`?
+---@field err `E`?
+Result = {}
+---@return boolean
 function Result:is_ok()
     return not (not self.result)
 end
+---@return boolean
 function Result:is_err()
     return not self.result
 end
+---@generic T
+---@return `T`
 function Result:unwrap()
-    if self.is_ok then
+    if self.result then
         return self.result
     else
         error("tried to unwrap an Err")
     end
 end
+---@generic T
+---@param default `T`
+---@return `T`
+function Result:unwrap_or(default)
+    if self.result then
+        return self.result
+    else
+        return default
+    end
+end
 
----@class Ok<T> { result: T }
+---@generic T
+---@class Ok<T>: ResultInternal
+---@field result `T`
 
 ---@generic T
 ---@param t `T`
 ---@return Ok<T>
 function Ok(t)
     local r = { result = t }
-    return setmetatable(r, Result)
+    return setmetatable(r, {__index = Result})
 end
 
----@class Err<E> { err: E }
+---@generic E
+---@class Err<E>: ResultInternal
+---@field err `E`
 
 ---@generic E
 ---@param e `E`
 ---@return Err<E>
 function Err(e)
     local r = { err = e }
-    return setmetatable(r, Result)
+    return setmetatable(r, {__index = Result})
 end
 
 ---@alias Result<T, E> (Ok<T>|Err<E>)

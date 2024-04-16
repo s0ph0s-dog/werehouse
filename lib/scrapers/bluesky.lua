@@ -66,7 +66,7 @@ local function process_uri(uri)
             { "rkey", post_id },
         },
     }
-    local json, errmsg = FetchJson(xrpc_uri)
+    local json, errmsg = Nu.FetchJson(xrpc_uri)
     if not json then
         return Err(TempScraperError(errmsg))
     end

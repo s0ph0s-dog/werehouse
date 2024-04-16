@@ -13,3 +13,7 @@ function FetchJson(uri, options)
     end
     return json
 end
+
+return {
+    FetchJson = FetchJson
+}

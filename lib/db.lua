@@ -204,7 +204,7 @@ local queries = {
             FROM queue
             ORDER BY added_on DESC
             LIMIT 20;]],
-        get_all_queue_entries = [[SELECT qid, link, tombstone, added_on, status
+        get_all_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status
             FROM queue
             ORDER BY added_on DESC;]],
         get_all_active_queue_entries = [[SELECT qid, link, added_on, status

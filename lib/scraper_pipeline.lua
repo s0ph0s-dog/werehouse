@@ -10,6 +10,7 @@ end
 ---@type Scraper[]
 local scrapers = {
     require_only("scrapers.bluesky"),
+    require_only("scrapers.test"),
 }
 
 local MIME_TO_EXT = {
@@ -43,7 +44,7 @@ local function fuzzysearch_uri(image_uri)
         path = "/v1/url",
         params = { {"url", image_uri}, }
     }
-    local json, errmsg = FetchJson(api_url, {
+    local json, errmsg = Nu.FetchJson(api_url, {
         headers = {
             ["x-api-key"] = FUZZYSEARCH_API_KEY,
         }
@@ -62,7 +63,7 @@ local function fuzzysearch_image(image_data, mime_type)
     }
     local boundary = "__X_HELLO_SYFARO__"
     local body = multipart_body(boundary, image_data, mime_type)
-    local json, errmsg = FetchJson(api_url, {
+    local json, errmsg = Nu.FetchJson(api_url, {
         method = "POST",
         headers = {
             ["Content-Type"] = "multipart/form-data; charset=utf-8; boundary=%s" % {boundary},
@@ -110,35 +111,7 @@ local function process_source_uri(uri)
 end
 
 
----@param model Model
----@param data ScrapedSourceData
----@param queue_entry
----@return Result<boolean, ScraperError>
-local function save_source(model, queue_entry, data)
-    Log(kLogInfo, "data: %s" % {EncodeJson(data)})
-    local status, headers, body = Fetch(data.raw_image_uri)
-    if status ~= 200 then
-        return Err(TempScraperError("I got a %d (%s) error when trying to download the image from '%s'." % {status, headers, data.raw_image_uri}))
-    end
-    if #body < 1024 then
-        return Err(TempScraperError("I got an image file that was too small to be real from '%s'." % {data.raw_image_uri}))
-    end
-    if not headers["Content-Type"] then
-        return Err(PermScraperError("%s didn't tell me what kind of image they sent." % {data.raw_image_uri}))
-    end
-    local content_type = headers["Content-Type"]
-    local filename = save_image(body, content_type)
-    Log(kLogInfo, "Saved image to disk")
-    local result, errmsg2 = model:insertImageAndRemoveFromQueue(queue_entry.qid, filename, content_type)
-    if not result then
-        Log(kLogInfo, "Database error: %s" % {errmsg2})
-        return Err(TempScraperError(errmsg2))
-    end
-    Log(kLogInfo, "Inserted image record into database (result: %d)" % {result})
-    return Ok(true)
-end
-
-local function get_sources_for_entry(model, queue_entry)
+local function get_sources_for_entry(queue_entry)
     if queue_entry.link then
         local status, headers, _ = Fetch(queue_entry.link, {method = "HEAD"})
         if not status then
@@ -157,59 +130,67 @@ local function get_sources_for_entry(model, queue_entry)
         else
             return { queue_entry.link }
         end
-    else
-        local image_record, errmsg1 = model:getQueueImageById(queue_entry.qid)
-        if not image_record then
-            return nil, errmsg1
-        end
-        if not image_record.image then
-            return nil, "No link or image data for queue entry %s for user %s" % {queue_entry.qid, model.user_id}
-        end
-        local maybe_source_links, errmsg2 = fuzzysearch_image(image_record.image_data)
+        return nil, "should be unreachable"
+    elseif queue_entry.image then
+        local maybe_source_links, errmsg2 = fuzzysearch_image(queue_entry.image_data)
         if not maybe_source_links then
             return nil, errmsg2
         end
         return maybe_source_links
+    else
+        return nil, "No link or image data for queue entry %s" % {queue_entry.qid}
     end
     return nil, "should be unreachable"
 end
 
-local function process_entry(model, queue_entry)
+
+---@param queue_entry table Queue entry from the database
+---@return EntryTask? # A database manipulation task to do now that the queue entry has been processed, or nil if there was an error.
+---@return ScraperError? # A table with information about the kind of error that occurred, or nil if there was no error.
+local function process_entry(queue_entry)
     if queue_entry.disambiguation_results then
         -- TODO: implement disambiguation.
-        return true
+        return NoopEntryTask
     end
     if queue_entry.disambiguation_request then
         -- Do nothing here because we're waiting for the user to disambiguate.
-        return true
+        return NoopEntryTask
     end
-    local source_links, errmsg1 = get_sources_for_entry(model, queue_entry)
+    local source_links, errmsg1 = get_sources_for_entry(queue_entry)
     if not source_links or (type(source_links) == "table" and #source_links < 1) then
         return nil, TempScraperError("I couldn't find sources for %s: %s" % {queue_entry.qid, errmsg1})
     end
     ---@cast source_links string[]
     Log(kLogInfo, "source_links: %s" % {EncodeJson(source_links)})
+    -- a list containing [ a result containing [ a list containing [ scraped data for one image at the source ] ] ]
     local scraped = table.map(source_links, process_source_uri)
     if #scraped < 1 then
         return nil, PermScraperError("I don't know how to scrape data from any of these sources: %s." % {EncodeJson(source_links)})
     end
     Log(kLogInfo, "scraped: %s" % {EncodeJson(scraped)})
-    local scraped_no_errors = table.filtermap(
-        table.flatten(scraped),
-        function (item) return item.err == nil end,
-        function (item) return item.result end
+    -- a list containing [ a list containing [ scraped data for one image at the source ] ]. The outer list has one item per source link in `sources`. The inner arrays are not necessarily all the same size (e.g. FA only ever has one image per link, but Twitter can have up to 4 and Cohost is effectively unlimited.)
+    local scraped_no_errors = table.map(
+        scraped,
+        ---@generic T
+        ---@generic E
+        ---@param item Result
+        ---@return `T`
+        function(item) return item:unwrap_or{} end
     )
+    ---@cast scraped_no_errors ScrapedSourceData[][]
     Log(kLogInfo, "scraped_no_errors: %s" % {EncodeJson(scraped_no_errors)})
-    if #scraped_no_errors < 1 then
+    local result_count = table.reduce(
+        table.map(
+            scraped_no_errors,
+            function (x) return #x end
+        ),
+        function (acc, next) return (acc or 0) + next end
+    )
+    if result_count < 1 then
         return nil, TempScraperError("All of the scrapers failed to scrape from these sources: %s" % {EncodeJson(source_links)})
     end
-    if #scraped == 1 then
-        for _, data in ipairs(scraped[1]) do
-            local result = save_source(model, queue_entry, data)
-            if result:is_err() then
-                return nil, result.err.description
-            end
-        end
+    if #scraped_no_errors == 1 then
+        return ArchiveEntryTask(scraped_no_errors[1])
     else
         local max_results = math.max(
             table.unpack(table.map(
@@ -218,7 +199,8 @@ local function process_entry(model, queue_entry)
             ))
         )
         if max_results == 1 then
-            local largest_source = table.reduce(scraped_no_errors,
+            local largest_source = table.reduce(
+                table.flatten(scraped_no_errors),
                 ---@param acc ScrapedSourceData
                 ---@param next ScrapedSourceData
                 ---@return ScrapedSourceData
@@ -233,39 +215,66 @@ local function process_entry(model, queue_entry)
                 end
             end)
             if not largest_source then
-                return nil, "I couldn't figure out which source had the largest version of the image. It's possible that they're down."
+                return nil, TempScraperError("I couldn't figure out which source had the largest version of the image. It's possible that they're down.")
             end
-            local result = save_source(model, queue_entry, largest_source)
-            if result.is_err then
-                return nil, result.err
-            end
+            return ArchiveEntryTask{largest_source}
         else
-            local ok, errmsg2 = model:updateDisambiguationRequestForQueueItem(queue_entry.qid)
-            if not ok then
-                return nil, TempScraperError(errmsg2)
-            end
+            return RequestHelpEntryTask(scraped)
         end
     end
+end
+
+---@param model Model
+---@param sources_list ScrapedSourceData[]
+---@param queue_entry table
+---@return boolean?
+---@return ScraperError?
+local function save_sources(model, queue_entry, sources_list)
+    Log(kLogInfo, "data: %s" % {EncodeJson(sources_list)})
+    -- TODO: rewrite this to loop over the sources list and save all of the images in one transaction.
+    local status, headers, body = Fetch(data.raw_image_uri)
+    if status ~= 200 then
+        return nil, TempScraperError("I got a %d (%s) error when trying to download the image from '%s'." % {status, headers, data.raw_image_uri})
+    end
+    if #body < 1024 then
+        return nil, TempScraperError("I got an image file that was too small to be real from '%s'." % {data.raw_image_uri})
+    end
+    if not headers["Content-Type"] then
+        return nil, PermScraperError("%s didn't tell me what kind of image they sent." % {data.raw_image_uri})
+    end
+    local content_type = headers["Content-Type"]
+    local filename = save_image(body, content_type)
+    Log(kLogInfo, "Saved image to disk")
+    local result, errmsg2 = model:insertImageAndRemoveFromQueue(queue_entry.qid, filename, content_type)
+    if not result then
+        Log(kLogInfo, "Database error: %s" % {errmsg2})
+        return nil, TempScraperError(errmsg2)
+    end
+    Log(kLogInfo, "Inserted image record into database (result: %d)" % {result})
+    return true
 end
 
 local function process_queue(model, queue_records)
     for _, queue_entry in ipairs(queue_records) do
         Log(kLogInfo, "Processing queue entry %s" % {EncodeJson(queue_entry)})
-        local result, errmsg1 = process_entry(model, queue_entry)
+        local result, errmsg1 = process_entry(queue_entry)
         if not result then
             local status_result, errmsg2 = model:setQueueItemStatus(
                 queue_entry.qid,
                 errmsg1
             )
             if not status_result then
-                Log(
-                    kLogWarn,
+                Log(kLogWarn,
                     "While processing queue for user %d, item %d: %s" % {
                         model.user_id,
                         queue_entry.qid,
                         errmsg2
-                    }
-                )
+                    })
+            end
+        else
+            local ok, errmsg2 = save_sources(model, queue_entry, result)
+            if not ok then
+                Log(kLogWarn, "%s" % {errmsg2})
             end
         end
     end
@@ -296,4 +305,5 @@ end
 
 return {
     process_all_queues = process_all_queues,
+    process_entry = process_entry,
 }
