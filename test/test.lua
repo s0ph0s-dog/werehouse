@@ -194,12 +194,17 @@ TestScraperPipeline = {}
                 },
             }
         }
+        local results = {}
         for _, input in ipairs(inputs) do
             local result, errmsg = pipeline.process_entry(input)
-            luaunit.assertEquals(result, expected)
-            luaunit.assertIsNil(errmsg)
+            table.insert(results, {input, result, errmsg})
         end
+        -- Must do this before asserting so that I don't leave global state messed up
         Fetch = original
+        for _, result in ipairs(results) do
+            luaunit.assertEquals(result[2], expected, "input: %s" % {result[1]})
+            luaunit.assertIsNil(result[3], "input: %s" % {result[1]})
+        end
     end
 
 luaunit.run()
