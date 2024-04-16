@@ -1,5 +1,5 @@
 
-BSKY_URI_EXP = assert(re.compile[[https?://[bp]sky\.app/profile/([A-z0-9\.:]+)/post/([a-z0-9]+)]])
+BSKY_URI_EXP = assert(re.compile[[^https?://[bp]sky\.app/profile/([A-z0-9\.:]+)/post/([a-z0-9]+)]])
 ---@param uri string
 ---@return string?
 ---@return string|re.Errno
