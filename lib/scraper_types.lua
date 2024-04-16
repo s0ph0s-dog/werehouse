@@ -32,6 +32,9 @@ ScraperError = {
 
 ---@class TempScraperError : ScraperError
 function TempScraperError(description)
+    if not description then
+        return error("Must provide a non-nil description when calling this function.")
+    end
     local result = {
         description = description,
         type = 0
@@ -41,6 +44,9 @@ function TempScraperError(description)
 end
 ---@class PermScraperError : ScraperError
 function PermScraperError(description)
+    if not description then
+        return error("Must provide a non-nil description when calling this function.")
+    end
     local result = {
         description = description,
         type = 1

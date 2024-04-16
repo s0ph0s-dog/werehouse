@@ -11,6 +11,7 @@ end
 local scrapers = {
     require_only("scrapers.bluesky"),
     require_only("scrapers.twitter"),
+    require_only("scrapers.furaffinity"),
     require_only("scrapers.test"),
 }
 

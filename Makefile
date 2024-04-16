@@ -5,12 +5,16 @@ OUTPUT := hyperphantasia.com
 SRV_DIR := srv
 LIBS := lib/third_party/fullmoon.lua \
     lib/third_party/uuid.lua \
+    lib/third_party/htmlparser.lua \
+    lib/third_party/htmlparser/ElementNode.lua \
+    lib/third_party/htmlparser/voidelements.lua \
     lib/db.lua \
 	lib/functools.lua \
 	lib/scraper_pipeline.lua \
 	lib/scraper_types.lua \
 	lib/scrapers/bluesky.lua \
 	lib/scrapers/twitter.lua \
+	lib/scrapers/furaffinity.lua \
 	lib/scrapers/test.lua \
 	lib/network_utils.lua \
 	lib/web.lua
