@@ -157,7 +157,7 @@ local function process_entry(queue_entry)
     end
     -- Log(kLogInfo, "scraped: %s" % {EncodeJson(scraped)})
     -- a list containing [ a list containing [ scraped data for one image at the source ] ]. The outer list has one item per source link in `sources`. The inner arrays are not necessarily all the same size (e.g. FA only ever has one image per link, but Twitter can have up to 4 and Cohost is effectively unlimited.)
-    local scraped_no_errors = table.collect(scraped)
+    local scraped_no_errors = table.collect_lenient(scraped)
     -- Log(kLogInfo, "scraped_no_errors: %s" % {EncodeJson(scraped_no_errors)})
     if scraped_no_errors:is_err() then
         return nil, scraped_no_errors.err

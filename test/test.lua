@@ -81,6 +81,27 @@ TestFunctools = {}
         luaunit.assertEquals(result_bad, expected_bad)
     end
 
+    function TestFunctools:testCollectLenientWorks()
+        local tests = {
+            {
+                input = { Ok(1), Ok(2), Ok(3), Ok(4) },
+                expected = Ok({1, 2, 3, 4}),
+            },
+            {
+                input = { Ok(1), Ok(2), Err("fart"), Ok(4) },
+                expected = Ok({1, 2, 4}),
+            },
+            {
+                input = { Err("fart1"), Err("fart2") },
+                expected = Err("fart1"),
+            },
+        }
+        for _, test in ipairs(tests) do
+            local result = table.collect_lenient(test.input)
+            luaunit.assertEquals(result, test.expected)
+        end
+    end
+
 local function fetch_mock(data)
     local orig = Fetch
     Fetch = function(url, opts)

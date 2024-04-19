@@ -167,3 +167,27 @@ function table.collect(sequence)
     end
     return Ok(result)
 end
+
+--- Like table.collect, but only returns an Err if nothing in the collection is an Ok.
+---@see table.collect
+---@generic T
+---@generic E
+---@param sequence Result<T, E>[]
+---@return Result<T[], E>
+function table.collect_lenient(sequence)
+    local result = {}
+    local first_error = nil
+    for _, item in ipairs(sequence) do
+        ---@cast item ResultInternal
+        if item:is_err() and not first_error then
+            first_error = item
+        elseif item:is_ok() then
+            table.insert(result, item:unwrap())
+        end
+    end
+    if #result < 1 then
+        return first_error
+    else
+        return Ok(result)
+    end
+end
