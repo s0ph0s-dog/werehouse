@@ -150,3 +150,20 @@ function Err(e)
 end
 
 ---@alias Result<T, E> (Ok<T>|Err<E>)
+
+---@generic T
+---@generic E
+---@param sequence Result<T, E>[]
+---@return Result<T[], E>
+function table.collect(sequence)
+    local result = {}
+    for _, item in ipairs(sequence) do
+        ---@cast item ResultInternal
+        if item:is_err() then
+            return item
+        else
+            table.insert(result, item:unwrap())
+        end
+    end
+    return Ok(result)
+end

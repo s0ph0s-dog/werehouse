@@ -70,6 +70,17 @@ TestFunctools = {}
         luaunit.assertEquals(result, expected)
     end
 
+    function TestFunctools:testCollectWorks()
+        local seq_good = { Ok(1), Ok(2), Ok(3), Ok(4) }
+        local seq_bad = { Ok(1), Ok(2), Err("fart"), Ok(4) }
+        local expected_good = Ok({1, 2, 3, 4})
+        local expected_bad = Err("fart")
+        local result_good = table.collect(seq_good)
+        local result_bad = table.collect(seq_bad)
+        luaunit.assertEquals(result_good, expected_good)
+        luaunit.assertEquals(result_bad, expected_bad)
+    end
+
 local function fetch_mock(data)
     local orig = Fetch
     Fetch = function(url, opts)
@@ -98,6 +109,12 @@ end
 
 
 TestScraperPipeline = {}
+
+    function TestScraperPipeline:testMultipartBody()
+        local expected = "--__X_PAW_BOUNDARY__\r\nContent-Disposition: form-data; name=\"image\"; filename=\"purple.txt\"\r\nContent-Type: text/plain\r\n\r\n|test|\r\n--__X_PAW_BOUNDARY__--\r\n\r\n"
+        local result = pipeline.multipart_body("__X_PAW_BOUNDARY__", "|test|", "text/plain")
+        luaunit.assertEquals(result, expected)
+    end
 
     function TestScraperPipeline:testUnansweredDisambiguationRequestIsSkipped()
         local input = { disambiguation_request = "garbage" }

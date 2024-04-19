@@ -169,6 +169,8 @@ local user_setup = [[
         "tombstone" INTEGER NOT NULL,
         "added_on" TEXT NOT NULL,
         "status" TEXT NOT NULL,
+        "disambiguation_request" TEXT,
+        "disambiguation_data" TEXT,
         PRIMARY KEY("qid")
     );
 
@@ -204,10 +206,10 @@ local queries = {
             FROM queue
             ORDER BY added_on DESC
             LIMIT 20;]],
-        get_all_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status
+        get_all_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status, disambiguation_request, disambiguation_data
             FROM queue
             ORDER BY added_on DESC;]],
-        get_all_active_queue_entries = [[SELECT qid, link, added_on, status
+        get_all_active_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status
             FROM queue
             WHERE tombstone = 0
             ORDER BY added_on DESC;]],
@@ -223,12 +225,18 @@ local queries = {
             "images" ("file", "mime_type", "saved_at")
             VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));]],
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
-        update_queue_item_status = [[UPDATE "queue" SET "status" = ?
+        update_queue_item_status = [[UPDATE "queue"
+            SET "status" = ?, "tombstone" = ?
+            WHERE qid = ?;]],
+        update_queue_item_disambiguation = [[UPDATE "queue"
+            SET "disambiguation_request" = ?
             WHERE qid = ?;]],
     }
 }
 
 ---@class Model
+---@field conn table
+---@field user_id string
 local Model = {}
 
 function Model:new(o, user_id)
@@ -241,10 +249,14 @@ function Model:new(o, user_id)
     return o
 end
 
+---@alias RecentQueueEntry {qid: string, link: string, tombstone: integer, added_on: string, status: string}
+---@return RecentQueueEntry[]
 function Model:getRecentQueueEntries()
     return self.conn:fetchAll(queries.model.get_recent_queue_entries)
 end
 
+---@alias ActiveQueueEntry {qid: string, link: string, image: string, image_mime_type: string, tombstone: integer, added_on: string, status: string, disambiguation_request: string, disambiguation_data: string}
+---@return ActiveQueueEntry[]
 function Model:getAllActiveQueueEntries()
     return self.conn:fetchAll(queries.model.get_all_active_queue_entries)
 end
@@ -261,15 +273,52 @@ function Model:enqueueImage(mime_type, image_data)
     return self.conn:execute(queries.model.insert_image_into_queue, image_data, mime_type)
 end
 
-function Model:setQueueItemStatus(queue_id, new_status)
-    return self.conn:execute(queries.model.update_queue_item_status, new_status, queue_id)
+function Model:setQueueItemStatus(queue_id, tombstone, new_status)
+    return self.conn:execute(queries.model.update_queue_item_status, new_status, tombstone, queue_id)
 end
 
-function Model:insertImageAndRemoveFromQueue(queue_id, image_file, mime_type)
-    return self.conn:execute{
-        {queries.model.insert_image_into_images, image_file, mime_type},
-        {queries.model.delete_item_from_queue, queue_id},
-    }
+function Model:setQueueItemDisambiguationRequest(queue_id, disambiguation_data)
+    return self.conn:execute(
+        queries.model.update_queue_item_disambiguation,
+        disambiguation_data,
+        queue_id
+    )
+end
+
+function Model:insertImage(image_file, mime_type)
+    return self.conn:execute(
+        queries.model.insert_image_into_images, image_file, mime_type
+    )
+end
+
+function Model:deleteFromQueue(queue_id)
+    return self.conn:execute(queries.model.delete_item_from_queue, queue_id)
+end
+
+function Model:create_savepoint(name)
+    if not name or #name < 1 then
+        error("Must provide a savepoint name")
+    end
+    return self.conn:execute(
+        "SAVEPOINT " .. name .. ";"
+    )
+end
+
+function Model:release_savepoint(name)
+    if not name or #name < 1 then
+        error("Must provide a savepoint name")
+    end
+    return self.conn:execute(
+        "RELEASE SAVEPOINT " .. name .. ";"
+    )
+end
+
+function Model:rollback(to_savepoint)
+    if to_savepoint and type(to_savepoint) == "string" then
+        return self.conn:execute("ROLLBACK TO " .. to_savepoint .. ";")
+    else
+        return self.conn:execute("ROLLBACK;")
+    end
 end
 
 local Accounts = {}

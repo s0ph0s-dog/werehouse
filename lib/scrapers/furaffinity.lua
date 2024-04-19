@@ -70,12 +70,13 @@ end
 local function process_uri(uri)
     local norm_uri = normalize_fa_uri(uri)
     local req_headers = {
-        ["Cookies"] = FA_AUTH_COOKIES,
+        ["Cookie"] = FA_AUTH_COOKIES,
     }
     local status, resp_headers, body = Fetch(norm_uri, {headers = req_headers})
     if not status then
         return Err(PermScraperError(resp_headers))
     end
+    -- Barf("http_response_debug.txt", tostring(body))
     if Nu.is_temporary_failure_status(status) then
         return Err(TempScraperError(status))
     elseif Nu.is_permanent_failure_status(status) then
@@ -91,6 +92,7 @@ local function process_uri(uri)
     if not root then
         return Err(PermScraperError("FA returned invalid HTML."))
     end
+    -- TODO: detect not being logged in as well
     if is_cloudflare_blocked(root) then
         return Err(TempScraperError("FA has turned on Cloudflare's 'under attack' mode, which blocks bots."))
     end
