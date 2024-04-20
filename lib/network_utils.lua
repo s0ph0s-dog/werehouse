@@ -44,6 +44,7 @@ local ext_to_mime = {
     jpg = "image/jpeg",
     jpeg = "image/jpeg",
     png = "image/png",
+    gif = "image/gif",
 }
 
 local function guess_mime_from_url(url)
@@ -65,4 +66,5 @@ return {
     is_permanent_failure_status = is_permanent_failure_status,
     is_success_status = is_success_status,
     guess_mime_from_url = guess_mime_from_url,
+    ext_to_mime = ext_to_mime,
 }

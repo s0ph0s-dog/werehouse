@@ -15,6 +15,7 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/scrapers/bluesky.lua \
 	lib/scrapers/twitter.lua \
 	lib/scrapers/furaffinity.lua \
+	lib/scrapers/e621.lua \
 	lib/scrapers/test.lua \
 	lib/network_utils.lua \
 	lib/web.lua
