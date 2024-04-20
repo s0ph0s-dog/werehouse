@@ -103,14 +103,19 @@ local render_home = login_required(function (r)
         return Fm.serve500()
     end
     local queue_records, errmsg2 = Model:getRecentQueueEntries()
-    Log(kLogInfo, EncodeJson(queue_records))
     if not queue_records then
         Log(kLogDebug, errmsg2)
         return Fm.serve500()
     end
+    local image_records, errmsg3 = Model:getRecentImageEntries()
+    if not image_records then
+        Log(kLogDebug, errmsg3)
+        return Fm.serve500()
+    end
     return Fm.serveContent("home", {
         user = user_record,
-        queued_posts = queue_records,
+        queue_records = queue_records,
+        image_records = image_records,
     })
 end)
 
@@ -128,6 +133,7 @@ local allowed_image_types = {
     ["image/png"] = true,
     ["image/jpeg"] = true,
     ["image/webp"] = true,
+    ["image/gif"] = true,
 }
 
 local accept_enqueue = login_required(function (r)
@@ -150,6 +156,53 @@ local accept_enqueue = login_required(function (r)
     return Fm.serve500("This should have been unreachable")
 end)
 
+local render_image_file = login_required(function (r)
+    if not r.params.filename then
+        return Fm.serve400()
+    end
+    local path = "images/%s/%s/%s" % {
+        r.params.filename:sub(1, 2),
+        r.params.filename:sub(3, 4),
+        r.params.filename
+    }
+    return Fm.serveAsset(path)
+end)
+
+local render_image = login_required(function (r)
+    if not r.params.image_id then
+        return Fm.serve400()
+    end
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    local image, errmsg1 = Model:getImageById(r.params.image_id)
+    if not image then
+        Log(kLogInfo, errmsg1)
+        return Fm.serve404()
+    end
+    local artists, errmsg2 = Model:getArtistsForImage(r.params.image_id)
+    if not artists then
+        Log(kLogInfo, errmsg2)
+    end
+    local tags, errmsg3 = Model:getTagsForImage(r.params.image_id)
+    if not tags then
+        Log(kLogInfo, errmsg3)
+    end
+    local sources, errmsg4 = Model:getSourcesForImage(r.params.image_id)
+    if not sources then
+        Log(kLogInfo, errmsg4)
+    end
+    return Fm.serveContent("image", {
+        user = user_record,
+        image = image,
+        artists = artists,
+        tags = tags,
+        sources = sources,
+    })
+end)
+
 local function setup()
     Fm.setTemplate({"/templates/", html = "fmt"})
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
@@ -159,6 +212,8 @@ local function setup()
     Fm.setRoute(Fm.GET{"/login"}, render_login)
     Fm.setRoute(Fm.POST{"/login", _ = login_validator}, accept_login)
     Fm.setRoute("/home", render_home)
+    Fm.setRoute("/image-file/:filename", render_image_file)
+    Fm.setRoute("/image/:image_id", render_image)
     -- API routes
     Fm.setRoute(Fm.GET{"/api/queue-image/:id"}, render_queue_image)
     -- Fm.setRoute("/api/telegram-webhook")

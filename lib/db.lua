@@ -215,6 +215,24 @@ local queries = {
             ORDER BY added_on DESC;]],
         get_queue_image_by_id = [[SELECT image, image_mime_type FROM queue
             WHERE qid = ?;]],
+        get_recent_image_entries = [[SELECT image_id, file
+            FROM images
+            ORDER BY saved_at DESC
+            LIMIT 20;]],
+        get_image_by_id = [[SELECT image_id, file, saved_at, category, rating, kind
+            FROM images
+            WHERE image_id = ?;]],
+        get_artists_for_image = [[SELECT artists.artist_id, artists.name
+            FROM artists INNER JOIN image_artists
+            ON image_artists.artist_id = artists.artist_id
+            WHERE image_artists.image_id = ?;]],
+        get_tags_for_image = [[SELECT tags.tag_id, tags.name
+            FROM tags INNER JOIN image_tags
+            ON image_tags.tag_id = tags.tag_id
+            WHERE image_tags.image_id = ?;]],
+        get_sources_for_image = [[SELECT link
+            FROM sources
+            WHERE image_id = ?;]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
@@ -261,8 +279,28 @@ function Model:getAllActiveQueueEntries()
     return self.conn:fetchAll(queries.model.get_all_active_queue_entries)
 end
 
+function Model:getRecentImageEntries()
+    return self.conn:fetchAll(queries.model.get_recent_image_entries)
+end
+
 function Model:getQueueImageById(qid)
     return self.conn:fetchOne(queries.model.get_queue_image_by_id, qid)
+end
+
+function Model:getImageById(image_id)
+    return self.conn:fetchOne(queries.model.get_image_by_id, image_id)
+end
+
+function Model:getArtistsForImage(image_id)
+    return self.conn:fetchAll(queries.model.get_artists_for_image, image_id)
+end
+
+function Model:getTagsForImage(image_id)
+    return self.conn:fetchAll(queries.model.get_tags_for_image, image_id)
+end
+
+function Model:getSourcesForImage(image_id)
+    return self.conn:fetchAll(queries.model.get_sources_for_image, image_id)
 end
 
 function Model:enqueueLink(link)

@@ -8,8 +8,8 @@
     <h1>Home</h1>
     <hr />
     <p>Logged in as {%& user.username %}</p>
-    <h2>Recently Queued Posts</h2>
-    {% if #queued_posts == 0 then %}
+    <h2>Recently Queued Items</h2>
+    {% if #queue_records == 0 then %}
     <p>Nothing queued</p>
     {% else %}
     <table>
@@ -23,22 +23,34 @@
           <th>Status</th>
         </tr>
       </thead>
-      {% for _, post in ipairs(queued_posts) do %}
+      {% for _, item in ipairs(queue_records) do %}
       <tr>
-        <td>{%& post.qid %}</td>
-        <td>{% if post.link then %}{%& post.link %}{% else %}N/A{% end %}</td>
+        <td>{%& item.qid %}</td>
+        <td>{% if item.link then %}{%& item.link %}{% else %}N/A{% end %}</td>
         <td>
-          {% if not post.link then %}<img
+          {% if not item.link then %}<img
             width="200"
-            src="/api/queue-image/{%& post.qid %}"
+            src="/api/queue-image/{%& item.qid %}"
           />{% else %}N/A{% end %}
         </td>
-        <td>{%& post.tombstone %}</td>
-        <td>{%& post.added %}</td>
-        <td>{%& post.status %}</td>
+        <td>{%& item.tombstone %}</td>
+        <td>{%& item.added %}</td>
+        <td>{%& item.status %}</td>
       </tr>
       {% end %}
     </table>
+    {% end %}
+    <h2>Recently Archived Items</h2>
+    {% if #image_records == 0 then %}
+    <p>Nothing archived yet</p>
+    {% else %}
+    <div>
+      {% for _, image in ipairs(image_records) do %}
+      <a href="/image/{%& image.image_id %}">
+        <img src="/image-file/{%& image.file %}" />
+      </a>
+      {% end %}
+    </div>
     {% end %}
     <footer>Some kind of copyright/source/license notice</footer>
   </body>
