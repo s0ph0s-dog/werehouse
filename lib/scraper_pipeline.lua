@@ -140,6 +140,7 @@ local function get_sources_for_entry(queue_entry)
     if queue_entry.link then
         local has_quirks, check_fuzzysearch = quirks(queue_entry.link)
         if not has_quirks then
+            local errmsg = nil
             check_fuzzysearch, errmsg = guess_with_head(queue_entry.link)
             if errmsg then
                 return nil, errmsg
