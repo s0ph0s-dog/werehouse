@@ -238,29 +238,26 @@ function TestScraperPipeline:testValidBskyLink()
         },
     }
     local expected = {
-        archive = table.map(
-            {
-                "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreib2v6upf5gz7q22jpdnrh2fwhtn6yexrsnbp6uh7ythgq3obhf7ia@jpeg",
-                "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreidjkqudkq2m6pojavuelcud2fez2eojxiflnxedimplumiygu76pe@jpeg",
-            },
-            function(item)
-                return {
-                    authors = {
-                        {
-                            display_name = "BigCozyOrca 🔞",
-                            handle = "bigcozyorca.art",
-                            profile_url = "https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz",
-                        },
+        archive = table.map({
+            "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreib2v6upf5gz7q22jpdnrh2fwhtn6yexrsnbp6uh7ythgq3obhf7ia@jpeg",
+            "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreidjkqudkq2m6pojavuelcud2fez2eojxiflnxedimplumiygu76pe@jpeg",
+        }, function(item)
+            return {
+                authors = {
+                    {
+                        display_name = "BigCozyOrca 🔞",
+                        handle = "bigcozyorca.art",
+                        profile_url = "https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz",
                     },
-                    canonical_domain = "bsky.app",
-                    height = 2000,
-                    mime_type = "image/jpeg",
-                    this_source = "https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz/post/3kphxqgx6iv2b",
-                    raw_image_uri = item,
-                    width = 1905,
-                }
-            end
-        ),
+                },
+                canonical_domain = "bsky.app",
+                height = 2000,
+                mime_type = "image/jpeg",
+                this_source = "https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz/post/3kphxqgx6iv2b",
+                raw_image_uri = item,
+                width = 1905,
+            }
+        end),
     }
     local tests = {
         { input = input, expected = { expected, nil } },

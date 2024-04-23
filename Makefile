@@ -44,10 +44,18 @@ clean:
 	rm -r $(SRV_DIR) $(TESTS_DIR)
 	rm -f $(OUTPUT) $(TEST_REDBEAN)
 
-test: $(TEST_REDBEAN)
+check: $(TEST_REDBEAN)
 	./$< -i test/test.lua
 
-.PHONY: build clean test
+test: check
+
+check-format:
+	stylua --check src lib test
+
+format:
+	stylua src lib test
+
+.PHONY: build clean check check-format test format
 
 # Don't delete any of these if make is interrupted
 .PRECIOUS: $(SRV_DIR)/. $(SRV_DIR)%/.
