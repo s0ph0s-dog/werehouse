@@ -1,5 +1,9 @@
-local FA_URI_EXP = assert(re.compile[[^https?://(www\.)?(fx|x)?furaffinity\.net/(view|full)/([0-9]+)]])
-local FA_SIZE_EXP = assert(re.compile[[(\d+) x (\d+)]])
+local FA_URI_EXP = assert(
+    re.compile(
+        [[^https?://(www\.)?(fx|x)?furaffinity\.net/(view|full)/([0-9]+)]]
+    )
+)
+local FA_SIZE_EXP = assert(re.compile([[(\d+) x (\d+)]]))
 local FA_AUTH_COOKIES = os.getenv("FA_AUTH_COOKIES")
 local CANONICAL_DOMAIN = "www.furaffinity.net"
 
@@ -8,7 +12,7 @@ local function normalize_fa_uri(uri)
     if not match then
         return nil
     end
-    return "https://www.furaffinity.net/full/%s" % {id}
+    return "https://www.furaffinity.net/full/%s" % { id }
 end
 
 local function can_process_uri(uri)
@@ -55,16 +59,19 @@ local function scrape_image_metadata(root)
     if not maybe_sidebar_size then
         return nil, PermScraperError("No size metadata in post.")
     end
-    local match, width, height = FA_SIZE_EXP:search(maybe_sidebar_size:getcontent())
+    local match, width, height =
+        FA_SIZE_EXP:search(maybe_sidebar_size:getcontent())
     if not match then
         return nil, PermScraperError("Corrupt size metadata in post.")
     end
     local mime_type = Nu.guess_mime_from_url(full_image_src)
-    local maybe_profile_element = first(root:select(".submission-id-sub-container a"))
+    local maybe_profile_element =
+        first(root:select(".submission-id-sub-container a"))
     if not maybe_profile_element then
         return nil, PermScraperError("Unable to find the post author's name")
     end
-    local profile_url = "https://www.furaffinity.net" .. maybe_profile_element.attributes.href
+    local profile_url = "https://www.furaffinity.net"
+        .. maybe_profile_element.attributes.href
     local display_name_element = first(maybe_profile_element:select("strong"))
     if not display_name_element then
         return nil, PermScraperError("No display name for the user")
@@ -81,7 +88,7 @@ local function scrape_image_metadata(root)
                 profile_url = profile_url,
                 display_name = display_name,
                 handle = display_name,
-            }
+            },
         },
     }
 end
@@ -91,7 +98,8 @@ local function process_uri(uri)
     local req_headers = {
         ["Cookie"] = FA_AUTH_COOKIES,
     }
-    local status, resp_headers, body = Fetch(norm_uri, {headers = req_headers})
+    local status, resp_headers, body =
+        Fetch(norm_uri, { headers = req_headers })
     if not status then
         return Err(PermScraperError(resp_headers))
     end
@@ -113,14 +121,18 @@ local function process_uri(uri)
     end
     -- TODO: detect not being logged in as well
     if is_cloudflare_blocked(root) then
-        return Err(TempScraperError("FA has turned on Cloudflare's 'under attack' mode, which blocks bots."))
+        return Err(
+            TempScraperError(
+                "FA has turned on Cloudflare's 'under attack' mode, which blocks bots."
+            )
+        )
     end
     local metadata, errmsg = scrape_image_metadata(root)
     if not metadata then
         return Err(errmsg)
     end
     metadata.this_source = norm_uri
-    return Ok({metadata})
+    return Ok { metadata }
 end
 
 return {

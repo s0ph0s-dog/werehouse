@@ -1,4 +1,6 @@
-TestScraperProcessUri = function (e) return nil, "this should never have been called" end
+TestScraperProcessUri = function(e)
+    return nil, "this should never have been called"
+end
 
 local function can_process_uri(uri)
     return uri:startswith("test://")

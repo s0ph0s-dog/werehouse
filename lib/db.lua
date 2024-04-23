@@ -1,4 +1,3 @@
-
 local ACCOUNTS_DB_FILE = "hyperphantasia-accounts.sqlite3"
 local USER_DB_FILE_TEMPLATE = "hyperphantasia-%s.sqlite3"
 
@@ -188,7 +187,7 @@ local queries = {
         find_invite = [[SELECT "inviter", "invitee", "created_at"
             FROM "invites"
             WHERE "invite_id" = ?;]],
-        insert_user =  [[INSERT INTO "users" ("user_id", "username", "password")
+        insert_user = [[INSERT INTO "users" ("user_id", "username", "password")
             VALUES (?, ?, ?);]],
         assign_invite = [[UPDATE "invites" SET "invitee" = ?
             WHERE invite_id = ? AND "invitee" = NULL;]],
@@ -264,7 +263,7 @@ local queries = {
         update_queue_item_disambiguation = [[UPDATE "queue"
             SET "disambiguation_request" = ?
             WHERE qid = ?;]],
-    }
+    },
 }
 
 ---@class Model
@@ -274,7 +273,7 @@ local Model = {}
 
 function Model:new(o, user_id)
     o = o or {}
-    local filename = USER_DB_FILE_TEMPLATE % {user_id}
+    local filename = USER_DB_FILE_TEMPLATE % { user_id }
     o.conn = Fm.makeStorage(filename, user_setup)
     o.user_id = user_id
     setmetatable(o, self)
@@ -323,11 +322,20 @@ function Model:enqueueLink(link)
 end
 
 function Model:enqueueImage(mime_type, image_data)
-    return self.conn:execute(queries.model.insert_image_into_queue, image_data, mime_type)
+    return self.conn:execute(
+        queries.model.insert_image_into_queue,
+        image_data,
+        mime_type
+    )
 end
 
 function Model:setQueueItemStatus(queue_id, tombstone, new_status)
-    return self.conn:execute(queries.model.update_queue_item_status, new_status, tombstone, queue_id)
+    return self.conn:execute(
+        queries.model.update_queue_item_status,
+        new_status,
+        tombstone,
+        queue_id
+    )
 end
 
 function Model:setQueueItemDisambiguationRequest(queue_id, disambiguation_data)
@@ -340,7 +348,11 @@ end
 
 function Model:insertImage(image_file, mime_type, width, height)
     return self.conn:fetchOne(
-        queries.model.insert_image_into_images, image_file, mime_type, width, height
+        queries.model.insert_image_into_images,
+        image_file,
+        mime_type,
+        width,
+        height
     )
 end
 
@@ -349,7 +361,11 @@ function Model:insertSourcesForImage(image_id, sources)
     -- TODO: figure out how to use prepared statements for this.
     self:create_savepoint(SP)
     for _, source in ipairs(sources) do
-        local result, errmsg = self.conn:execute(queries.model.insert_source_for_image, image_id, source)
+        local result, errmsg = self.conn:execute(
+            queries.model.insert_source_for_image,
+            image_id,
+            source
+        )
         if not result then
             self:rollback(SP)
             return nil, errmsg
@@ -364,13 +380,22 @@ end
 function Model:createArtistAndFirstHandle(author_info, domain)
     local SP = "create_artist"
     self:create_savepoint(SP)
-    local artist, errmsg = self.conn:fetchOne(queries.model.insert_artist, author_info.display_name)
+    local artist, errmsg = self.conn:fetchOne(
+        queries.model.insert_artist,
+        author_info.display_name
+    )
     if not artist or artist == self.conn.NONE then
         self:rollback(SP)
         return nil, errmsg
     end
     local artist_id = artist.artist_id
-    local result2, errmsg2 = self.conn:execute(queries.model.insert_artist_handle, artist_id, author_info.handle, domain, author_info.profile_url)
+    local result2, errmsg2 = self.conn:execute(
+        queries.model.insert_artist_handle,
+        artist_id,
+        author_info.handle,
+        domain,
+        author_info.profile_url
+    )
     if not result2 then
         self:rollback(SP)
         return nil, errmsg2
@@ -382,7 +407,11 @@ end
 ---@param image_id integer
 ---@param artist_id integer
 function Model:associateArtistWithImage(image_id, artist_id)
-    return self.conn:execute(queries.model.insert_image_artist, image_id, artist_id)
+    return self.conn:execute(
+        queries.model.insert_image_artist,
+        image_id,
+        artist_id
+    )
 end
 
 ---@param image_id integer
@@ -391,13 +420,18 @@ end
 function Model:createOrAssociateArtistWithImage(image_id, domain, author_info)
     local SP = "create_or_associate_artist"
     self:create_savepoint(SP)
-    local artist, errmsg = self.conn:fetchOne(queries.model.get_artist_id_by_domain_and_handle, domain, author_info.handle)
+    local artist, errmsg = self.conn:fetchOne(
+        queries.model.get_artist_id_by_domain_and_handle,
+        domain,
+        author_info.handle
+    )
     if not artist then
         return nil, errmsg
     end
     local artist_id = artist.artist_id
     if not artist_id or artist == self.conn.NONE then
-        local result3, errmsg3 = self:createArtistAndFirstHandle(author_info, domain)
+        local result3, errmsg3 =
+            self:createArtistAndFirstHandle(author_info, domain)
         if not result3 then
             self:rollback(SP)
             return nil, errmsg3
@@ -421,18 +455,14 @@ function Model:create_savepoint(name)
     if not name or #name < 1 then
         error("Must provide a savepoint name")
     end
-    return self.conn:execute(
-        "SAVEPOINT " .. name .. ";"
-    )
+    return self.conn:execute("SAVEPOINT " .. name .. ";")
 end
 
 function Model:release_savepoint(name)
     if not name or #name < 1 then
         error("Must provide a savepoint name")
     end
-    return self.conn:execute(
-        "RELEASE SAVEPOINT " .. name .. ";"
-    )
+    return self.conn:execute("RELEASE SAVEPOINT " .. name .. ";")
 end
 
 function Model:rollback(to_savepoint)
@@ -460,7 +490,11 @@ function Accounts:bootstrapInvites()
         -- making a new one.
         local invite_id = Uuid()
         self.conn:execute(queries.accounts.bootstrap_invite, invite_id)
-        Log(kLogWarn, "There are no accounts in the database. Register one using this link: http://127.0.0.1:8082/accept-invite/%s" % {invite_id})
+        Log(
+            kLogWarn,
+            "There are no accounts in the database. Register one using this link: http://127.0.0.1:8082/accept-invite/%s"
+                % { invite_id }
+        )
     end
 end
 
@@ -471,9 +505,9 @@ end
 
 function Accounts:acceptInvite(invite_id, username, password_hash)
     local user_id = Uuid()
-    local result, errmsg = self.conn:execute{
-        {queries.accounts.insert_user, user_id, username, password_hash},
-        {queries.accounts.assign_invite, user_id, invite_id},
+    local result, errmsg = self.conn:execute {
+        { queries.accounts.insert_user, user_id, username, password_hash },
+        { queries.accounts.assign_invite, user_id, invite_id },
     }
     Model:new(nil, user_id)
     return result, errmsg
@@ -485,7 +519,8 @@ end
 
 function Accounts:createSessionForUser(user_id)
     local session_id = Uuid()
-    local result, errmsg = self.conn:execute(queries.accounts.insert_session, session_id, user_id)
+    local result, errmsg =
+        self.conn:execute(queries.accounts.insert_session, session_id, user_id)
     if not result then
         return result, errmsg
     else

@@ -1,4 +1,3 @@
-
 ---@alias ScrapedAuthor { handle: string, display_name: string, profile_url: string }
 
 --- The data produced by a scraper.
@@ -41,24 +40,28 @@ ScraperError = {
 ---@class TempScraperError : ScraperError
 function TempScraperError(description)
     if not description then
-        return error("Must provide a non-nil description when calling this function.")
+        return error(
+            "Must provide a non-nil description when calling this function."
+        )
     end
     local result = {
         description = description,
-        type = 0
+        type = 0,
     }
-    setmetatable(result, {__index = ScraperError})
+    setmetatable(result, { __index = ScraperError })
     return result
 end
 ---@class PermScraperError : ScraperError
 function PermScraperError(description)
     if not description then
-        return error("Must provide a non-nil description when calling this function.")
+        return error(
+            "Must provide a non-nil description when calling this function."
+        )
     end
     local result = {
         description = description,
-        type = 1
+        type = 1,
     }
-    setmetatable(result, {__index = ScraperError})
+    setmetatable(result, { __index = ScraperError })
     return result
 end

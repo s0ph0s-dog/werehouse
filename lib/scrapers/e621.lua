@@ -1,4 +1,3 @@
-
 local ALLOWED_EXTS = {
     jpg = true,
     jpeg = true,
@@ -32,13 +31,21 @@ local function process_uri(uri)
     end
     local file = json.post.file
     if not file then
-        return Err(PermScraperError("The e621 API didn't give me a file for the post"))
+        return Err(
+            PermScraperError("The e621 API didn't give me a file for the post")
+        )
     end
     if not file.url then
-        return Err(PermScraperError("The e621 API gave me a post file with no URL"))
+        return Err(
+            PermScraperError("The e621 API gave me a post file with no URL")
+        )
     end
     if not ALLOWED_EXTS[file.ext] then
-        return Err(PermScraperError("This post is a %s, which isn't supported yet" % {file.ext}))
+        return Err(
+            PermScraperError(
+                "This post is a %s, which isn't supported yet" % { file.ext }
+            )
+        )
     end
     local additional_sources = json.post.sources
     if not additional_sources then
@@ -49,31 +56,32 @@ local function process_uri(uri)
         artist_tags = {}
     end
     ---@cast artist_tags string[]
-    local authors = table.map(
-        artist_tags,
-        function (item) return {
+    local authors = table.map(artist_tags, function(item)
+        return {
             display_name = item,
             handle = item,
-            profile_url = EncodeUrl({
+            profile_url = EncodeUrl {
                 scheme = "https",
                 host = "e621.net",
                 path = "/posts",
                 params = {
-                    { "tags", tostring(item) }
-                }
-            })
-        } end
-    )
-    return Ok({{
-        raw_image_uri = file.url,
-        width = file.width,
-        height = file.height,
-        this_source = clean_uri,
-        additional_sources = additional_sources,
-        mime_type = Nu.ext_to_mime[file.ext],
-        canonical_domain = CANONICAL_DOMAIN,
-        authors = authors,
-    },})
+                    { "tags", tostring(item) },
+                },
+            },
+        }
+    end)
+    return Ok {
+        {
+            raw_image_uri = file.url,
+            width = file.width,
+            height = file.height,
+            this_source = clean_uri,
+            additional_sources = additional_sources,
+            mime_type = Nu.ext_to_mime[file.ext],
+            canonical_domain = CANONICAL_DOMAIN,
+            authors = authors,
+        },
+    }
 end
 
 return {

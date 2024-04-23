@@ -1,6 +1,9 @@
-
-local BSKY_URI_EXP = assert(re.compile[[^https?://[bp]sky\.app/profile/([A-z0-9\.:]+)/post/([a-z0-9]+)]])
-local BSKY_DID_EXP = assert(re.compile[[^at://([A-z0-9:]+)/]])
+local BSKY_URI_EXP = assert(
+    re.compile(
+        [[^https?://[bp]sky\.app/profile/([A-z0-9\.:]+)/post/([a-z0-9]+)]]
+    )
+)
+local BSKY_DID_EXP = assert(re.compile([[^at://([A-z0-9:]+)/]]))
 local CANONICAL_DOMAIN = "bsky.app"
 
 ---@param uri string
@@ -28,10 +31,13 @@ local function extract_image_embeds(post_data)
         return nil
     end
     local embed_type = post_data.value.embed["$type"]
-    if not embed_type or (
-        embed_type ~= "app.bsky.embed.images"
-        and embed_type ~= "app.bsky.embed.recordWithMedia"
-    ) then
+    if
+        not embed_type
+        or (
+            embed_type ~= "app.bsky.embed.images"
+            and embed_type ~= "app.bsky.embed.recordWithMedia"
+        )
+    then
         Log(kLogVerbose, "Post embed was not an image.")
         return nil
     end
@@ -54,13 +60,13 @@ end
 local function get_artist_profile(post_uri, handle_or_did, did)
     local handle = handle_or_did
     if did == handle_or_did then
-        local xrpc_user_uri = EncodeUrl{
+        local xrpc_user_uri = EncodeUrl {
             scheme = "https",
             host = "bsky.social",
             path = "/xrpc/com.atproto.repo.describeRepo",
             params = {
                 { "repo", did },
-            }
+            },
         }
         local repo_json, errmsg3 = Nu.FetchJson(xrpc_user_uri)
         if not repo_json then
@@ -71,7 +77,7 @@ local function get_artist_profile(post_uri, handle_or_did, did)
         end
         handle = repo_json.handle
     end
-    local xrpc_profile_uri = EncodeUrl{
+    local xrpc_profile_uri = EncodeUrl {
         scheme = "https",
         host = "bsky.social",
         path = "/xrpc/com.atproto.repo.listRecords",
@@ -79,7 +85,7 @@ local function get_artist_profile(post_uri, handle_or_did, did)
             { "repo", handle_or_did },
             { "collection", "app.bsky.actor.profile" },
             { "limit", "1" },
-        }
+        },
     }
     local user_json, errmsg2 = Nu.FetchJson(xrpc_profile_uri)
     if not user_json then
@@ -92,10 +98,10 @@ local function get_artist_profile(post_uri, handle_or_did, did)
     if not displayName then
         return nil, PermScraperError("No display name")
     end
-    local profile_url = EncodeUrl{
+    local profile_url = EncodeUrl {
         scheme = "https",
         host = "bsky.app",
-        path = "/profile/" .. did
+        path = "/profile/" .. did,
     }
     return {
         handle = handle,
@@ -112,7 +118,7 @@ local function process_uri(uri)
     if not handle_or_did or type(post_id) == "re.Errno" then
         return Err(PermScraperError("Invalid Bluesky post URI"))
     end
-    local xrpc_uri = EncodeUrl{
+    local xrpc_uri = EncodeUrl {
         scheme = "https",
         host = "bsky.social",
         path = "/xrpc/com.atproto.repo.getRecord",
@@ -138,35 +144,37 @@ local function process_uri(uri)
     if not artist then
         return Err(errmsg2)
     end
-    local results = table.map(images,
+    local results = table.map(
+        images,
         ---@return ScrapedSourceData
-        function (image)
-        if not image then
-            Log(kLogInfo, "Image was null")
-            return nil
+        function(image)
+            if not image then
+                Log(kLogInfo, "Image was null")
+                return nil
+            end
+            if not image.image then
+                Log(kLogInfo, "Image.image was null")
+                return nil
+            end
+            if not image.image.ref then
+                Log(kLogInfo, "Image.image.ref was null")
+                return nil
+            end
+            if not image.aspectRatio then
+                Log(kLogInfo, "Image.aspectRatio was null")
+                return nil
+            end
+            return {
+                raw_image_uri = make_image_uri(did, image.image.ref["$link"]),
+                mime_type = image.image.mimeType,
+                width = image.aspectRatio.width,
+                height = image.aspectRatio.height,
+                canonical_domain = CANONICAL_DOMAIN,
+                this_source = uri,
+                authors = { artist },
+            }
         end
-        if not image.image then
-            Log(kLogInfo, "Image.image was null")
-            return nil
-        end
-        if not image.image.ref then
-            Log(kLogInfo, "Image.image.ref was null")
-            return nil
-        end
-        if not image.aspectRatio then
-            Log(kLogInfo, "Image.aspectRatio was null")
-            return nil
-        end
-        return {
-            raw_image_uri = make_image_uri(did, image.image.ref["$link"]),
-            mime_type = image.image.mimeType,
-            width = image.aspectRatio.width,
-            height = image.aspectRatio.height,
-            canonical_domain = CANONICAL_DOMAIN,
-            this_source = uri,
-            authors = {artist, },
-        }
-    end)
+    )
     return Ok(results)
 end
 

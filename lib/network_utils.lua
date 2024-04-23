@@ -1,14 +1,17 @@
-
-FILE_EXT_EXP = assert(re.compile[[\.([a-z0-9]{1,5})$]])
+FILE_EXT_EXP = assert(re.compile([[\.([a-z0-9]{1,5})$]]))
 
 local function FetchJson(uri, options)
     local status, headers, body = Fetch(uri, options)
     if not status then
-        Log(kLogVerbose, "TLS error: %s" % {headers})
+        Log(kLogVerbose, "TLS error: %s" % { headers })
         return nil, headers
     end
     if status ~= 200 then
-        Log(kLogVerbose, "Error %d from %s: Headers%s; Body(%s)" % {status, uri, EncodeJson(headers), body})
+        Log(
+            kLogVerbose,
+            "Error %d from %s: Headers%s; Body(%s)"
+                % { status, uri, EncodeJson(headers), body }
+        )
         return nil, status
     end
     local json, errmsg = DecodeJson(body)
@@ -19,25 +22,15 @@ local function FetchJson(uri, options)
 end
 
 local function is_temporary_failure_status(status)
-    return (
-        status >= 500 and status <= 599
-    ) or (
-        status == 429
-    )
+    return (status >= 500 and status <= 599) or (status == 429)
 end
 
 local function is_permanent_failure_status(status)
-    return (
-        status >= 400 and status <= 499
-    ) and (
-        status ~= 429
-    )
+    return (status >= 400 and status <= 499) and (status ~= 429)
 end
 
 local function is_success_status(status)
-    return (
-        status >= 200 and status <= 299
-    )
+    return (status >= 200 and status <= 299)
 end
 
 local ext_to_mime = {

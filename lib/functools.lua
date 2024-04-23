@@ -1,4 +1,3 @@
-
 ---@param s (string) A string
 ---@param prefix (string) Another string
 ---@return (boolean) # True if prefix is a substring of s at index 1, false otherwise.
@@ -69,10 +68,7 @@ end
 ---@param transformation (fun(item: T): U)
 ---@return (U[])
 function table.filtermap(sequence, predicate, transformation)
-    return table.map(
-        table.filter(sequence, predicate),
-        transformation
-    )
+    return table.map(table.filter(sequence, predicate), transformation)
 end
 
 --- Given a list-table that contains arbitrarily nested other list-tables, flatten all of the nested lists into one list.
@@ -99,7 +95,7 @@ end
 Result = {}
 ---@return boolean
 function Result:is_ok()
-    return not (not self.result)
+    return not not self.result
 end
 ---@return boolean
 function Result:is_err()
@@ -134,7 +130,7 @@ end
 ---@return Ok<T>
 function Ok(t)
     local r = { result = t }
-    return setmetatable(r, {__index = Result})
+    return setmetatable(r, { __index = Result })
 end
 
 ---@generic E
@@ -146,7 +142,7 @@ end
 ---@return Err<E>
 function Err(e)
     local r = { err = e }
-    return setmetatable(r, {__index = Result})
+    return setmetatable(r, { __index = Result })
 end
 
 ---@alias Result<T, E> (Ok<T>|Err<E>)
