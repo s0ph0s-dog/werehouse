@@ -136,6 +136,17 @@ local allowed_image_types = {
     ["image/gif"] = true,
 }
 
+local render_enqueue = login_required(function (r)
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    return Fm.serveContent("enqueue", {
+        user = user_record,
+    })
+end)
+
 local accept_enqueue = login_required(function (r)
     if r.params.link then
         local result, errmsg = Model:enqueueLink(r.params.link)
@@ -143,13 +154,13 @@ local accept_enqueue = login_required(function (r)
             Log(kLogWarn, errmsg)
         end
         -- TODO: check errors
-        return Fm.serve204()
+        return Fm.serveRedirect("/home", 302)
     elseif allowed_image_types[r.headers["Content-Type"]] then
         local result, errmsg = Model:enqueueImage(r.headers["Content-Type"], r.body)
         if not result then
             Log(kLogWarn, errmsg)
         end
-        return Fm.serve204()
+        return Fm.serveRedirect("/home", 302)
     else
         return Fm.serve400("Must provide link or PNG/JPEG image file.")
     end
@@ -161,8 +172,8 @@ local render_image_file = login_required(function (r)
         return Fm.serve400()
     end
     local path = "images/%s/%s/%s" % {
-        r.params.filename:sub(1, 2),
-        r.params.filename:sub(3, 4),
+        r.params.filename:sub(1, 1),
+        r.params.filename:sub(2, 2),
         r.params.filename
     }
     return Fm.serveAsset(path)
@@ -214,6 +225,8 @@ local function setup()
     Fm.setRoute("/home", render_home)
     Fm.setRoute("/image-file/:filename", render_image_file)
     Fm.setRoute("/image/:image_id", render_image)
+    Fm.setRoute(Fm.GET{"/enqueue"}, render_enqueue)
+    Fm.setRoute(Fm.POST{"/enqueue"}, accept_enqueue)
     -- API routes
     Fm.setRoute(Fm.GET{"/api/queue-image/:id"}, render_queue_image)
     -- Fm.setRoute("/api/telegram-webhook")

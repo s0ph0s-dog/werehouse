@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Login</title>
+  </head>
+  <body>
+    <h1>Add to Queue</h1>
+    <hr />
+    <p>Logged in as {%& user.username %}</p>
+    {% if type(error) == "string" then %}
+    <p style="color: red">{%& error %}</p>
+    {% end %}
+    <p>Choose either:</p>
+    <form method="POST">
+      <label>Link: <input type="text" name="link" /></label>
+      <input type="submit" />
+    </form>
+    <p>Or:</p>
+    <form method="POST" enctype="multipart/form-data">
+      <label
+        >File:<input
+          type="file"
+          name="image"
+          accept="*.png,*.jpg,*.jpeg,*.gif,image/png,image/jpeg,image/gif"
+      /></label>
+      <input type="submit" />
+    </form>
+  </body>
+</html>

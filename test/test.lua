@@ -201,22 +201,34 @@ TestScraperPipeline = {}
             {
                 whenCalledWith="https://bsky.social/xrpc/com.atproto.repo.getRecord?repo=did%3Aplc%3A4gjc5765wbtvrkdxysyvaewz&collection=app.bsky.feed.post&rkey=3kphxqgx6iv2b",
                 thenReturn={200, {}, Slurp("./test/bsky_example.json")}
-            }
-        }
-        local expected = { archive = {
-            {
-                height=2000,
-                mime_type="image/jpeg",
-                raw_image_uri="https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreib2v6upf5gz7q22jpdnrh2fwhtn6yexrsnbp6uh7ythgq3obhf7ia@jpeg",
-                width=1905
             },
             {
-                height=2000,
-                mime_type="image/jpeg",
-                raw_image_uri="https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreidjkqudkq2m6pojavuelcud2fez2eojxiflnxedimplumiygu76pe@jpeg",
-                width=1905
-            }
-        }}
+                whenCalledWith="https://bsky.social/xrpc/com.atproto.repo.describeRepo?repo=did%3Aplc%3A4gjc5765wbtvrkdxysyvaewz",
+                thenReturn={200, {}, [[{"handle":"bigcozyorca.art","did":"did:plc:4gjc5765wbtvrkdxysyvaewz","didDoc":{"@context":["https://www.w3.org/ns/did/v1","https://w3id.org/security/multikey/v1","https://w3id.org/security/suites/secp256k1-2019/v1"],"id":"did:plc:4gjc5765wbtvrkdxysyvaewz","alsoKnownAs":["at://bigcozyorca.art"],"verificationMethod":[{"id":"did:plc:4gjc5765wbtvrkdxysyvaewz#atproto","type":"Multikey","controller":"did:plc:4gjc5765wbtvrkdxysyvaewz","publicKeyMultibase":"zQ3shk8eMicPrTviAy8AFU1YDTg4Y1Vcx6KL8kScPuqn9YPhX"}],"service":[{"id":"#atproto_pds","type":"AtprotoPersonalDataServer","serviceEndpoint":"https://puffball.us-east.host.bsky.network"}]},"collections":["app.bsky.actor.profile","app.bsky.feed.like","app.bsky.feed.post","app.bsky.feed.repost","app.bsky.graph.block","app.bsky.graph.follow"],"handleIsCorrect":true}]]}
+            },
+            {
+                whenCalledWith="https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=did%3Aplc%3A4gjc5765wbtvrkdxysyvaewz&collection=app.bsky.actor.profile&limit=1",
+                thenReturn={200, {}, [[{"records":[{"uri":"at://did:plc:4gjc5765wbtvrkdxysyvaewz/app.bsky.actor.profile/self","cid":"bafyreidyznavjmovmun7bgixgxjz3zu24j7jjaj23fr5allx4pbusbn6ei","value":{"$type":"app.bsky.actor.profile","avatar":{"$type":"blob","ref":{"$link":"bafkreiabtb4hbusnizey2sqzdtdy5fza72e5d5alovjpn6hvkolvozegwa"},"mimeType":"image/jpeg","size":905826},"banner":{"$type":"blob","ref":{"$link":"bafkreibiet6367gxfkhj3ua5vdgdbbvubucpkxbyekssgngi3zcww7ukia"},"mimeType":"image/jpeg","size":362391},"description":"He/They\n18+ (NO MINORS)\nA 🔞NSFW furry artist!!\nTrying out new platforms to spread out.","displayName":"BigCozyOrca 🔞"}}],"cursor":"self"}]]},
+            },
+        }
+        local expected = {
+            archive = table.map(
+                {"https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreib2v6upf5gz7q22jpdnrh2fwhtn6yexrsnbp6uh7ythgq3obhf7ia@jpeg", "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreidjkqudkq2m6pojavuelcud2fez2eojxiflnxedimplumiygu76pe@jpeg"},
+                function (item) return {
+                    authors = {{
+                        display_name="BigCozyOrca 🔞",
+                        handle="bigcozyorca.art",
+                        profile_url="https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz"
+                    }, },
+                    canonical_domain="bsky.app",
+                    height=2000,
+                    mime_type="image/jpeg",
+                    this_source="https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz/post/3kphxqgx6iv2b",
+                    raw_image_uri=item,
+                    width=1905
+                } end
+            ),
+        }
         local tests = {
             { input = input, expected = { expected, nil } },
         }
@@ -235,37 +247,31 @@ TestScraperPipeline = {}
                 whenCalledWith = "https://api.fxtwitter.com/status/1778885919572979806",
                 thenReturn = {200, {}, Slurp("test/twitter_fxtwitter_response.json")}}
         }
-        local expected = { archive = {
-            {
-                height=2300,
-                mime_type="image/jpeg",
-                raw_image_uri="https://pbs.twimg.com/media/GK_fDarXQAE6yBj.jpg",
-                width=1600
-            },
-            {
-                height=2300,
-                mime_type="image/jpeg",
-                raw_image_uri="https://pbs.twimg.com/media/GK_fDaaXsAATM_X.jpg",
-                width=1600
-            },
-            {
-                height=2300,
-                mime_type="image/jpeg",
-                raw_image_uri="https://pbs.twimg.com/media/GK_fDaUWYAABb40.jpg",
-                width=1600
-            },
-            {
-                height=2300,
-                mime_type="image/jpeg",
-                raw_image_uri="https://pbs.twimg.com/media/GK_fDaUXsAAGJng.jpg",
-                width=1600
-            },
-        } }
+        local author = {
+            handle = "thatFunkybun",
+            display_name = "Funkybun",
+            profile_url = "https://twitter.com/thatFunkybun",
+        }
+        local expected = { archive =
+            table.map(
+                {
+                    "https://pbs.twimg.com/media/GK_fDarXQAE6yBj.jpg",
+                    "https://pbs.twimg.com/media/GK_fDaaXsAATM_X.jpg",
+                    "https://pbs.twimg.com/media/GK_fDaUWYAABb40.jpg",
+                    "https://pbs.twimg.com/media/GK_fDaUXsAAGJng.jpg"
+                },
+                function (item) return {
+                    this_source = "https://twitter.com/thatFunkybun/status/1778885919572979806",
+                    canonical_domain="twitter.com",
+                    height=2300,
+                    mime_type="image/jpeg",
+                    raw_image_uri=item,
+                    width=1600,
+                    authors = {author, },
+                } end
+            )
+        }
         local tests = {
-            {
-                input = { link = tweetTrackingParams },
-                expected = { expected, nil }
-            },
             {
                 input = { link = tweetTrackingParams },
                 expected = { expected, nil }
@@ -284,6 +290,7 @@ TestScraperPipeline = {}
 
     function TestScraperPipeline:testValidFuraffinityLinks()
         local inputRegular = "https://www.furaffinity.net/view/36328438"
+        local regularWithFull = "https://www.furaffinity.net/full/36328438"
         local inputFx = "https://www.fxfuraffinity.net/view/36328438"
         local inputX = "https://www.xfuraffinity.net/view/36328438"
         local inputNoWwwFull = "https://furaffinity.net/full/36328438"
@@ -293,15 +300,24 @@ TestScraperPipeline = {}
             fetch_mock_head_html_200(inputX),
             fetch_mock_head_html_200(inputNoWwwFull),
             {
-                whenCalledWith = "https://www.furaffinity.net/full/36328438",
-                thenReturn = {200, {}, Slurp("./test/fa_example.html")},
+                whenCalledWith = regularWithFull,
+                thenReturn = {200, {}, Slurp("test/fa_example.html")},
             },
         }
         local expected = { archive = { {
-                    height=1280,
-                    mime_type="image/png",
-                    raw_image_uri="https://d.furaffinity.net/art/glopossum/1589320262/1589320262.glopossum_chloelatex.png",
-                    width=960,
+            authors = {
+                {
+                    handle = "Glopossum",
+                    display_name = "Glopossum",
+                    profile_url = "https://www.furaffinity.net/user/glopossum/"
+                },
+            },
+            canonical_domain="www.furaffinity.net",
+            height=1280,
+            mime_type="image/png",
+            raw_image_uri="https://d.furaffinity.net/art/glopossum/1589320262/1589320262.glopossum_chloelatex.png",
+            this_source = regularWithFull,
+            width=960,
         } } }
         local tests = {
             {
@@ -329,12 +345,25 @@ TestScraperPipeline = {}
         local inputQueryParams = "https://e621.net/posts/4366241?q=filetype%3Ajpg+order%3Ascore"
         local inputQueryParamsWithJson = "https://e621.net/posts/4366241.json?q=filetype%3Ajpg%2Border%3Ascore"
         local expectedRegular = {
-            archive = {
+            archive = { {
+                canonical_domain="e621.net",
                 height = 1100,
                 mime_type = "image/jpeg",
                 raw_image_uri = "https://static1.e621.net/data/63/f2/63f28a75d91d42252326235a03efe93e.jpg",
+                this_source = inputRegular,
+                additional_sources = {
+                    "https://twitter.com/BeaganBong/status/1715891189566881976",
+                    "https://pbs.twimg.com/media/F9AR0lUagAAq1wc?format=jpg&name=orig",
+                },
                 width = 880,
-            }
+                authors = {
+                    {
+                        display_name="reagan_long",
+                        handle="reagan_long",
+                        profile_url="https://e621.net/posts?tags=reagan_long"
+                    }
+                },
+            }, },
         }
         local inputVideo = "https://e621.net/posts/2848682"
         local inputGif = "https://e621.net/posts/3105830"
@@ -353,12 +382,24 @@ TestScraperPipeline = {}
             },
             {
                 input = { link = inputGif },
-                expected = { { archive = {
+                expected = { { archive = { {
+                    canonical_domain="e621.net",
                     height = 1920,
                     mime_type = "image/gif",
+                    this_source = inputGif,
+                    additional_sources = {
+                        "https://twitter.com/its_a_mok/status/1478372140542042114",
+                    },
                     raw_image_uri = "https://static1.e621.net/data/f6/d9/f6d9af24b4a47fd324bd41ebe21aeb42.gif",
                     width = 1080,
-                }}, nil}
+                    authors = {
+                        {
+                            handle = "its_a_mok",
+                            display_name = "its_a_mok",
+                            profile_url = "https://e621.net/posts?tags=its_a_mok"
+                        },
+                    }
+                }, } }, nil}
             }
         }
         local regular_response_body = Slurp("test/e6_regular_example.json")

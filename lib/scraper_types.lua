@@ -1,6 +1,8 @@
 
+---@alias ScrapedAuthor { handle: string, display_name: string, profile_url: string }
+
 --- The data produced by a scraper.
----@alias ScrapedSourceData { raw_image_uri: string, mime_type: string, width: integer, height: integer }
+---@alias ScrapedSourceData { raw_image_uri: string, mime_type: string, width: integer, height: integer, this_source: string, additional_sources: string[]?, canonical_domain: string, authors: ScrapedAuthor[]}
 
 --- ScraperProcess function: given a URI, scrape whatever info is needed for archiving
 --- from that website.
@@ -12,13 +14,19 @@
 
 ---@alias Scraper {process_uri: ScraperProcess, can_process_uri: ScraperCanProcess}
 
----@alias ArchiveEntryTask { archive: ScrapedSourceData[] }
-function ArchiveEntryTask(data)
-    return { archive = data }
+---@alias ArchiveEntryTask { archive: ScrapedSourceData[], discovered_sources: string[] }
+function ArchiveEntryTask(data, discovered_sources)
+    if #discovered_sources == 1 then
+        discovered_sources = nil
+    end
+    return { archive = data, discovered_sources = discovered_sources }
 end
----@alias RequestHelpEntryTask { help: ScrapedSourceData[][] }
-function RequestHelpEntryTask(data)
-    return { help = data }
+---@alias RequestHelpEntryTask { help: ScrapedSourceData[][], discovered_sources: string[] }
+function RequestHelpEntryTask(data, discovered_sources)
+    if #discovered_sources == 1 then
+        discovered_sources = nil
+    end
+    return { help = data, discovered_sources = discovered_sources }
 end
 ---@alias NoopEntryTask { noop: true }
 NoopEntryTask = { noop = true }

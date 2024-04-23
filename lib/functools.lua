@@ -191,3 +191,18 @@ function table.collect_lenient(sequence)
         return Ok(result)
     end
 end
+
+--- Return only the unique elements from the provided arguments.
+---@param sequence string[]
+---@return string[]
+function table.uniq(sequence)
+    local set = {}
+    for _, item in ipairs(sequence) do
+        set[item] = true
+    end
+    local result = {}
+    for item, _ in pairs(set) do
+        table.insert(result, item)
+    end
+    return result
+end

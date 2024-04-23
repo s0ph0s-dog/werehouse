@@ -773,6 +773,7 @@ local function makeStorage(dbname, sqlsetup, opts)
     local stmt, tail = query, nil
     repeat
       if type(stmt) == "string" then
+        Log(kLogDebug, "query: " .. stmt)
         stmt, tail = prepstmt(self, stmt)
       end
       if not stmt then return nil, "can't prepare: "..self.db:errmsg() end

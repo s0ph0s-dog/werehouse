@@ -9,6 +9,7 @@
     <hr />
     <p>Logged in as {%& user.username %}</p>
     <h2>Recently Queued Items</h2>
+    <p><a href="/enqueue">Add Something</a></p>
     {% if #queue_records == 0 then %}
     <p>Nothing queued</p>
     {% else %}

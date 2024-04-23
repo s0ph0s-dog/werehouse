@@ -1,6 +1,7 @@
-FA_URI_EXP = assert(re.compile[[^https?://(www\.)?(fx|x)?furaffinity\.net/(view|full)/([0-9]+)]])
-FA_SIZE_EXP = assert(re.compile[[(\d+) x (\d+)]])
-FA_AUTH_COOKIES = os.getenv("FA_AUTH_COOKIES")
+local FA_URI_EXP = assert(re.compile[[^https?://(www\.)?(fx|x)?furaffinity\.net/(view|full)/([0-9]+)]])
+local FA_SIZE_EXP = assert(re.compile[[(\d+) x (\d+)]])
+local FA_AUTH_COOKIES = os.getenv("FA_AUTH_COOKIES")
+local CANONICAL_DOMAIN = "www.furaffinity.net"
 
 local function normalize_fa_uri(uri)
     local match, _, _, _, id = FA_URI_EXP:search(uri)
@@ -59,11 +60,29 @@ local function scrape_image_metadata(root)
         return nil, PermScraperError("Corrupt size metadata in post.")
     end
     local mime_type = Nu.guess_mime_from_url(full_image_src)
+    local maybe_profile_element = first(root:select(".submission-id-sub-container a"))
+    if not maybe_profile_element then
+        return nil, PermScraperError("Unable to find the post author's name")
+    end
+    local profile_url = "https://www.furaffinity.net" .. maybe_profile_element.attributes.href
+    local display_name_element = first(maybe_profile_element:select("strong"))
+    if not display_name_element then
+        return nil, PermScraperError("No display name for the user")
+    end
+    local display_name = display_name_element:getcontent()
     return {
         raw_image_uri = full_image_src,
         mime_type = mime_type,
         width = tonumber(width),
         height = tonumber(height),
+        canonical_domain = CANONICAL_DOMAIN,
+        authors = {
+            {
+                profile_url = profile_url,
+                display_name = display_name,
+                handle = display_name,
+            }
+        },
     }
 end
 
@@ -76,7 +95,7 @@ local function process_uri(uri)
     if not status then
         return Err(PermScraperError(resp_headers))
     end
-    -- Barf("http_response_debug.txt", tostring(body))
+    Barf("http_response_debug.txt", tostring(body))
     if Nu.is_temporary_failure_status(status) then
         return Err(TempScraperError(status))
     elseif Nu.is_permanent_failure_status(status) then
@@ -100,6 +119,7 @@ local function process_uri(uri)
     if not metadata then
         return Err(errmsg)
     end
+    metadata.this_source = norm_uri
     return Ok({metadata})
 end
 

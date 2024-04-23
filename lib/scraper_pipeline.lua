@@ -99,25 +99,54 @@ local function process_source_uri(uri)
 end
 
 
+---@param link string
+---@return boolean # Does this URL have quirks?
+---@return boolean? # If this URL has quirks, true if it should be checked against FuzzySearch, false otherwise.
+local function quirks(link)
+    local parts = ParseUrl(link)
+    if parts.host == "twitter.com" then
+        -- Twitter (for mystery reasons) makes Redbean go into an infinite loop while waiting for the response to my HEAD request below.
+        return true, false
+    end
+    return false
+end
+
+---@return boolean # true if this URL should be checked with FuzzySearch, false if it can be handled internally.
+---@return string? errmsg An error message, if one occurred.
+local function guess_with_head(link)
+    local status, headers, _ = Fetch(link, {method = "HEAD"})
+    if not status then
+        return false, "%s while fetching %s" % {link}
+    elseif status == 405 then
+        -- If status is 405, assume it's not a raw image URL. Most image CDNs don't disallow HEAD (for caching/performance reasons)
+        return false
+    elseif status ~= 200 then
+        return false, "%d while fetching %s" % {status, link}
+    elseif headers["Content-Type"] and headers["Content-Type"]:startswith("image/") then
+        return true
+    else
+        return false
+    end
+end
+
 ---@param queue_entry ActiveQueueEntry
 local function get_sources_for_entry(queue_entry)
     if queue_entry.link then
-        local status, headers, _ = Fetch(queue_entry.link, {method = "HEAD"})
-        if not status then
-            return nil, "%s while fetching %s" % {headers, queue_entry.link}
-        elseif status == 405 then
-            -- If status is 405, assume it's not a raw image URL. Most image CDNs don't disallow HEAD (for caching/performance reasons)
-            return { queue_entry.link }
-        elseif status ~= 200 then
-            return nil, "%d while fetching %s" % {status, queue_entry.link}
-        elseif headers["Content-Type"] and headers["Content-Type"]:startswith("image/") then
+        local has_quirks, check_fuzzysearch = quirks(queue_entry.link)
+        if not has_quirks then
+            check_fuzzysearch, errmsg = guess_with_head(queue_entry.link)
+            if errmsg then
+                return nil, errmsg
+            end
+        end
+        if check_fuzzysearch then
             local maybe_source_links, errmsg = fuzzysearch_uri(queue_entry.link)
             if not maybe_source_links then
                 return nil, errmsg
             end
             return maybe_source_links
         else
-            return { queue_entry.link }
+            return { queue_entry.link, }
         end
         return nil, "should be unreachable"
     elseif queue_entry.image then
@@ -165,7 +194,7 @@ local function process_entry(queue_entry)
     end
     scraped_no_errors = scraped_no_errors.result
     if #scraped_no_errors == 1 then
-        return ArchiveEntryTask(scraped_no_errors[1])
+        return ArchiveEntryTask(scraped_no_errors[1], source_links)
     else
         local max_results = math.max(
             table.unpack(table.map(
@@ -193,9 +222,9 @@ local function process_entry(queue_entry)
             if not largest_source then
                 return nil, TempScraperError("I couldn't figure out which source had the largest version of the image. It's possible that they're down.")
             end
-            return ArchiveEntryTask{largest_source}
+            return ArchiveEntryTask({largest_source}, source_links)
         else
-            return RequestHelpEntryTask(scraped)
+            return RequestHelpEntryTask(scraped, source_links)
         end
     end
     return nil, PermScraperError("This should be unreachable")
@@ -213,8 +242,8 @@ local function save_image(image_data, image_mime_type)
     local ext = MIME_TO_EXT[image_mime_type] or ""
     local filename = hash .. ext
     local parent_dir = "./images/%s/%s/" % {
-        hash:sub(1, 2),
-        hash:sub(3, 4),
+        hash:sub(1, 1),
+        hash:sub(2, 2),
     }
     Log(kLogInfo, "parent_dir: %s" % {parent_dir})
     local path = parent_dir .. filename
@@ -224,15 +253,14 @@ local function save_image(image_data, image_mime_type)
 end
 
 ---@param model Model
----@param sources_list ScrapedSourceData[]
+---@param scraped_data ScrapedSourceData[]
 ---@param queue_entry table
 ---@return boolean?
 ---@return ScraperError?
-local function save_sources(model, queue_entry, sources_list)
-    Log(kLogInfo, "sources_list: %s" % {EncodeJson(sources_list)})
-    -- TODO: rewrite this to loop over the sources list and save all of the images in one transaction.
+local function save_sources(model, queue_entry, scraped_data, sources_list)
+    Log(kLogInfo, "scraped_data: %s" % {EncodeJson(scraped_data)})
     model:create_savepoint(SP_QUEUE)
-    for _, data in ipairs(sources_list) do
+    for _, data in ipairs(scraped_data) do
         local status, headers, body = Fetch(data.raw_image_uri)
         if status ~= 200 then
             model:rollback(SP_QUEUE)
@@ -249,13 +277,42 @@ local function save_sources(model, queue_entry, sources_list)
         local content_type = headers["Content-Type"]
         local filename = save_image(body, content_type)
         Log(kLogInfo, "Saved image to disk")
-        local result, errmsg2 = model:insertImage(filename, content_type)
-        if not result then
-            Log(kLogInfo, "Database error: %s" % {errmsg2})
+        local image, errmsg2 = model:insertImage(filename, content_type, data.width, data.height)
+        if not image then
+            Log(kLogInfo, "Database error 1: %s" % {errmsg2})
             model:rollback(SP_QUEUE)
             return nil, TempScraperError(errmsg2)
         end
-        Log(kLogInfo, "Inserted image record into database (result: %d)" % {result})
+        Log(kLogInfo, "Inserted image record into database (result: %s)" % {image})
+        local sources_with_dupes = {
+            data.this_source,
+        }
+        if sources_list then
+            for _, source in ipairs(sources_list) do
+                table.insert(sources_with_dupes, source)
+            end
+        end
+        if data.additional_sources then
+            for _, source in ipairs(data.additional_sources) do
+                table.insert(sources_with_dupes, source)
+            end
+        end
+        local this_item_sources = table.uniq(sources_with_dupes)
+        Log(kLogInfo, "Sources (deduped): "..EncodeJson(this_item_sources))
+        local ok, errmsg4 = model:insertSourcesForImage(image.image_id, this_item_sources)
+        if not ok then
+            Log(kLogInfo, "Database error 2: "..errmsg4)
+            model:rollback(SP_QUEUE)
+            return nil, TempScraperError(errmsg4)
+        end
+        for _, author in ipairs(data.authors) do
+            local result2, errmsg3 = model:createOrAssociateArtistWithImage(image.image_id, data.canonical_domain, author)
+            if not result2 then
+                Log(kLogInfo, "Database error 3: "..errmsg3)
+                model:rollback(SP_QUEUE)
+                return nil, TempScraperError(errmsg3)
+            end
+        end
     end
     local ok, errmsg3 = model:deleteFromQueue(queue_entry.qid)
     if not ok then
@@ -313,7 +370,7 @@ local function process_queue(model, queue_records)
             handle_queue_error(model, queue_entry, error)
         else
             if task.archive then
-                local ok, error2 = save_sources(model, queue_entry, task.archive)
+                local ok, error2 = save_sources(model, queue_entry, task.archive, task.discovered_sources)
                 if not ok then
                     ---@cast error2 ScraperError
                     handle_queue_error(model, queue_entry, error2)
@@ -321,7 +378,7 @@ local function process_queue(model, queue_records)
             elseif task.help then
                 local ok, errmsg3 = model:setQueueItemDisambiguationRequest(
                     queue_entry.qid,
-                    task.help
+                    task
                 )
                 if not ok then
                     Log(kLogWarn, "%s" % {errmsg3})

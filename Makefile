@@ -23,6 +23,7 @@ SRCS := src/.init.lua \
     src/templates/accept_invite.html \
     src/templates/login.html \
     src/templates/image.html \
+    src/templates/enqueue.html \
 	src/templates/home.html
 TEST_LIBS := lib/third_party/luaunit.lua
 

@@ -48,12 +48,14 @@ local user_setup = [[
     PRAGMA foreign_keys=ON;
     CREATE TABLE IF NOT EXISTS "images" (
         "image_id" INTEGER NOT NULL UNIQUE,
-        "file" TEXT NOT NULL,
+        "file" TEXT NOT NULL UNIQUE,
         "mime_type" TEXT NOT NULL,
         "category" INTEGER,
         "saved_at" TEXT NOT NULL,
         "rating" INTEGER,
         "kind" INTEGER,
+        "height" INTEGER NOT NULL,
+        "width" INTEGER NOT NULL,
         PRIMARY KEY("image_id")
     );
 
@@ -83,8 +85,8 @@ local user_setup = [[
 
     CREATE TABLE IF NOT EXISTS "artists" (
         "artist_id" INTEGER NOT NULL UNIQUE,
+        "manually_confirmed" INTEGER NOT NULL DEFAULT 0,
         "name" TEXT NOT NULL,
-        "gallery_uri" TEXT NOT NULL,
         PRIMARY KEY("artist_id")
     );
 
@@ -92,7 +94,8 @@ local user_setup = [[
         "artist_id" INTEGER NOT NULL UNIQUE,
         "handle" TEXT NOT NULL,
         "domain" TEXT NOT NULL,
-        PRIMARY KEY("artist_id", "handle", "domain"),
+        "profile_url" TEXT NOT NULL,
+        PRIMARY KEY("artist_id"),
         FOREIGN KEY ("artist_id") REFERENCES "artists"("artist_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
@@ -233,6 +236,8 @@ local queries = {
         get_sources_for_image = [[SELECT link
             FROM sources
             WHERE image_id = ?;]],
+        get_artist_id_by_domain_and_handle = [[SELECT artist_id FROM artist_handles
+            WHERE domain = ? AND handle = ?;]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
@@ -240,8 +245,18 @@ local queries = {
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (NULL, ?, ?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
         insert_image_into_images = [[INSERT INTO
-            "images" ("file", "mime_type", "saved_at")
-            VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));]],
+            "images" ("file", "mime_type", "width", "height", "saved_at")
+            VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            RETURNING image_id;]],
+        insert_source_for_image = [[INSERT INTO "sources" ("image_id", "link")
+            VALUES (?, ?);]],
+        insert_artist = [[INSERT INTO "artists" ("name")
+            VALUES (?)
+            RETURNING artist_id;]],
+        insert_image_artist = [[INSERT INTO "image_artists" ("image_id", "artist_id")
+            VALUES (?, ?);]],
+        insert_artist_handle = [[INSERT INTO "artist_handles" ("artist_id", "handle", "domain", "profile_url")
+            VALUES (?, ?, ?, ?);]],
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
         update_queue_item_status = [[UPDATE "queue"
             SET "status" = ?, "tombstone" = ?
@@ -323,10 +338,79 @@ function Model:setQueueItemDisambiguationRequest(queue_id, disambiguation_data)
     )
 end
 
-function Model:insertImage(image_file, mime_type)
-    return self.conn:execute(
-        queries.model.insert_image_into_images, image_file, mime_type
+function Model:insertImage(image_file, mime_type, width, height)
+    return self.conn:fetchOne(
+        queries.model.insert_image_into_images, image_file, mime_type, width, height
     )
+end
+
+function Model:insertSourcesForImage(image_id, sources)
+    local SP = "insert_sources"
+    -- TODO: figure out how to use prepared statements for this.
+    self:create_savepoint(SP)
+    for _, source in ipairs(sources) do
+        local result, errmsg = self.conn:execute(queries.model.insert_source_for_image, image_id, source)
+        if not result then
+            self:rollback(SP)
+            return nil, errmsg
+        end
+    end
+    self:release_savepoint(SP)
+    return true
+end
+
+---@param author_info ScrapedAuthor
+---@param domain string
+function Model:createArtistAndFirstHandle(author_info, domain)
+    local SP = "create_artist"
+    self:create_savepoint(SP)
+    local artist, errmsg = self.conn:fetchOne(queries.model.insert_artist, author_info.display_name)
+    if not artist or artist == self.conn.NONE then
+        self:rollback(SP)
+        return nil, errmsg
+    end
+    local artist_id = artist.artist_id
+    local result2, errmsg2 = self.conn:execute(queries.model.insert_artist_handle, artist_id, author_info.handle, domain, author_info.profile_url)
+    if not result2 then
+        self:rollback(SP)
+        return nil, errmsg2
+    end
+    self:release_savepoint(SP)
+    return artist_id
+end
+
+---@param image_id integer
+---@param artist_id integer
+function Model:associateArtistWithImage(image_id, artist_id)
+    return self.conn:execute(queries.model.insert_image_artist, image_id, artist_id)
+end
+
+---@param image_id integer
+---@param domain string The domain name of the website that author_info is from.
+---@param author_info ScrapedAuthor
+function Model:createOrAssociateArtistWithImage(image_id, domain, author_info)
+    local SP = "create_or_associate_artist"
+    self:create_savepoint(SP)
+    local artist, errmsg = self.conn:fetchOne(queries.model.get_artist_id_by_domain_and_handle, domain, author_info.handle)
+    if not artist then
+        return nil, errmsg
+    end
+    local artist_id = artist.artist_id
+    if not artist_id or artist == self.conn.NONE then
+        local result3, errmsg3 = self:createArtistAndFirstHandle(author_info, domain)
+        if not result3 then
+            self:rollback(SP)
+            return nil, errmsg3
+        end
+        artist_id = result3
+    end
+    local result2, errmsg2 = self:associateArtistWithImage(image_id, artist_id)
+    if not result2 then
+        self:rollback(SP)
+        return nil, errmsg2
+    end
+    self:release_savepoint(SP)
+    return true
 end
 
 function Model:deleteFromQueue(queue_id)
