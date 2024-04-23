@@ -5,3 +5,5 @@
 .nova/*
 *.ducklet/*
 srv/*
+images/*
+*.paw
