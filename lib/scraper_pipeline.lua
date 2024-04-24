@@ -285,6 +285,25 @@ end
 local function save_sources(model, queue_entry, scraped_data, sources_list)
     Log(kLogInfo, "scraped_data: %s" % { EncodeJson(scraped_data) })
     model:create_savepoint(SP_QUEUE)
+    local group = nil
+    Log(kLogInfo, "#scraped_data: %d" % { #scraped_data })
+    if #scraped_data > 1 then
+        local name = "Untitled group by "
+            .. table.reduce(scraped_data[1].authors, function(acc, next)
+                if acc == nil then
+                    return next.display_name
+                else
+                    return acc .. ", " .. next.display_name
+                end
+            end)
+        local errmsg
+        group, errmsg = model:createImageGroup(name)
+        if not group then
+            Log(kLogInfo, "Database error 0: " .. errmsg)
+            model:rollback(SP_QUEUE)
+            return nil, TempScraperError(errmsg)
+        end
+    end
     for _, data in ipairs(scraped_data) do
         local status, headers, body = Fetch(data.raw_image_uri)
         if status ~= 200 then
@@ -357,6 +376,15 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
                 Log(kLogInfo, "Database error 3: " .. errmsg3)
                 model:rollback(SP_QUEUE)
                 return nil, TempScraperError(errmsg3)
+            end
+        end
+        if group then
+            local result5, errmsg5 =
+                model:addImageToGroupAtEnd(image.image_id, group.ig_id)
+            if not result5 then
+                Log(kLogInfo, "Database error 4: " .. errmsg5)
+                model:rollback(SP_QUEUE)
+                return nil, TempScraperError(errmsg5)
             end
         end
     end

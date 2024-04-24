@@ -237,6 +237,9 @@ local queries = {
             WHERE image_id = ?;]],
         get_artist_id_by_domain_and_handle = [[SELECT artist_id FROM artist_handles
             WHERE domain = ? AND handle = ?;]],
+        get_last_order_for_image_group = [[SELECT MAX("order") AS max_order
+            FROM images_in_group
+            WHERE ig_id = ?;]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
@@ -256,6 +259,11 @@ local queries = {
             VALUES (?, ?);]],
         insert_artist_handle = [[INSERT INTO "artist_handles" ("artist_id", "handle", "domain", "profile_url")
             VALUES (?, ?, ?, ?);]],
+        insert_image_group = [[INSERT INTO "image_group" ("name")
+            VALUES (?)
+            RETURNING ig_id;]],
+        insert_image_in_group = [[INSERT INTO images_in_group (image_id, ig_id, "order")
+            VALUES (?, ?, ?);]],
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
         update_queue_item_status = [[UPDATE "queue"
             SET "status" = ?, "tombstone" = ?
@@ -445,6 +453,26 @@ function Model:createOrAssociateArtistWithImage(image_id, domain, author_info)
     end
     self:release_savepoint(SP)
     return true
+end
+
+function Model:createImageGroup(name)
+    return self.conn:fetchOne(queries.model.insert_image_group, name)
+end
+
+function Model:addImageToGroupAtEnd(image_id, group_id)
+    local last_order, errmsg = self.conn:fetchOne(
+        queries.model.get_last_order_for_image_group,
+        group_id
+    )
+    if not last_order then
+        return nil, errmsg
+    end
+    return self.conn:execute(
+        queries.model.insert_image_in_group,
+        image_id,
+        group_id,
+        (last_order.max_order or 0) + 1
+    )
 end
 
 function Model:deleteFromQueue(queue_id)
