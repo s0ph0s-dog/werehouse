@@ -112,6 +112,10 @@ local function quirks(link)
         -- Twitter (for mystery reasons) makes Redbean go into an infinite loop while waiting for the response to my HEAD request below.
         return true, false
     end
+    if parts.host == "nitter.privacydev.net" then
+        -- Nitter results in "HTTP client EOF body error"
+        return true, false
+    end
     return false
 end
 
