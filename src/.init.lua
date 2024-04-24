@@ -15,13 +15,17 @@ ServerVersion = string.format(
     about.VERSION,
     about.REDBEAN_VERSION
 )
-local seed_str = GetRandomBytes(4)
--- Lua has no bit shift operators, so multiplication by powers of two will do.
-local seed_int = (string.byte(seed_str, 1) * (2 ^ 24))
-    + (string.byte(seed_str, 2) * (2 ^ 16))
-    + (string.byte(seed_str, 3) * (2 ^ 8))
-    + string.byte(seed_str, 4)
-Uuid.randomseed(seed_int)
+local function reseedUuid()
+    local seed_str = GetRandomBytes(4)
+    -- Lua has no bit shift operators, so multiplication by powers of two will do.
+    local seed_int = (string.byte(seed_str, 1) * (2 ^ 24))
+        + (string.byte(seed_str, 2) * (2 ^ 16))
+        + (string.byte(seed_str, 3) * (2 ^ 8))
+        + string.byte(seed_str, 4)
+    Uuid.randomseed(seed_int)
+end
+
+reseedUuid()
 
 Accounts = DbUtil.Accounts:new()
 Accounts:bootstrapInvites()
@@ -34,6 +38,7 @@ function OnWorkerStart()
 
     assert(unix.unveil(".", "rw"))
     assert(unix.unveil(nil, nil))
+    reseedUuid()
 end
 -- 10MB, a reasonable limit for images.
 ProgramMaxPayloadSize(10 * 1024 * 1024)
