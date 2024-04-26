@@ -485,4 +485,104 @@ function TestScraperPipeline:testValidE6Links()
     process_entry_framework(tests, mocks)
 end
 
+function TestScraperPipeline:testValidCohostLinks()
+    local inputSFW =
+        "https://cohost.org/TuxedoDragon/post/5682670-something-something"
+    local inputNSFW =
+        "https://cohost.org/Puptini/post/5584885-did-you-wonder-where"
+    local inputLoggedInOnly =
+        "https://cohost.org/infinityio/post/4685920-div-style-flex-dir"
+    local tests = {
+        {
+            input = { link = inputSFW },
+            expected = {
+                {
+                    archive = {
+                        {
+                            authors = {
+                                {
+                                    display_name = "Tux!! (certified tf hazard >:3)",
+                                    handle = "TuxedoDragon",
+                                    profile_url = "https://cohost.org/TuxedoDragon",
+                                },
+                            },
+                            canonical_domain = "cohost.org",
+                            height = 800,
+                            mime_type = "image/png",
+                            raw_image_uri = "https://staging.cohostcdn.org/attachment/bc0436cc-262d-47a1-b444-f954a3f81c6c/eyes.png",
+                            width = 1630,
+                        },
+                    },
+                },
+                nil,
+            },
+        },
+        {
+            input = { link = inputNSFW },
+            expected = {
+                {
+                    archive = {
+                        {
+                            authors = {
+                                {
+                                    display_name = "Annie",
+                                    handle = "Puptini",
+                                    profile_url = "https://cohost.org/Puptini",
+                                },
+                            },
+                            canonical_domain = "cohost.org",
+                            height = 1280,
+                            mime_type = "image/png",
+                            raw_image_uri = "https://staging.cohostcdn.org/attachment/40e2ebfc-a548-458d-abde-6551929a6ae3/tumblr_nbrmyhYBa41t46mxyo2_1280.png",
+                            width = 1280,
+                        },
+                        {
+                            authors = {
+                                {
+                                    display_name = "Annie",
+                                    handle = "Puptini",
+                                    profile_url = "https://cohost.org/Puptini",
+                                },
+                            },
+                            canonical_domain = "cohost.org",
+                            height = 1200,
+                            mime_type = "image/png",
+                            raw_image_uri = "https://staging.cohostcdn.org/attachment/0164799d-c699-48fd-bdaf-558f6f947aa3/bayli%20aftersex%20resize.png",
+                            width = 857,
+                        },
+                    },
+                },
+                nil,
+            },
+        },
+        {
+            input = { link = inputLoggedInOnly },
+            expected = {
+                nil,
+                PermScraperError(
+                    "This user's posts are only visible when logged in."
+                ),
+            },
+        },
+    }
+    local mocks = {
+        fetch_mock_head_html_200(inputSFW),
+        fetch_mock_head_html_200(inputNSFW),
+        fetch_mock_head_html_200(inputLoggedInOnly),
+        {
+            whenCalledWith = "https://cohost.org/api/v1/trpc/posts.singlePost?batch=1&input=%7B%220%22%3A%7B%22handle%22%3A%22TuxedoDragon%22%2C%22postId%22%3A5682670%7D%7D",
+            thenReturn = { 200, {}, Slurp("test/cohost_sfw.json") },
+        },
+        {
+            whenCalledWith = "https://cohost.org/api/v1/trpc/posts.singlePost?batch=1&input=%7B%220%22%3A%7B%22handle%22%3A%22Puptini%22%2C%22postId%22%3A5584885%7D%7D",
+            thenReturn = { 200, {}, Slurp("test/cohost_nsfw.json") },
+        },
+        {
+            whenCalledWith = "https://cohost.org/api/v1/trpc/posts.singlePost?batch=1&input=%7B%220%22%3A%7B%22handle%22%3A%22infinityio%22%2C%22postId%22%3A4685920%7D%7D",
+            thenReturn = { 200, {}, Slurp("test/cohost_loggedinonly.json") },
+        },
+    }
+    process_entry_framework(tests, mocks)
+end
+
 luaunit.run()

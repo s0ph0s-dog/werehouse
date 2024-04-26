@@ -14,6 +14,7 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/scraper_types.lua \
 	lib/scrapers/bluesky.lua \
 	lib/scrapers/twitter.lua \
+	lib/scrapers/cohost.lua \
 	lib/scrapers/furaffinity.lua \
 	lib/scrapers/e621.lua \
 	lib/scrapers/test.lua \
@@ -34,9 +35,6 @@ TEST_REDBEAN := test-$(REDBEAN)
 SRCS_OUT := $(patsubst src/%,$(SRV_DIR)/%,$(SRCS))
 LIBS_OUT := $(patsubst lib/%,$(SRV_DIR)/.lua/%,$(LIBS))
 TEST_LIBS_OUT := $(patsubst lib/%,$(SRV_DIR)/.lua/%,$(TEST_LIBS))
-$(info $(SRCS_OUT))
-$(info $(LIBS_OUT))
-$(info $(TEST_LIBS_OUT))
 
 build: $(OUTPUT)
 
