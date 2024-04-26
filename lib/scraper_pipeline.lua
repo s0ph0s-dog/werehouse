@@ -34,7 +34,6 @@ local function multipart_body(boundary, image_data, content_type)
             image_data,
             boundary,
         }
-    Barf("http_request_debug.txt", result)
     return result
 end
 

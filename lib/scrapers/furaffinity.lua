@@ -103,7 +103,6 @@ local function process_uri(uri)
     if not status then
         return Err(PermScraperError(resp_headers))
     end
-    Barf("http_response_debug.txt", tostring(body))
     if Nu.is_temporary_failure_status(status) then
         return Err(TempScraperError(status))
     elseif Nu.is_permanent_failure_status(status) then
