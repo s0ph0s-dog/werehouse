@@ -1,58 +1,46 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Home</title>
-  </head>
-  <body>
-    <h1>Home</h1>
-    <hr />
-    <p>Logged in as {%& user.username %}</p>
-    <h2>Recently Queued Items</h2>
-    <p><a href="/enqueue">Add Something</a></p>
-    {% if #queue_records == 0 then %}
-    <p>Nothing queued</p>
-    {% else %}
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Link</th>
-          <th>Image</th>
-          <th>Tombstone Flag</th>
-          <th>Added</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      {% for _, item in ipairs(queue_records) do %}
-      <tr>
-        <td>{%& item.qid %}</td>
-        <td>{% if item.link then %}{%& item.link %}{% else %}N/A{% end %}</td>
-        <td>
-          {% if not item.link then %}<img
-            width="200"
-            src="/api/queue-image/{%& item.qid %}"
-          />{% else %}N/A{% end %}
-        </td>
-        <td>{%& item.tombstone %}</td>
-        <td>{%& item.added %}</td>
-        <td>{%& item.status %}</td>
-      </tr>
-      {% end %}
-    </table>
-    {% end %}
-    <h2>Recently Archived Items</h2>
-    {% if #image_records == 0 then %}
-    <p>Nothing archived yet</p>
-    {% else %}
-    <div>
-      {% for _, image in ipairs(image_records) do %}
-      <a href="/image/{%& image.image_id %}">
-        <img src="/image-file/{%& image.file %}" />
-      </a>
-      {% end %}
-    </div>
-    {% end %}
-    <footer>Some kind of copyright/source/license notice</footer>
-  </body>
-</html>
+{% function block.content() %}
+<h1>Recently Queued Items</h1>
+<p><a href="/enqueue">Add Something</a></p>
+{% if #queue_records == 0 then %}
+<p>Nothing queued</p>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Link</th>
+      <th>Image</th>
+      <th>Tombstone Flag</th>
+      <th>Added</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  {% for _, item in ipairs(queue_records) do %}
+  <tr>
+    <td>{%& item.qid %}</td>
+    <td>{% if item.link then %}{%& item.link %}{% else %}N/A{% end %}</td>
+    <td>
+      {% if not item.link then %}<img
+        width="200"
+        src="/api/queue-image/{%& item.qid %}"
+      />{% else %}N/A{% end %}
+    </td>
+    <td>{%& item.tombstone %}</td>
+    <td>{%& item.added %}</td>
+    <td>{%& item.status %}</td>
+  </tr>
+  {% end %}
+</table>
+{% end %}
+<h1>Recently Archived Items</h1>
+{% if #image_records == 0 then %}
+<p>Nothing archived yet</p>
+{% else %}
+<div>
+  {% for _, image in ipairs(image_records) do %}
+  <a href="/image/{%& image.image_id %}">
+    <img src="/image-file/{%& image.file %}" />
+  </a>
+  {% end %}
+</div>
+{% end %}{% end %}{% render("main_layout", { title = "Home", user = user }) %}

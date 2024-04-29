@@ -241,6 +241,7 @@ end)
 local function setup()
     Fm.setTemplate { "/templates/", html = "fmt" }
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
+    Fm.setRoute("/style.css", Fm.serveAsset)
     -- User-facing routes
     Fm.setRoute(Fm.GET { "/accept-invite/:invite_code" }, render_invite)
     Fm.setRoute(

@@ -25,6 +25,8 @@ SRCS := src/.init.lua \
     src/templates/login.html \
     src/templates/image.html \
     src/templates/enqueue.html \
+    src/templates/main_layout.html \
+	src/style.css \
 	src/templates/home.html
 TEST_LIBS := lib/third_party/luaunit.lua
 

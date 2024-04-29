@@ -1,35 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Accept Invitation</title>
-  </head>
-  <body>
-    <h1>Accept Invitation</h1>
-    <hr />
-    <p>You have been invited to use Hyperphantasia. Create your account:</p>
-    {% if type(error) == "string" then %}
-    <p style="color: red">{%& error %}</p>
-    {% end %}
-    <form method="POST">
-      <label
-        >Username:
-        <input type="text" minlength="2" maxlength="128" name="username"
-      /></label>
-      <label
-        >Password:
-        <input type="password" minlength="16" maxlength="128" name="password"
-      /></label>
-      <label
-        >Password (again):
-        <input
-          type="password"
-          minlength="16"
-          maxlength="128"
-          name="password_confirm"
-      /></label>
+{% function block.content() %}
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+</style>
+<div class="dialog" style="width: 28em">
+  <h1>Accept Invitation</h1>
+  <p>You have been invited to use Hyperphantasia. Create your account:</p>
+  {% if type(error) == "string" then %}
+  <p style="color: red">{%& error %}</p>
+  {% end %}
+  <form method="POST" class="vbox">
+    <label
+      >Username:
+      <input type="text" minlength="2" maxlength="128" name="username"
+    /></label>
+    <label
+      >Password:
+      <input type="password" minlength="16" maxlength="128" name="password"
+    /></label>
+    <label
+      >Password (again):
+      <input
+        type="password"
+        minlength="16"
+        maxlength="128"
+        name="password_confirm"
+    /></label>
+    <span class="buttons">
       <input type="reset" />
       <input type="submit" value="Accept Invite" />
-    </form>
-  </body>
-</html>
+    </span>
+  </form>
+</div>
+{% end %}{% render("main_layout", { title = "Accept Invitation", hide_header =
+true, hide_footer = true }) %}

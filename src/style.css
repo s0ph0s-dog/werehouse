@@ -1,0 +1,41 @@
+:root {
+  color-scheme: light dark;
+}
+* {
+  box-sizing: border-box;
+}
+.dialog {
+  max-width: 40em;
+  border: 1px solid CanvasText;
+  border-radius: 5px;
+  padding: 1em;
+}
+.dialog h1 {
+  font-size: 1.5rem;
+}
+.vbox {
+  display: flex;
+  flex-direction: column;
+}
+.vbox label,
+.vbox label * {
+  display: block;
+  margin-bottom: 0.5em;
+}
+input[type="text"],
+input[type="password"] {
+  border: 1px solid GrayText;
+  border-radius: 4px;
+  width: 100%;
+  padding: 0.5em;
+}
+.dialog .buttons {
+  display: flex;
+  justify-content: flex-end;
+}
+.dialog .buttons input {
+  margin-right: 1em;
+}
+.dialog .buttons input:last-child {
+  margin-right: 0;
+}
