@@ -108,12 +108,26 @@ end
 ---@return boolean? # If this URL has quirks, true if it should be checked against FuzzySearch, false otherwise.
 local function quirks(link)
     local parts = ParseUrl(link)
-    if parts.host == "twitter.com" then
+    if parts.host == "twitter.com" or parts.host == "vxtwitter.com" then
         -- Twitter (for mystery reasons) makes Redbean go into an infinite loop while waiting for the response to my HEAD request below.
         return true, false
     end
     if parts.host == "nitter.privacydev.net" then
         -- Nitter results in "HTTP client EOF body error"
+        return true, false
+    end
+    if
+        parts.host == "www.fxfuraffinity.net"
+        or parts.host == "fxfuraffinity.net"
+    then
+        -- fxfuraffinity and Redbean's Fetch() don't get along well when sending HEAD requests.
+        return true, false
+    end
+    if
+        parts.host == "www.furaffinity.net"
+        or parts.host == "furaffinity.net"
+    then
+        -- FurAffinity also sometimes confuses Redbean's Fetch().
         return true, false
     end
     return false
@@ -186,6 +200,7 @@ local function process_entry(queue_entry)
         -- Do nothing here because we're waiting for the user to disambiguate.
         return NoopEntryTask
     end
+
     local source_links, errmsg1 = get_sources_for_entry(queue_entry)
     if
         not source_links
@@ -305,6 +320,38 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
         end
     end
     for _, data in ipairs(scraped_data) do
+        -- 1. Check for duplicates of this item.
+        local sources_with_dupes = {
+            data.this_source,
+        }
+        if sources_list then
+            for _, source in ipairs(sources_list) do
+                table.insert(sources_with_dupes, source)
+            end
+        end
+        if data.additional_sources then
+            for _, source in ipairs(data.additional_sources) do
+                table.insert(sources_with_dupes, source)
+            end
+        end
+        local this_item_sources = table.uniq(sources_with_dupes)
+        local dupes, dupe_err = model:checkDuplicateSources(this_item_sources)
+        if not dupes or dupe_err then
+            Log(kLogInfo, "Database error 0.5: %s" % { dupe_err })
+            model:rollback(SP_QUEUE)
+            return nil, TempScraperError(dupe_err)
+        end
+        if #dupes > 0 then
+            model:rollback(SP_QUEUE)
+            Log(kLogInfo, "Found duplicates")
+            return nil,
+                PermScraperError(
+                    "This source has been saved already: %s"
+                        % { EncodeJson(dupes) }
+                )
+        end
+        Log(kLogVerbose, "Found no duplicates by source link")
+        -- 2. Download image file.
         local status, headers, body = Fetch(data.raw_image_uri)
         if status ~= 200 then
             model:rollback(SP_QUEUE)
@@ -314,7 +361,11 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
                         % { status, headers, data.raw_image_uri }
                 )
         end
-        if #body < 1024 then
+        Log(kLogVerbose, "Successfully fetched image")
+        -- The smallest possible GIF file is 35 bytes, which is smaller than PNG (68 B) or JPEG (119 B). I'm using it as a reasonable minimum for file size.
+        -- https://stackoverflow.com/questions/2570633/smallest-filesize-for-transparent-single-pixel-image
+        -- https://stackoverflow.com/questions/2253404/what-is-the-smallest-valid-jpeg-file-size-in-bytes
+        if #body < 35 then
             model:rollback(SP_QUEUE)
             return nil,
                 TempScraperError(
@@ -331,8 +382,10 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
                 )
         end
         local content_type = headers["Content-Type"]
+        -- 3. Save image file to disk.
         local filename = save_image(body, content_type)
         Log(kLogInfo, "Saved image to disk")
+        -- 4. Add image, sources, etc. to database.
         local image, errmsg2 =
             model:insertImage(filename, content_type, data.width, data.height)
         if not image then
@@ -344,20 +397,6 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
             kLogInfo,
             "Inserted image record into database (result: %s)" % { image }
         )
-        local sources_with_dupes = {
-            data.this_source,
-        }
-        if sources_list then
-            for _, source in ipairs(sources_list) do
-                table.insert(sources_with_dupes, source)
-            end
-        end
-        if data.additional_sources then
-            for _, source in ipairs(data.additional_sources) do
-                table.insert(sources_with_dupes, source)
-            end
-        end
-        local this_item_sources = table.uniq(sources_with_dupes)
         Log(kLogInfo, "Sources (deduped): " .. EncodeJson(this_item_sources))
         local ok, errmsg4 =
             model:insertSourcesForImage(image.image_id, this_item_sources)
@@ -388,12 +427,13 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
             end
         end
     end
-    local ok, errmsg3 = model:deleteFromQueue(queue_entry.qid)
+    local ok, errmsg3 = model:setQueueItemStatus(queue_entry.qid, 2, "Archived")
     if not ok then
         model:rollback(SP_QUEUE)
         return nil,
             TempScraperError(
-                "Unable to delete the now-completed queue entry: " % { errmsg3 }
+                "Unable to mark the now-completed queue entry as complete: "
+                    % { errmsg3 }
             )
     end
     model:release_savepoint(SP_QUEUE)

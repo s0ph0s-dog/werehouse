@@ -100,7 +100,7 @@ local user_setup = [[
     );
 
     CREATE TABLE IF NOT EXISTS "image_artists" (
-        "image_id" INTEGER NOT NULL UNIQUE,
+        "image_id" INTEGER NOT NULL,
         "artist_id" INTEGER NOT NULL,
         PRIMARY KEY("image_id", "artist_id"),
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
@@ -235,6 +235,8 @@ local queries = {
         get_sources_for_image = [[SELECT link
             FROM sources
             WHERE image_id = ?;]],
+        get_source_by_link = [[SELECT DISTINCT image_id FROM sources
+            WHERE link = ?;]],
         get_artist_id_by_domain_and_handle = [[SELECT artist_id FROM artist_handles
             WHERE domain = ? AND handle = ?;]],
         get_last_order_for_image_group = [[SELECT MAX("order") AS max_order
@@ -362,6 +364,28 @@ function Model:insertImage(image_file, mime_type, width, height)
         width,
         height
     )
+end
+
+function Model:checkDuplicateSources(links)
+    local dupe_ids_set = {}
+    for _, link in ipairs(links) do
+        local sources, errmsg =
+            self.conn:fetchAll(queries.model.get_source_by_link, link)
+        if not sources then
+            return nil, errmsg
+        end
+        if #sources == 0 then
+            return {}
+        end
+        for _, image in ipairs(sources) do
+            dupe_ids_set[image.image_id] = true
+        end
+    end
+    local dupe_ids_list = {}
+    for id, _ in pairs(dupe_ids_set) do
+        table.insert(dupe_ids_list, id)
+    end
+    return dupe_ids_list
 end
 
 function Model:insertSourcesForImage(image_id, sources)
@@ -495,7 +519,10 @@ end
 
 function Model:rollback(to_savepoint)
     if to_savepoint and type(to_savepoint) == "string" then
-        return self.conn:execute("ROLLBACK TO " .. to_savepoint .. ";")
+        return self.conn:execute(
+            "ROLLBACK TO %s; RELEASE SAVEPOINT %s;"
+                % { to_savepoint, to_savepoint }
+        )
     else
         return self.conn:execute("ROLLBACK;")
     end
