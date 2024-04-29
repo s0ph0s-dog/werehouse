@@ -2,24 +2,82 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Login</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      .box {
+        max-width: 40em;
+        border: 1px solid CanvasText;
+        border-radius: 5px;
+        padding: 1em;
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+      }
+      label,
+      label * {
+        display: block;
+        margin-bottom: 0.5em;
+      }
+      input[type="text"],
+      input[type="password"] {
+        border: 1px solid GrayText;
+        border-radius: 4px;
+        width: 100%;
+        padding: 0.5em;
+      }
+      .buttons {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .buttons input {
+        margin-right: 1em;
+      }
+      .buttons input:last-child {
+        margin-right: 0;
+      }
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+    </style>
   </head>
   <body>
-    <h1>Login</h1>
-    <hr />
-    {% if type(error) == "string" then %}
-    <p style="color: red">{%& error %}</p>
-    {% end %}
-    <form method="POST">
-      <label
-        >Username:
-        <input type="text" minlength="2" maxlength="128" name="username"
-      /></label>
-      <label
-        >Password:
-        <input type="password" minlength="16" maxlength="128" name="password"
-      /></label>
-      <input type="submit" />
-    </form>
+    <div class="box">
+      <h1>hyperphantasia</h1>
+      <hr />
+      {% if type(error) == "string" then %}
+      <p style="color: red">{%& error %}</p>
+      {% end %}
+      <form method="POST">
+        <label
+          >Username:
+          <input
+            type="text"
+            minlength="2"
+            maxlength="128"
+            name="username" /></label
+        ><label
+          >Password:
+          <input
+            type="password"
+            minlength="16"
+            maxlength="128"
+            name="password" /></label
+        ><span class="buttons"
+          ><input type="reset" /><input type="submit" value="Log In"
+        /></span>
+      </form>
+    </div>
   </body>
 </html>
