@@ -188,6 +188,42 @@ local function get_sources_for_entry(queue_entry)
     return nil, "should be unreachable"
 end
 
+---@param model Model
+---@param task ArchiveEntryTask
+local function check_duplicates(model, task)
+    assert(
+        task.archive ~= nil,
+        "check_duplicates function only works with archive tasks"
+    )
+    local sources_with_dupes = {}
+    if task.discovered_sources then
+        for _, source in ipairs(task.discovered_sources) do
+            table.insert(sources_with_dupes, source)
+        end
+    end
+    for _, data in ipairs(task.archive) do
+        table.insert(sources_with_dupes, data.this_source)
+        if data.additional_sources then
+            for _, source in ipairs(data.additional_sources) do
+                table.insert(sources_with_dupes, data.additional_sources)
+            end
+        end
+    end
+    local this_item_sources = table.uniq(sources_with_dupes)
+    local dupes, dupe_err = model:checkDuplicateSources(this_item_sources)
+    if not dupes or dupe_err then
+        return TempScraperError(dupe_err)
+    end
+    if #dupes > 0 then
+        Log(kLogInfo, "Found duplicates: %s" % { EncodeJson(dupes) })
+        return PermScraperError(
+            "This source has been saved already: %s" % { EncodeJson(dupes) }
+        )
+    end
+    Log(kLogVerbose, "Found no duplicates by source link")
+    return nil
+end
+
 ---@param queue_entry ActiveQueueEntry Queue entry from the database
 ---@return EntryTask? # A database manipulation task to do now that the queue entry has been processed, or nil if there was an error.
 ---@return ScraperError? # A table with information about the kind of error that occurred, or nil if there was no error.
@@ -320,7 +356,6 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
         end
     end
     for _, data in ipairs(scraped_data) do
-        -- 1. Check for duplicates of this item.
         local sources_with_dupes = {
             data.this_source,
         }
@@ -335,23 +370,7 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
             end
         end
         local this_item_sources = table.uniq(sources_with_dupes)
-        local dupes, dupe_err = model:checkDuplicateSources(this_item_sources)
-        if not dupes or dupe_err then
-            Log(kLogInfo, "Database error 0.5: %s" % { dupe_err })
-            model:rollback(SP_QUEUE)
-            return nil, TempScraperError(dupe_err)
-        end
-        if #dupes > 0 then
-            model:rollback(SP_QUEUE)
-            Log(kLogInfo, "Found duplicates")
-            return nil,
-                PermScraperError(
-                    "This source has been saved already: %s"
-                        % { EncodeJson(dupes) }
-                )
-        end
-        Log(kLogVerbose, "Found no duplicates by source link")
-        -- 2. Download image file.
+        -- 1. Download image file.
         local status, headers, body = Fetch(data.raw_image_uri)
         if status ~= 200 then
             model:rollback(SP_QUEUE)
@@ -382,10 +401,10 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
                 )
         end
         local content_type = headers["Content-Type"]
-        -- 3. Save image file to disk.
+        -- 2. Save image file to disk.
         local filename = save_image(body, content_type)
         Log(kLogInfo, "Saved image to disk")
-        -- 4. Add image, sources, etc. to database.
+        -- 3. Add image, sources, etc. to database.
         local image, errmsg2 =
             model:insertImage(filename, content_type, data.width, data.height)
         if not image then
@@ -488,15 +507,20 @@ local function process_queue(model, queue_records)
             handle_queue_error(model, queue_entry, error)
         else
             if task.archive then
-                local ok, error2 = save_sources(
-                    model,
-                    queue_entry,
-                    task.archive,
-                    task.discovered_sources
-                )
-                if not ok then
-                    ---@cast error2 ScraperError
-                    handle_queue_error(model, queue_entry, error2)
+                local dupe_err = check_duplicates(model, task)
+                if dupe_err then
+                    handle_queue_error(model, queue_entry, dupe_err)
+                else
+                    local ok, error2 = save_sources(
+                        model,
+                        queue_entry,
+                        task.archive,
+                        task.discovered_sources
+                    )
+                    if not ok then
+                        ---@cast error2 ScraperError
+                        handle_queue_error(model, queue_entry, error2)
+                    end
                 end
             elseif task.help then
                 local ok, errmsg3 = model:setQueueItemDisambiguationRequest(
