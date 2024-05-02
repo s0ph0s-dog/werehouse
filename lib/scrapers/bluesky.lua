@@ -49,7 +49,14 @@ local function extract_image_embeds(post_data)
 end
 
 local function make_image_uri(handle_or_did, image_ref)
-    local parts = {
+    return string.format(
+        "https://cdn.bsky.app/img/feed_thumbnail/plain/%s/%s@%s",
+        handle_or_did,
+        image_ref,
+        "jpeg"
+    )
+    -- This should work, but I get a 403 "Request forbidden by administrative rules" error *only when Redbean makes the request.*
+    --[[local parts = {
         scheme = "https",
         host = "bsky.social",
         path = "/xrpc/com.atproto.sync.getBlob",
@@ -58,7 +65,7 @@ local function make_image_uri(handle_or_did, image_ref)
             { "cid", image_ref },
         },
     }
-    return EncodeUrl(parts)
+    return EncodeUrl(parts)]]
 end
 
 local function get_artist_profile(post_uri, handle_or_did, did)
