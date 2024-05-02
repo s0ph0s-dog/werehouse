@@ -205,7 +205,7 @@ local function check_duplicates(model, task)
         table.insert(sources_with_dupes, data.this_source)
         if data.additional_sources then
             for _, source in ipairs(data.additional_sources) do
-                table.insert(sources_with_dupes, data.additional_sources)
+                table.insert(sources_with_dupes, source)
             end
         end
     end

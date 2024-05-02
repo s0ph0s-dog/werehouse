@@ -416,13 +416,11 @@ end
 function Model:checkDuplicateSources(links)
     local dupe_ids_set = {}
     for _, link in ipairs(links) do
+        Log(kLogDebug, "checking for duplicates of: %s" % { EncodeJson(link) })
         local sources, errmsg =
             self.conn:fetchAll(queries.model.get_source_by_link, link)
         if not sources then
             return nil, errmsg
-        end
-        if #sources == 0 then
-            return {}
         end
         for _, image in ipairs(sources) do
             dupe_ids_set[image.image_id] = true
