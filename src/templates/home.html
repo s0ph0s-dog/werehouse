@@ -1,4 +1,5 @@
-{% function block.content() %}
+{% tombstone_map = { [0] = "To Do", [1] = "Error", [2] = "Done" } %} {% function
+block.content() %}
 <h1>Recently Queued Items</h1>
 <p><a href="/enqueue">Add Something</a></p>
 {% if #queue_records == 0 then %}
@@ -7,27 +8,27 @@
 <table>
   <thead>
     <tr>
-      <th>ID</th>
-      <th>Link</th>
-      <th>Image</th>
-      <th>Tombstone Flag</th>
-      <th>Added</th>
-      <th>Status</th>
+      <th class="num">ID</th>
+      <th class="txt">Link</th>
+      <th class="txt">Image</th>
+      <th class="txt">Status</th>
+      <th class="txt">Description</th>
     </tr>
   </thead>
   {% for _, item in ipairs(queue_records) do %}
   <tr>
-    <td>{%& item.qid %}</td>
-    <td>{% if item.link then %}{%& item.link %}{% else %}N/A{% end %}</td>
+    <td class="num">{%& item.qid %}</td>
+    <td class="txt">
+      {% if item.link then %}{%& item.link %}{% else %}N/A{% end %}
+    </td>
     <td>
       {% if not item.link then %}<img
         width="200"
         src="/api/queue-image/{%& item.qid %}"
       />{% else %}N/A{% end %}
     </td>
-    <td>{%& item.tombstone %}</td>
-    <td>{%& item.added %}</td>
-    <td>{%& item.status %}</td>
+    <td class="txt">{%& tombstone_map[item.tombstone] %}</td>
+    <td class="txt">{%& item.status %}</td>
   </tr>
   {% end %}
 </table>

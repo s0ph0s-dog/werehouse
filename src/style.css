@@ -80,10 +80,39 @@ footer {
   max-height: 12em;
   display: block;
   margin: 0 auto;
+  border: 3px solid LinkText;
+}
+.gallery a:active img {
+  border-color: ActiveText;
+}
+.gallery a:visited img {
+  border-color: VisitedText;
 }
 
 .main-image {
   max-width: 100%;
   margin: 1.5em auto 0 auto;
   display: block;
+}
+
+table {
+  border-top: 2px solid CanvasText;
+  border-bottom: 2px solid CanvasText;
+  border-collapse: collapse;
+  width: 100%;
+}
+thead {
+  border-bottom: 1px solid CanvasText;
+}
+th,
+td {
+  padding: 0.2em;
+}
+
+table .txt {
+  text-align: left;
+}
+
+table .num {
+  text-align: right;
 }
