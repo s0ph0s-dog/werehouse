@@ -78,13 +78,16 @@ end
 
 local function login_required(handler)
     return function(r)
+        Log(kLogInfo, "session token: %s" % { EncodeJson(r.session.token) })
         if not r.session.token then
-            return Fm.serve401()
+            r.session.after_login_url = r.url
+            return Fm.serveRedirect("/login", 302)
         end
         local session, errmsg = Accounts:findSessionById(r.session.token)
         if not session then
             Log(kLogDebug, errmsg)
-            return Fm.serve401()
+            r.session.after_login_url = r.url
+            return Fm.serveRedirect("/login", 302)
         end
         -- TODO: enforce session expiry
         Model = DbUtil.Model:new(nil, session.user_id)
@@ -115,7 +118,12 @@ local function accept_login(r)
         return Fm.serveRedirect("/login", 302)
     end
     r.session.token = session_id
-    return Fm.serveRedirect("/home", 302)
+    local redirect_url = "/home"
+    if r.session.after_login_url then
+        redirect_url = r.session.after_login_url
+        -- r.session.after_login_url = nil
+    end
+    return Fm.serveRedirect(redirect_url, 302)
 end
 
 local render_home = login_required(function(r)
