@@ -30,7 +30,10 @@
 <h1>Sources</h1>
 {% if #sources == 0 then %}
 <p>No sources for this image yet.</p>
-{% else %}{% for _, source in ipairs(sources) do %}
-<li><a href="{%& source.link %}">{%& ParseUrl(source.link).host %}</a></li>
-{% end %}{% end %}{% end %}{% render("main_layout", { title = "Home", user =
-user }) %}
+{% else %}
+<ul>
+  {% for _, source in ipairs(sources) do %}
+  <li><a href="{%& source.link %}">{%& ParseUrl(source.link).host %}</a></li>
+  {% end %}
+</ul>
+{% end %}{% end %}{% render("main_layout", { title = "Home", user = user }) %}
