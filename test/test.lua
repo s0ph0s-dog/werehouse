@@ -445,6 +445,7 @@ function TestScraperPipeline:testValidE6Links()
         "https://e621.net/posts/4366241?q=filetype%3Ajpg+order%3Ascore"
     local inputQueryParamsWithJson =
         "https://e621.net/posts/4366241.json?q=filetype%3Ajpg%2Border%3Ascore"
+    local inputThirdPartyEdit = "https://e621.net/posts/4721029"
     local expectedRegular = {
         archive = {
             {
@@ -516,6 +517,38 @@ function TestScraperPipeline:testValidE6Links()
                 nil,
             },
         },
+        {
+            input = { link = inputThirdPartyEdit },
+            expected = {
+                {
+                    archive = {
+                        {
+                            canonical_domain = "e621.net",
+                            height = 2103,
+                            mime_type = "image/jpeg",
+                            this_source = inputThirdPartyEdit,
+                            additional_sources = {
+                                "https://twitter.com/mukinky",
+                                "https://www.furaffinity.net/view/56276968/",
+                                "https://itaku.ee/images/806865",
+                                "https://www.weasyl.com/~kuruk/submissions/2369253/trying-out-the-vixenmaker-pt-3-color",
+                                "https://inkbunny.net/s/3299951",
+                            },
+                            raw_image_uri = "https://static1.e621.net/data/dc/90/dc90a909c40a2c602143dbf765c2074f.jpg",
+                            width = 1752,
+                            authors = {
+                                {
+                                    handle = "mukinky",
+                                    display_name = "mukinky",
+                                    profile_url = "https://e621.net/posts?tags=mukinky",
+                                },
+                            },
+                        },
+                    },
+                },
+                nil,
+            },
+        },
     }
     local regular_response_body = Slurp("test/e6_regular_example.json")
     local mocks = {
@@ -523,6 +556,7 @@ function TestScraperPipeline:testValidE6Links()
         fetch_mock_head_html_200(inputQueryParams),
         fetch_mock_head_html_200(inputVideo),
         fetch_mock_head_html_200(inputGif),
+        fetch_mock_head_html_200(inputThirdPartyEdit),
         {
             whenCalledWith = inputRegular .. ".json",
             thenReturn = { 200, {}, regular_response_body },
@@ -538,6 +572,10 @@ function TestScraperPipeline:testValidE6Links()
         {
             whenCalledWith = inputGif .. ".json",
             thenReturn = { 200, {}, Slurp("test/e6_gif_example.json") },
+        },
+        {
+            whenCalledWith = inputThirdPartyEdit .. ".json",
+            thenReturn = { 200, {}, Slurp("test/e6_third_party_edit.json") },
         },
     }
     process_entry_framework(tests, mocks)

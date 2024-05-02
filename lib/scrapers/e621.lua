@@ -55,6 +55,9 @@ local function process_uri(uri)
     if not artist_tags or type(artist_tags) ~= "table" then
         artist_tags = {}
     end
+    local artist_tags = table.filter(artist_tags, function(x)
+        return x ~= "third-party_edit"
+    end)
     ---@cast artist_tags string[]
     local authors = table.map(artist_tags, function(item)
         return {
