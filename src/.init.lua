@@ -9,6 +9,11 @@ local web = require("web")
 local _ = require("functools")
 local scraper_pipeline = require("scraper_pipeline")
 
+local session_key = os.getenv("SESSION_KEY")
+if session_key then
+    Fm.sessionOptions.secret = Fm.decodeBase64()
+end
+
 ServerVersion = string.format(
     "%s/%s; redbean/%s",
     about.NAME,
