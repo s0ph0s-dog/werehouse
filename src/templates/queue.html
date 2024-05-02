@@ -1,0 +1,60 @@
+{% tombstone_map = { [0] = "To Do", [1] = "Error", [2] = "Done" } %} {% function
+block.content() %}
+<h1>Queued Items</h1>
+<p><a href="/enqueue">Add Something</a></p>
+{% if #queue_records == 0 then %}
+<p>Nothing queued</p>
+{% else %}
+<form method="POST">
+  <span class="buttons"
+    ><input type="reset" value="Deselect All" /><input
+      type="submit"
+      name="tryagain"
+      value="Try Again"
+  /></span>
+  <table>
+    <thead>
+      <tr>
+        <th class="num"></th>
+        <th class="num">ID</th>
+        <th class="txt">Link</th>
+        <th class="txt">Image</th>
+        <th class="txt">Added On</th>
+        <th class="txt">Status</th>
+        <th class="txt">Description</th>
+      </tr>
+    </thead>
+    {% for _, item in ipairs(queue_records) do %}
+    <tr>
+      <td class="num"><input type="checkbox" /></td>
+      <td class="num">{%& item.qid %}</td>
+      <td class="txt">
+        {% if item.link then %}{%& item.link %}{% else %}N/A{% end %}
+      </td>
+      <td>
+        {% if not item.link then %}<img
+          width="200"
+          src="/api/queue-image/{%& item.qid %}"
+        />{% else %}N/A{% end %}
+      </td>
+      <td class="txt">{%& item.added_on %}</td>
+      <td class="txt">{%& tombstone_map[item.tombstone] %}</td>
+      <td class="txt">{%& item.status %}</td>
+    </tr>
+    {% end %}
+  </table>
+  <p>
+    {%& pages.first_row %} to {%& pages.last_row %} of {%& queue_record_count %}
+    total entries
+  </p>
+  <p>
+    {% if pages.before then %}<a
+      href="?before={%& pages.before.key %}&page={%& pages.before.num %}"
+      >&lt; Previous</a
+    >{% end %} &nbsp; {% if pages.after then %}<a
+      href="?after={%& pages.after.key %}&page={%& pages.after.num %}"
+      >Next &gt;</a
+    >{% end %}
+  </p>
+</form>
+{% end %}{% end %}{% render("main_layout", { title = "Home", user = user }) %}

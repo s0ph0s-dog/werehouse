@@ -215,6 +215,21 @@ local queries = {
             FROM queue
             WHERE tombstone = 0
             ORDER BY added_on DESC;]],
+        get_queue_entry_count = [[SELECT COUNT(*) AS count FROM "queue";]],
+        get_queue_entries_page_1 = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
+            FROM queue
+            ORDER BY added_on DESC
+            LIMIT ?;]],
+        get_queue_entries_page_forward = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
+            FROM queue
+            WHERE added_on < ?
+            ORDER BY added_on DESC
+            LIMIT ?;]],
+        get_queue_entries_page_backward = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
+            FROM queue
+            WHERE added_on > ?
+            ORDER BY added_on DESC
+            LIMIT ?;]],
         get_queue_image_by_id = [[SELECT image, image_mime_type FROM queue
             WHERE qid = ?;]],
         get_recent_image_entries = [[SELECT image_id, file
@@ -301,6 +316,38 @@ end
 ---@return ActiveQueueEntry[]
 function Model:getAllActiveQueueEntries()
     return self.conn:fetchAll(queries.model.get_all_active_queue_entries)
+end
+
+function Model:getQueueEntryCount()
+    local result, errmsg =
+        self.conn:fetchOne(queries.model.get_queue_entry_count)
+    if not result then
+        return nil, errmsg
+    end
+    return result.count
+end
+
+---@param options { after: string?, before: string? }
+function Model:getPaginatedQueueEntries(per_page, options)
+    options = options or {}
+    if options.after then
+        return self.conn:fetchAll(
+            queries.model.get_queue_entries_page_forward,
+            options.after,
+            per_page
+        )
+    elseif options.before then
+        return self.conn:fetchAll(
+            queries.model.get_queue_entries_page_backward,
+            options.before,
+            per_page
+        )
+    else
+        return self.conn:fetchAll(
+            queries.model.get_queue_entries_page_1,
+            per_page
+        )
+    end
 end
 
 function Model:getRecentImageEntries()

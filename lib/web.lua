@@ -246,6 +246,57 @@ local render_image = login_required(function(r)
     })
 end)
 
+local render_queue = login_required(function(r)
+    local per_page = 100
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    local queue_count, count_errmsg = Model:getQueueEntryCount()
+    if not queue_count then
+        Log(kLogDebug, count_errmsg)
+        return Fm.serve500()
+    end
+    local options = {
+        after = r.params.after,
+        before = r.params.before,
+    }
+    local queue_records, queue_errmsg =
+        Model:getPaginatedQueueEntries(per_page, options)
+    if not queue_records then
+        Log(kLogInfo, queue_errmsg)
+        return Fm.serve500()
+    end
+    local pages = {}
+    if #queue_records > 0 then
+        local first_row = queue_records[1]
+        local last_row = queue_records[#queue_records]
+        pages.current = tonumber(r.params.page or "1")
+        pages.total = math.ceil(queue_count / per_page)
+        pages.first_row = ((pages.current - 1) * per_page) + 1
+        pages.last_row = pages.first_row + #queue_records - 1
+        if pages.current ~= pages.total then
+            pages.after = {
+                key = last_row.added_on,
+                num = pages.current + 1,
+            }
+        end
+        if pages.current ~= 1 then
+            pages.before = {
+                key = first_row.added_on,
+                num = pages.current - 1,
+            }
+        end
+    end
+    return Fm.serveContent("queue", {
+        user = user_record,
+        queue_records = queue_records,
+        queue_record_count = queue_count,
+        pages = pages,
+    })
+end)
+
 local function setup()
     Fm.setTemplate { "/templates/", html = "fmt" }
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
@@ -258,6 +309,7 @@ local function setup()
     )
     Fm.setRoute(Fm.GET { "/login" }, render_login)
     Fm.setRoute(Fm.POST { "/login", _ = login_validator }, accept_login)
+    Fm.setRoute(Fm.GET { "/queue" }, render_queue)
     Fm.setRoute("/home", render_home)
     Fm.setRoute("/image-file/:filename", render_image_file)
     Fm.setRoute("/image/:image_id", render_image)
