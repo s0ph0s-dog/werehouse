@@ -208,7 +208,7 @@ function TestScraperPipeline:testExampleLinkPermanentFailureShouldError()
     luaunit.assertEquals(error.type, 1)
 end
 
-function TestScraperPipeline:testValidBskyLink()
+function TestScraperPipeline:testValidBskyLinks()
     local input = {
         link = "https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz/post/3kphxqgx6iv2b",
     }
@@ -239,8 +239,8 @@ function TestScraperPipeline:testValidBskyLink()
     }
     local expected = {
         archive = table.map({
-            "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreib2v6upf5gz7q22jpdnrh2fwhtn6yexrsnbp6uh7ythgq3obhf7ia@jpeg",
-            "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreidjkqudkq2m6pojavuelcud2fez2eojxiflnxedimplumiygu76pe@jpeg",
+            "https://bsky.social/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3A4gjc5765wbtvrkdxysyvaewz&cid=bafkreib2v6upf5gz7q22jpdnrh2fwhtn6yexrsnbp6uh7ythgq3obhf7ia",
+            "https://bsky.social/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3A4gjc5765wbtvrkdxysyvaewz&cid=bafkreidjkqudkq2m6pojavuelcud2fez2eojxiflnxedimplumiygu76pe",
         }, function(item)
             return {
                 authors = {
@@ -256,6 +256,64 @@ function TestScraperPipeline:testValidBskyLink()
                 this_source = "https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz/post/3kphxqgx6iv2b",
                 raw_image_uri = item,
                 width = 1905,
+            }
+        end),
+    }
+    local tests = {
+        { input = input, expected = { expected, nil } },
+    }
+    process_entry_framework(tests, mocks)
+end
+
+function TestScraperPipeline:testBskyLinkWithNoAspectRatio()
+    local input = {
+        link = "https://bsky.app/profile/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/post/3kb4ebxmabw2v",
+    }
+    local mocks = {
+        fetch_mock_head_html_200(
+            "https://bsky.app/profile/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/post/3kb4ebxmabw2v"
+        ),
+        {
+            whenCalledWith = "https://bsky.social/xrpc/com.atproto.repo.getRecord?repo=did%3Aplc%3Abkq6i3w4hg7zkzuf5phyfdxg&collection=app.bsky.feed.post&rkey=3kb4ebxmabw2v",
+            thenReturn = { 200, {}, Slurp("./test/bsky_no_aspectratio.json") },
+        },
+        {
+            whenCalledWith = "https://bsky.social/xrpc/com.atproto.repo.describeRepo?repo=did%3Aplc%3Abkq6i3w4hg7zkzuf5phyfdxg",
+            thenReturn = {
+                200,
+                {},
+                [[{"handle":"bigcozyorca.art","did":"did:plc:4gjc5765wbtvrkdxysyvaewz","didDoc":{"@context":["https://www.w3.org/ns/did/v1","https://w3id.org/security/multikey/v1","https://w3id.org/security/suites/secp256k1-2019/v1"],"id":"did:plc:4gjc5765wbtvrkdxysyvaewz","alsoKnownAs":["at://bigcozyorca.art"],"verificationMethod":[{"id":"did:plc:4gjc5765wbtvrkdxysyvaewz#atproto","type":"Multikey","controller":"did:plc:4gjc5765wbtvrkdxysyvaewz","publicKeyMultibase":"zQ3shk8eMicPrTviAy8AFU1YDTg4Y1Vcx6KL8kScPuqn9YPhX"}],"service":[{"id":"#atproto_pds","type":"AtprotoPersonalDataServer","serviceEndpoint":"https://puffball.us-east.host.bsky.network"}]},"collections":["app.bsky.actor.profile","app.bsky.feed.like","app.bsky.feed.post","app.bsky.feed.repost","app.bsky.graph.block","app.bsky.graph.follow"],"handleIsCorrect":true}]],
+            },
+        },
+        {
+            whenCalledWith = "https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=did%3Aplc%3Abkq6i3w4hg7zkzuf5phyfdxg&collection=app.bsky.actor.profile&limit=1",
+            thenReturn = {
+                200,
+                {},
+                [[{"records":[{"uri":"at://did:plc:4gjc5765wbtvrkdxysyvaewz/app.bsky.actor.profile/self","cid":"bafyreidyznavjmovmun7bgixgxjz3zu24j7jjaj23fr5allx4pbusbn6ei","value":{"$type":"app.bsky.actor.profile","avatar":{"$type":"blob","ref":{"$link":"bafkreiabtb4hbusnizey2sqzdtdy5fza72e5d5alovjpn6hvkolvozegwa"},"mimeType":"image/jpeg","size":905826},"banner":{"$type":"blob","ref":{"$link":"bafkreibiet6367gxfkhj3ua5vdgdbbvubucpkxbyekssgngi3zcww7ukia"},"mimeType":"image/jpeg","size":362391},"description":"He/They\n18+ (NO MINORS)\nA 🔞NSFW furry artist!!\nTrying out new platforms to spread out.","displayName":"BigCozyOrca 🔞"}}],"cursor":"self"}]],
+            },
+        },
+    }
+    local expected = {
+        archive = table.map({
+            "https://bsky.social/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3Abkq6i3w4hg7zkzuf5phyfdxg&cid=bafkreie4pcim2xsuzgjstzhprtkfjiam2vqlgygjhxujiduvoxs5z2opr4",
+            "https://bsky.social/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3Abkq6i3w4hg7zkzuf5phyfdxg&cid=bafkreiag6auhhw5by6nrkmgzzhtxetqtmsa55o3o7rnyzwhohxga3cfpoq",
+            "https://bsky.social/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3Abkq6i3w4hg7zkzuf5phyfdxg&cid=bafkreibxygqam6gddpcexktzuup6js52g2fx73ytip3ptdetc4d6g3kq4u",
+        }, function(item)
+            return {
+                authors = {
+                    {
+                        display_name = "BigCozyOrca 🔞",
+                        handle = "bigcozyorca.art",
+                        profile_url = "https://bsky.app/profile/did:plc:bkq6i3w4hg7zkzuf5phyfdxg",
+                    },
+                },
+                canonical_domain = "bsky.app",
+                height = 0,
+                mime_type = "image/jpeg",
+                this_source = "https://bsky.app/profile/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/post/3kb4ebxmabw2v",
+                raw_image_uri = item,
+                width = 0,
             }
         end),
     }

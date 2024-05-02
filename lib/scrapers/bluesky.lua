@@ -49,12 +49,16 @@ local function extract_image_embeds(post_data)
 end
 
 local function make_image_uri(handle_or_did, image_ref)
-    return string.format(
-        "https://cdn.bsky.app/img/feed_thumbnail/plain/%s/%s@%s",
-        handle_or_did,
-        image_ref,
-        "jpeg"
-    )
+    local parts = {
+        scheme = "https",
+        host = "bsky.social",
+        path = "/xrpc/com.atproto.sync.getBlob",
+        params = {
+            { "did", handle_or_did },
+            { "cid", image_ref },
+        },
+    }
+    return EncodeUrl(parts)
 end
 
 local function get_artist_profile(post_uri, handle_or_did, did)
@@ -160,15 +164,19 @@ local function process_uri(uri)
                 Log(kLogInfo, "Image.image.ref was null")
                 return nil
             end
-            if not image.aspectRatio then
-                Log(kLogInfo, "Image.aspectRatio was null")
-                return nil
+            local aspectRatio = image.aspectRatio
+            if not aspectRatio then
+                -- This is apparently not required. Assume 0 for both. This will get chosen last among available sources, which is maybe not the best choice, but I don't want to download the image and compute the size myself yet.
+                aspectRatio = {
+                    width = 0,
+                    height = 0,
+                }
             end
             return {
                 raw_image_uri = make_image_uri(did, image.image.ref["$link"]),
                 mime_type = image.image.mimeType,
-                width = image.aspectRatio.width,
-                height = image.aspectRatio.height,
+                width = aspectRatio.width,
+                height = aspectRatio.height,
                 canonical_domain = CANONICAL_DOMAIN,
                 this_source = uri,
                 authors = { artist },
