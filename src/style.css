@@ -39,3 +39,51 @@ input[type="password"] {
 .dialog .buttons input:last-child {
   margin-right: 0;
 }
+
+.content {
+  max-width: 64em;
+  margin: 0 auto;
+}
+nav {
+  border-bottom: 1px solid CanvasText;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+nav .links {
+  display: flex;
+  justify-content: end;
+}
+nav .links a {
+  padding: 0.5em;
+}
+nav .links a:last-child {
+  padding-right: 0;
+}
+footer {
+  border-top: 1px solid CanvasText;
+  margin-top: 1em;
+  padding: 1em 0;
+}
+
+.gallery {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: start;
+  gap: 1em;
+}
+.gallery a {
+  width: 12em;
+}
+.gallery a img {
+  max-width: 12em;
+  max-height: 12em;
+  display: block;
+  margin: 0 auto;
+}
+
+.main-image {
+  max-width: 100%;
+  margin: 1.5em auto 0 auto;
+  display: block;
+}
