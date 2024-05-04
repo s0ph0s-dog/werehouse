@@ -297,10 +297,34 @@ local render_queue = login_required(function(r)
     })
 end)
 
+local function render_about(r)
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if errmsg then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    return Fm.serveContent("about", {
+        user = user_record,
+    })
+end
+
+local function render_tos(r)
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if errmsg then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    return Fm.serveContent("tos", {
+        user = user_record,
+    })
+end
+
 local function setup()
     Fm.setTemplate { "/templates/", html = "fmt" }
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
     Fm.setRoute("/style.css", Fm.serveAsset)
+    Fm.setRoute("/", render_about)
+    Fm.setRoute("/tos", render_tos)
     -- User-facing routes
     Fm.setRoute(Fm.GET { "/accept-invite/:invite_code" }, render_invite)
     Fm.setRoute(
