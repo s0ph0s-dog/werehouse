@@ -204,7 +204,7 @@ local queries = {
         get_all_user_ids = [[SELECT user_id FROM "users";]],
     },
     model = {
-        get_recent_queue_entries = [[SELECT qid, link, tombstone, added_on, status
+        get_recent_queue_entries = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
             FROM queue
             ORDER BY added_on DESC
             LIMIT 20;]],
@@ -414,7 +414,7 @@ function Model:insertImage(image_file, mime_type, width, height)
 end
 
 function Model:checkDuplicateSources(links)
-    local dupe_ids_set = {}
+    local dupes = {}
     for _, link in ipairs(links) do
         Log(kLogDebug, "checking for duplicates of: %s" % { EncodeJson(link) })
         local sources, errmsg =
@@ -423,14 +423,10 @@ function Model:checkDuplicateSources(links)
             return nil, errmsg
         end
         for _, image in ipairs(sources) do
-            dupe_ids_set[image.image_id] = true
+            dupes[link] = image.image_id
         end
     end
-    local dupe_ids_list = {}
-    for id, _ in pairs(dupe_ids_set) do
-        table.insert(dupe_ids_list, id)
-    end
-    return dupe_ids_list
+    return dupes
 end
 
 function Model:insertSourcesForImage(image_id, sources)

@@ -13,16 +13,27 @@
 
 ---@alias Scraper {process_uri: ScraperProcess, can_process_uri: ScraperCanProcess}
 
+---@alias DuplicateData { url: string, image_id: integer, source_kind: string }
+---@alias HelpWithDuplicates { original_task: ArchiveEntryTask, duplicates: DuplicateData[]}
+function HelpWithDuplicates(original_task, duplicates)
+    return { original_task = original_task, duplicates = duplicates }
+end
+
+---@alias HelpWithHeuristicFailure ArchiveEntryTask
+function HelpWithHeuristicFailure(original_task)
+    return original_task
+end
+
 ---@alias ArchiveEntryTask { archive: ScrapedSourceData[], discovered_sources: string[] }
 function ArchiveEntryTask(data, discovered_sources)
-    if #discovered_sources == 1 then
+    if discovered_sources and #discovered_sources == 1 then
         discovered_sources = nil
     end
     return { archive = data, discovered_sources = discovered_sources }
 end
----@alias RequestHelpEntryTask { help: ScrapedSourceData[][], discovered_sources: string[] }
+---@alias RequestHelpEntryTask { help: { d: HelpWithDuplicates?, h: HelpWithHeuristicFailure? }, discovered_sources: string[] }
 function RequestHelpEntryTask(data, discovered_sources)
-    if #discovered_sources == 1 then
+    if discovered_sources and #discovered_sources == 1 then
         discovered_sources = nil
     end
     return { help = data, discovered_sources = discovered_sources }

@@ -150,7 +150,7 @@ local function process_entry_framework(test_data, mocks)
     local original = fetch_mock(mocks)
     local results = {}
     for _, test in ipairs(test_data) do
-        local result, errmsg = pipeline.process_entry(test.input)
+        local result, errmsg = pipeline.scrape_sources(test.input)
         table.insert(results, {
             input = test.input,
             expected = test.expected,
@@ -183,14 +183,8 @@ function TestScraperPipeline:testMultipartBody()
     luaunit.assertEquals(result, expected)
 end
 
-function TestScraperPipeline:testUnansweredDisambiguationRequestIsSkipped()
-    local input = { disambiguation_request = "garbage" }
-    local result = pipeline.process_entry(input)
-    luaunit.assertEquals(result, { noop = true })
-end
-
 function TestScraperPipeline:testExampleLinkPermanentFailureShouldError()
-    local input = { link = "test://shouldFailPermanently" }
+    local input = { "test://shouldFailPermanently" }
     TestScraperProcessUri = function()
         return nil, PermScraperError("404")
     end
@@ -200,7 +194,7 @@ function TestScraperPipeline:testExampleLinkPermanentFailureShouldError()
             thenReturn = { 200, {}, "" },
         },
     }
-    local result, error = pipeline.process_entry(input)
+    local result, error = pipeline.scrape_sources(input)
     Fetch = original
     luaunit.assertIsNil(result)
     luaunit.assertNotIsNil(error)
@@ -210,7 +204,7 @@ end
 
 function TestScraperPipeline:testValidBskyLinks()
     local input = {
-        link = "https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz/post/3kphxqgx6iv2b",
+        "https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz/post/3kphxqgx6iv2b",
     }
     local mocks = {
         fetch_mock_head_html_200(
@@ -267,7 +261,7 @@ end
 
 function TestScraperPipeline:testBskyLinkWithNoAspectRatio()
     local input = {
-        link = "https://bsky.app/profile/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/post/3kb4ebxmabw2v",
+        "https://bsky.app/profile/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/post/3kb4ebxmabw2v",
     }
     local mocks = {
         fetch_mock_head_html_200(
@@ -368,15 +362,15 @@ function TestScraperPipeline:testValidTwitterLinks()
     }
     local tests = {
         {
-            input = { link = tweetTrackingParams },
+            input = { tweetTrackingParams },
             expected = { expected, nil },
         },
         {
-            input = { link = tweetVxtwitter },
+            input = { tweetVxtwitter },
             expected = { expected, nil },
         },
         {
-            input = { link = tweetNitter },
+            input = { tweetNitter },
             expected = { expected, nil },
         },
     }
@@ -420,19 +414,19 @@ function TestScraperPipeline:testValidFuraffinityLinks()
     }
     local tests = {
         {
-            input = { link = inputRegular },
+            input = { inputRegular },
             expected = { expected, nil },
         },
         {
-            input = { link = inputFx },
+            input = { inputFx },
             expected = { expected, nil },
         },
         {
-            input = { link = inputX },
+            input = { inputX },
             expected = { expected, nil },
         },
         {
-            input = { link = inputNoWwwFull },
+            input = { inputNoWwwFull },
             expected = { expected, nil },
         },
     }
@@ -473,15 +467,15 @@ function TestScraperPipeline:testValidE6Links()
     local inputGif = "https://e621.net/posts/3105830"
     local tests = {
         {
-            input = { link = inputRegular },
+            input = { inputRegular },
             expected = { expectedRegular, nil },
         },
         {
-            input = { link = inputQueryParams },
+            input = { inputQueryParams },
             expected = { expectedRegular, nil },
         },
         {
-            input = { link = inputVideo },
+            input = { inputVideo },
             expected = {
                 nil,
                 PermScraperError(
@@ -490,7 +484,7 @@ function TestScraperPipeline:testValidE6Links()
             },
         },
         {
-            input = { link = inputGif },
+            input = { inputGif },
             expected = {
                 {
                     archive = {
@@ -518,7 +512,7 @@ function TestScraperPipeline:testValidE6Links()
             },
         },
         {
-            input = { link = inputThirdPartyEdit },
+            input = { inputThirdPartyEdit },
             expected = {
                 {
                     archive = {
@@ -528,7 +522,6 @@ function TestScraperPipeline:testValidE6Links()
                             mime_type = "image/jpeg",
                             this_source = inputThirdPartyEdit,
                             additional_sources = {
-                                "https://twitter.com/mukinky",
                                 "https://www.furaffinity.net/view/56276968/",
                                 "https://itaku.ee/images/806865",
                                 "https://www.weasyl.com/~kuruk/submissions/2369253/trying-out-the-vixenmaker-pt-3-color",
@@ -590,7 +583,7 @@ function TestScraperPipeline:testValidCohostLinks()
         "https://cohost.org/infinityio/post/4685920-div-style-flex-dir"
     local tests = {
         {
-            input = { link = inputSFW },
+            input = { inputSFW },
             expected = {
                 {
                     archive = {
@@ -614,7 +607,7 @@ function TestScraperPipeline:testValidCohostLinks()
             },
         },
         {
-            input = { link = inputNSFW },
+            input = { inputNSFW },
             expected = {
                 {
                     archive = {
@@ -652,7 +645,7 @@ function TestScraperPipeline:testValidCohostLinks()
             },
         },
         {
-            input = { link = inputLoggedInOnly },
+            input = { inputLoggedInOnly },
             expected = {
                 nil,
                 PermScraperError(

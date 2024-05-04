@@ -1,5 +1,8 @@
-{% tombstone_map = { [0] = "To Do", [1] = "Error", [2] = "Done" } %} {% function
-block.content() %}
+{% function status_text(queue_item) %} {% if queue_item.tombstone == 1 then
+%}Error{% elseif queue_item.tombstone == 2 then %}Archived{% elseif
+queue_item.disambiguation_data then %}To Do (again){% elseif
+queue_item.disambiguation_request then %}Help Needed{% else %}To Do{% end %} {%
+end %}{% function block.content() %}
 <h1>Recently Queued Items</h1>
 <p><a href="/enqueue">Add Something</a></p>
 {% if #queue_records == 0 then %}
@@ -27,7 +30,7 @@ block.content() %}
         src="/api/queue-image/{%& item.qid %}"
       />{% else %}N/A{% end %}
     </td>
-    <td class="txt">{%& tombstone_map[item.tombstone] %}</td>
+    <td class="txt">{%& status_text(item) %}</td>
     <td class="txt">{%& item.status %}</td>
   </tr>
   {% end %}

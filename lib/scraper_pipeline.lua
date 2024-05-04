@@ -188,67 +188,80 @@ local function get_sources_for_entry(queue_entry)
     return nil, "should be unreachable"
 end
 
+local function check_for_duplicates_helper(
+    model,
+    dupes_list,
+    sources,
+    source_kind
+)
+    local dupes, dupe_err = model:checkDuplicateSources(sources)
+    if not dupes then
+        return TempScraperError(dupe_err)
+    end
+    for dupe_url, dupe_image_id in pairs(dupes) do
+        table.insert(dupes_list, {
+            url = dupe_url,
+            image_id = dupe_image_id,
+            source_kind = source_kind,
+        })
+    end
+end
+
 ---@param model Model
----@param task ArchiveEntryTask
-local function check_duplicates(model, task)
-    assert(
-        task.archive ~= nil,
-        "check_duplicates function only works with archive tasks"
-    )
-    local sources_with_dupes = {}
+---@param task EntryTask
+local function check_for_duplicates(model, task)
+    -- This validation only makes sense for archive tasks, so pass other tasks through unchanged.
+    if not task.archive then
+        return task
+    end
+    -- Check for duplicate sources already in the database.
+    ---@type DuplicateData[]
+    local duplicates = {}
     if task.discovered_sources then
-        for _, source in ipairs(task.discovered_sources) do
-            table.insert(sources_with_dupes, source)
+        local err = check_for_duplicates_helper(
+            model,
+            duplicates,
+            task.discovered_sources,
+            "discovered"
+        )
+        if err then
+            return nil, err
         end
     end
     for _, data in ipairs(task.archive) do
-        table.insert(sources_with_dupes, data.this_source)
+        local this_err = check_for_duplicates_helper(
+            model,
+            duplicates,
+            { data.this_source },
+            "this"
+        )
+        if this_err then
+            return nil, this_err
+        end
         if data.additional_sources then
-            for _, source in ipairs(data.additional_sources) do
-                table.insert(sources_with_dupes, source)
+            local addtnl_err = check_for_duplicates_helper(
+                model,
+                duplicates,
+                data.additional_sources,
+                "additional"
+            )
+            if addtnl_err then
+                return nil, addtnl_err
             end
         end
     end
-    local this_item_sources = table.uniq(sources_with_dupes)
-    local dupes, dupe_err = model:checkDuplicateSources(this_item_sources)
-    if not dupes or dupe_err then
-        return TempScraperError(dupe_err)
-    end
-    if #dupes > 0 then
-        Log(kLogInfo, "Found duplicates: %s" % { EncodeJson(dupes) })
-        return PermScraperError(
-            "This source has been saved already: %s" % { EncodeJson(dupes) }
-        )
+    if #duplicates > 0 then
+        Log(kLogInfo, "Found duplicates: %s" % { EncodeJson(duplicates) })
+        return RequestHelpEntryTask { d = HelpWithDuplicates(task, duplicates) }
     end
     Log(kLogVerbose, "Found no duplicates by source link")
-    return nil
+    return task
 end
 
----@param queue_entry ActiveQueueEntry Queue entry from the database
+---@param source_links string[] A list of source links to scrape.
 ---@return EntryTask? # A database manipulation task to do now that the queue entry has been processed, or nil if there was an error.
 ---@return ScraperError? # A table with information about the kind of error that occurred, or nil if there was no error.
-local function process_entry(queue_entry)
-    if queue_entry.disambiguation_data then
-        -- TODO: implement disambiguation.
-        return NoopEntryTask
-    end
-    if queue_entry.disambiguation_request then
-        -- Do nothing here because we're waiting for the user to disambiguate.
-        return NoopEntryTask
-    end
-
-    local source_links, errmsg1 = get_sources_for_entry(queue_entry)
-    if
-        not source_links
-        or (type(source_links) == "table" and #source_links < 1)
-    then
-        return nil,
-            TempScraperError(
-                "I couldn't find sources for %s: %s"
-                    % { queue_entry.qid, errmsg1 }
-            )
-    end
-    ---@cast source_links string[]
+local function scrape_sources(source_links)
     -- Log(kLogInfo, "source_links: %s" % {EncodeJson(source_links)})
     -- a list containing [ a result containing [ a list containing [ scraped data for one image at the source ] ] ]
     local scraped = table.map(source_links, process_source_uri)
@@ -493,54 +506,115 @@ local function queue_entry_tostr(queue_entry)
     return EncodeJson(result)
 end
 
+local function execute_task(model, queue_entry, task)
+    if task.archive then
+        local ok, error2 = save_sources(
+            model,
+            queue_entry,
+            task.archive,
+            task.discovered_sources
+        )
+        if not ok then
+            ---@cast error2 ScraperError
+            return nil, error2
+        end
+    elseif task.help then
+        local json_task = EncodeJson(task)
+        local ok, errmsg3 =
+            model:setQueueItemDisambiguationRequest(queue_entry.qid, json_task)
+        if not ok then
+            Log(kLogWarn, "%s" % { errmsg3 })
+        end
+    elseif task.noop then
+        -- intentionally do nothing
+    else
+        Log(
+            kLogFatal,
+            "Unhandled task from process_entry: %s" % { EncodeJson(task) }
+        )
+        -- Execution stops after a fatal log event.
+    end
+end
+
+local function task_for_scraping(queue_entry)
+    local sources, find_src_err = get_sources_for_entry(queue_entry)
+    if not sources or (type(sources) == "table" and #sources < 1) then
+        return nil,
+            TempScraperError(
+                "I couldn't find sources for %s: %s"
+                    % { queue_entry.qid, find_src_err }
+            )
+    end
+    local task, scrape_err = scrape_sources(sources)
+    if not task then
+        return nil, scrape_err
+    end
+    return task
+end
+
+local function task_for_answering_disambiguation_req(queue_entry)
+    -- TODO: implement disambiguation.
+    return NoopEntryTask
+end
+
+---@param queue_entry ActiveQueueEntry
+---@return EntryTask?
+---@return ScraperError?
+local function task_for_entry(queue_entry)
+    -- These states are possible, but filtered out by the query that selects active queue entries.
+    --[[
+    -- Dead -> Dead
+    if queue_entry.tombstone == 1 then
+        return NoopEntryTask
+    end
+    -- Archived -> Archived
+    if queue_entry.tombstone == 2 then
+        return NoopEntryTask
+    end
+    ]]
+    -- NeedsHelp -> Archived
+    if queue_entry.disambiguation_data then
+        return task_for_answering_disambiguation_req(queue_entry)
+    end
+    -- NeedsHelp -> NeedsHelp
+    if queue_entry.disambiguation_request then
+        -- Do nothing here because we're waiting for the user to disambiguate.
+        return NoopEntryTask
+    end
+    -- Queued -> (NeedsHelp, Dead, Archived)
+    return task_for_scraping(queue_entry)
+end
+
+local function process_entry(model, queue_entry)
+    Log(
+        kLogInfo,
+        "Processing queue entry %s" % { queue_entry_tostr(queue_entry) }
+    )
+    -- 1. Generate task for queue entry
+    local task, task_err = task_for_entry(queue_entry)
+    if not task then
+        handle_queue_error(model, queue_entry, task_err)
+        return nil
+    end
+    -- 3. Validate task
+    local validated_task, validation_err = check_for_duplicates(model, task)
+    if not validated_task then
+        handle_queue_error(model, queue_entry, validation_err)
+        return nil
+    end
+    -- 4. Execute task
+    local execute_err = execute_task(model, queue_entry, validated_task)
+    if execute_err then
+        handle_queue_error(model, queue_entry, execute_err)
+        return nil
+    end
+end
+
 ---@param model Model
 ---@param queue_records ActiveQueueEntry[]
 local function process_queue(model, queue_records)
     for _, queue_entry in ipairs(queue_records) do
-        Log(
-            kLogInfo,
-            "Processing queue entry %s" % { queue_entry_tostr(queue_entry) }
-        )
-        local task, error = process_entry(queue_entry)
-        if not task then
-            ---@cast error ScraperError
-            handle_queue_error(model, queue_entry, error)
-        else
-            if task.archive then
-                local dupe_err = check_duplicates(model, task)
-                if dupe_err then
-                    handle_queue_error(model, queue_entry, dupe_err)
-                else
-                    local ok, error2 = save_sources(
-                        model,
-                        queue_entry,
-                        task.archive,
-                        task.discovered_sources
-                    )
-                    if not ok then
-                        ---@cast error2 ScraperError
-                        handle_queue_error(model, queue_entry, error2)
-                    end
-                end
-            elseif task.help then
-                local ok, errmsg3 = model:setQueueItemDisambiguationRequest(
-                    queue_entry.qid,
-                    task
-                )
-                if not ok then
-                    Log(kLogWarn, "%s" % { errmsg3 })
-                end
-            elseif task.noop then
-                -- intentionally do nothing
-            else
-                Log(
-                    kLogFatal,
-                    "Unhandled task from process_entry: %s"
-                        % { EncodeJson(task) }
-                )
-                -- Execution stops after a fatal log event.
-            end
-        end
+        process_entry(model, queue_entry)
     end
 end
 
@@ -578,5 +652,6 @@ end
 return {
     process_all_queues = process_all_queues,
     process_entry = process_entry,
+    scrape_sources = scrape_sources,
     multipart_body = multipart_body,
 }

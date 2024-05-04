@@ -11,6 +11,25 @@ local function can_process_uri(uri)
     return parts.host == "e621.net"
 end
 
+local function is_user_page(source)
+    if source:find("furaffinity%.net/user/") then
+        return false
+    end
+    -- Twitter page without /status/snowflake
+    if source:find("twitter.com/[A-z0-9_]+/?$") then
+        return false
+    end
+    -- Ditto for x.com
+    if source:find("x.com/[A-z0-9_]+/?$") then
+        return false
+    end
+    return true
+end
+
+local function filter_user_pages(sources)
+    return table.filter(sources, is_user_page)
+end
+
 ---@return Result<ScrapedSourceData, ScraperError>
 local function process_uri(uri)
     local parts = ParseUrl(uri)
@@ -51,6 +70,7 @@ local function process_uri(uri)
     if not additional_sources then
         additional_sources = {}
     end
+    additional_sources = filter_user_pages(additional_sources)
     local artist_tags = json.post.tags.artist
     if not artist_tags or type(artist_tags) ~= "table" then
         artist_tags = {}
