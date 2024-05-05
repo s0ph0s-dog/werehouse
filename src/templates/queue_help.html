@@ -1,0 +1,60 @@
+{% function help_dupes() %}
+<p>
+  This entry seems to be a duplicate of something that's already been saved.
+</p>
+<table>
+  <thead>
+    <tr>
+      <th class="txt">Link</th>
+      <th class="txt">Link Kind</th>
+      <th class="txt">Possible Duplicate</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for _, dupe in ipairs(disambiguation_data.d.duplicates) do %}
+    <tr>
+      <td class="txt"><a href="{%& dupe.url %}">{%& dupe.url %}</a></td>
+      <td class="txt">{%& dupe.source_kind %} source</td>
+      <td class="txt">
+        <a href="/image/{%& dupe.image_id %}">Image {%& dupe.image_id %}</a>
+      </td>
+    </tr>
+    {% end %}
+  </tbody>
+</table>
+<form method="POST">
+  <p>What do you want to do?</p>
+  <span class="buttons">
+    <input type="submit" name="discard" value="Discard" />
+    <input type="submit" name="save" value="Save Anyway" />
+  </span>
+</form>
+{% end %}{% function help_heuristic() %}
+<p>
+  The sources for this entry have different numbers of images, and the
+  application can't guess what to do.
+</p>
+{% end %}{% function block.content() %}
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+</style>
+<div class="dialog" style="width: 64em">
+  <h1>Provide Help</h1>
+  {% if type(error) == "string" then %}
+  <p style="color: red">{%& error %}</p>
+  {% end %}{% if disambiguation_data.d then %}{% help_dupes() %}{% elseif
+  disambiguation_data.h then %}{% help_heuristic() %}{% else %}
+  <p>
+    Error: something has gone wrong and the scraper pipeline has asked for help
+    in a way that the web front-end doesn't know how to display.
+  </p>
+  {% end %}
+</div>
+{% end %}{% render("main_layout", { title = "Provide Help", user = user,
+hide_header = true, hide_footer = true }) %}

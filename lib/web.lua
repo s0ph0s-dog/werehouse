@@ -1,7 +1,7 @@
 local function render_invite(r)
     local invite_record = Accounts:findInvite(r.params.invite_code)
     if not invite_record then
-        return 404
+        return Fm.serve404()
     end
     return Fm.render(
         "accept_invite",
@@ -50,7 +50,21 @@ local function accept_invite(r)
             kLogInfo,
             "No invite records in database for %s" % { r.params.invite_code }
         )
-        return 404
+        return Fm.serve404()
+    end
+    local valid, val_err = invite_validator(r.params)
+    if not valid then
+        Log(
+            kLogInfo,
+            "invite form validation error: %s" % { EncodeJson(val_err) }
+        )
+        r.session.error = table.concat(val_err, ", ")
+        return Fm.serveRedirect(r.path, 302)
+    end
+    if r.params.tos ~= "accepted" then
+        r.session.error =
+            "You must accept the Terms of Service if you want to register."
+        return Fm.serveRedirect(r.path, 302)
     end
     if r.params.password ~= r.params.password_confirm then
         -- TODO: password mismatch
@@ -66,7 +80,7 @@ local function accept_invite(r)
     print(result)
     if not result then
         Log(kLogInfo, "Invitation acceptance failed: %s" % { errmsg })
-        return 400
+        return Fm.serve400()
     end
     Log(kLogInfo, "Registration success!")
     return Fm.serveRedirect("/login", 302)
@@ -185,9 +199,14 @@ local accept_enqueue = login_required(function(r)
         end
         -- TODO: check errors
         return Fm.serveRedirect("/home", 302)
-    elseif allowed_image_types[r.headers["Content-Type"]] then
-        local result, errmsg =
-            Model:enqueueImage(r.headers["Content-Type"], r.body)
+    elseif
+        r.params.multipart.image
+        and allowed_image_types[r.params.multipart.image.headers["content-type"]]
+    then
+        local result, errmsg = Model:enqueueImage(
+            r.params.multipart.image.headers["content-type"],
+            r.params.multipart.image.data
+        )
         if not result then
             Log(kLogWarn, errmsg)
         end
@@ -258,43 +277,68 @@ local render_queue = login_required(function(r)
         Log(kLogDebug, count_errmsg)
         return Fm.serve500()
     end
-    local options = {
-        after = r.params.after,
-        before = r.params.before,
-    }
+    local cur_page = tonumber(r.params.page or "1")
+    if cur_page < 1 then
+        return Fm.serve400()
+    end
     local queue_records, queue_errmsg =
-        Model:getPaginatedQueueEntries(per_page, options)
+        Model:getPaginatedQueueEntries(cur_page, per_page)
     if not queue_records then
         Log(kLogInfo, queue_errmsg)
         return Fm.serve500()
     end
     local pages = {}
+    pages.current = cur_page
     if #queue_records > 0 then
-        local first_row = queue_records[1]
-        local last_row = queue_records[#queue_records]
-        pages.current = tonumber(r.params.page or "1")
         pages.total = math.ceil(queue_count / per_page)
         pages.first_row = ((pages.current - 1) * per_page) + 1
         pages.last_row = pages.first_row + #queue_records - 1
         if pages.current ~= pages.total then
             pages.after = {
-                key = last_row.added_on,
                 num = pages.current + 1,
             }
         end
         if pages.current ~= 1 then
             pages.before = {
-                key = first_row.added_on,
                 num = pages.current - 1,
             }
         end
     end
+    local error = r.session.error
+    r.session.error = nil
     return Fm.serveContent("queue", {
         user = user_record,
+        error = error,
         queue_records = queue_records,
         queue_record_count = queue_count,
         pages = pages,
     })
+end)
+
+local accept_queue = login_required(function(r)
+    if not r.params.qids then
+        return Fm.serve400("Must select at least one queue entry.")
+    end
+    if r.params.delete then
+        local ok, err = Model:deleteFromQueue(r.params.qids)
+        if not ok then
+            r.session.error = err
+        end
+    elseif r.params.tryagain then
+        local ok, err = Model:resetQueueItemStatus(r.params.qids)
+        if not ok then
+            r.session.error = err
+        end
+    elseif r.params.error then
+        local ok, err =
+            Model:setQueueItemsStatus(r.params.qids, 1, "Manually forced error")
+        if not ok then
+            r.session.error = err
+        end
+    else
+        return Fm.serve400()
+    end
+    return Fm.serveRedirect("/queue", 302)
 end)
 
 local function render_about(r)
@@ -319,6 +363,67 @@ local function render_tos(r)
     })
 end
 
+local render_queue_help = login_required(function(r)
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record or errmsg then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    local queue_entry, queue_errmsg = Model:getQueueEntryById(r.params.qid)
+    if not queue_entry then
+        return Fm.serve404()
+    end
+    local dd_str = queue_entry.disambiguation_request
+    if not dd_str then
+        dd_str = "{}"
+    end
+    local dd, json_err = DecodeJson(dd_str)
+    if json_err then
+        Log(
+            kLogWarn,
+            "JSON decode error while decoding qid %d: %s"
+                % { queue_entry.qid, json_err }
+        )
+        return Fm.serve500()
+    end
+    r.session.after_help_submit = r.headers["Referer"]
+    return Fm.serveContent("queue_help", {
+        user = user_record,
+        queue_entry = queue_entry,
+        disambiguation_data = dd,
+    })
+end)
+
+local accept_queue_help = login_required(function(r)
+    local qid = r.params.qid
+    if not qid then
+        return Fm.serve400()
+    end
+    -- TODO: modularize this part so that it can answer both kinds of disambiguation requests
+    if
+        r.params.save and r.params.discard
+        or (not r.params.save and not r.params.discard)
+    then
+        return Fm.serve400()
+    end
+    local result = {}
+    if r.params.save then
+        result = { d = "save" }
+    else
+        result = { d = "discard" }
+    end
+    local ok, err = Model:setQueueItemDisambiguationResponse(qid, result)
+    if not ok or err then
+        Log(kLogInfo, "Database error: %s" % { err })
+        return Fm.serve500()
+    end
+    local last_page = r.session.after_help_submit
+    if not last_page then
+        last_page = "/home"
+    end
+    return Fm.serveRedirect(last_page, 302)
+end)
+
 local function setup()
     Fm.setTemplate { "/templates/", html = "fmt" }
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
@@ -334,6 +439,9 @@ local function setup()
     Fm.setRoute(Fm.GET { "/login" }, render_login)
     Fm.setRoute(Fm.POST { "/login", _ = login_validator }, accept_login)
     Fm.setRoute(Fm.GET { "/queue" }, render_queue)
+    Fm.setRoute(Fm.POST { "/queue" }, accept_queue)
+    Fm.setRoute(Fm.GET { "/queue/:qid/help" }, render_queue_help)
+    Fm.setRoute(Fm.POST { "/queue/:qid/help" }, accept_queue_help)
     Fm.setRoute("/home", render_home)
     Fm.setRoute("/image-file/:filename", render_image_file)
     Fm.setRoute("/image/:image_id", render_image)

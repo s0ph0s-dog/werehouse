@@ -32,14 +32,21 @@ input[type="password"] {
   width: 100%;
   padding: 0.5em;
 }
-.dialog .buttons {
+.inline,
+.inline a,
+.inline input {
+  display: inline;
+}
+.buttons {
   display: flex;
   justify-content: flex-end;
 }
-.dialog .buttons input {
+.buttons input,
+.buttons button {
   margin-right: 1em;
 }
-.dialog .buttons input:last-child {
+.buttons input:last-child,
+.buttons button:last-child {
   margin-right: 0;
 }
 

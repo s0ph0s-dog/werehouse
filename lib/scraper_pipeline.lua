@@ -26,7 +26,7 @@ local MIME_TO_EXT = {
 }
 
 local function multipart_body(boundary, image_data, content_type)
-    local result = '--%s\r\nContent-Disposition: form-data; name="image"; filename="purple%s"\r\nContent-Type: %s\r\n\r\n%s\r\n--%s--\r\n\r\n'
+    local result = '--%s\r\nContent-Disposition: form-data; name="image"; filename="C:\\fakepath\\purple%s"\r\nContent-Type: %s\r\n\r\n%s\r\n--%s--\r\n\r\n'
         % {
             boundary,
             MIME_TO_EXT[content_type],
@@ -108,7 +108,11 @@ end
 ---@return boolean? # If this URL has quirks, true if it should be checked against FuzzySearch, false otherwise.
 local function quirks(link)
     local parts = ParseUrl(link)
-    if parts.host == "twitter.com" or parts.host == "vxtwitter.com" then
+    if
+        parts.host == "twitter.com"
+        or parts.host == "vxtwitter.com"
+        or parts.host == "x.com"
+    then
         -- Twitter (for mystery reasons) makes Redbean go into an infinite loop while waiting for the response to my HEAD request below.
         return true, false
     end
@@ -119,6 +123,8 @@ local function quirks(link)
     if
         parts.host == "www.fxfuraffinity.net"
         or parts.host == "fxfuraffinity.net"
+        or parts.host == "xfuraffinity.net"
+        or parts.host == "www.xfuraffinity.net"
     then
         -- fxfuraffinity and Redbean's Fetch() don't get along well when sending HEAD requests.
         return true, false
@@ -212,6 +218,9 @@ end
 local function check_for_duplicates(model, task)
     -- This validation only makes sense for archive tasks, so pass other tasks through unchanged.
     if not task.archive then
+        return task
+    end
+    if task.no_dupe_check then
         return task
     end
     -- Check for duplicate sources already in the database.
@@ -519,7 +528,7 @@ local function execute_task(model, queue_entry, task)
             return nil, error2
         end
     elseif task.help then
-        local json_task = EncodeJson(task)
+        local json_task = EncodeJson(task.help)
         local ok, errmsg3 =
             model:setQueueItemDisambiguationRequest(queue_entry.qid, json_task)
         if not ok then
@@ -553,7 +562,54 @@ local function task_for_scraping(queue_entry)
 end
 
 local function task_for_answering_disambiguation_req(queue_entry)
-    -- TODO: implement disambiguation.
+    local disambiguation_request = queue_entry.disambiguation_request
+    if not disambiguation_request then
+        return NoopEntryTask
+    end
+    local dr, req_err = DecodeJson(queue_entry.disambiguation_request)
+    if not dr or req_err then
+        Log(kLogWarn, "error decoding JSON from queue: %s" % { req_err })
+        return NoopEntryTask
+    end
+    if dr.d then
+        if not queue_entry.disambiguation_data then
+            return NoopEntryTask
+        end
+        local response, data_err = DecodeJson(queue_entry.disambiguation_data)
+        if not response or data_err then
+            Log(kLogWarn, "error decoding JSON from queue: %s" % { data_err })
+            return NoopEntryTask
+        end
+        if not response.d then
+            return nil,
+                PermScraperError(
+                    "Unexpected response to request for help (wanted %s): %s"
+                        % { "{'d': something}", queue_entry.disambiguation_data }
+                )
+        end
+        if response.d == "discard" then
+            return nil,
+                PermScraperError(
+                    "Duplicate of existing image, user-requested error"
+                )
+        elseif response.d == "save" then
+            local new_task = dr.d.original_task
+            new_task.no_dupe_check = true
+            Log(kLogInfo, "Returning task: %s" % { EncodeJson(new_task) })
+            ---@cast new_task ArchiveEntryTask
+            return new_task
+        else
+            return nil,
+                PermScraperError(
+                    "Unexpected response to request for help (wanted %s): %s"
+                        % { "{'d': something}", queue_entry.disambiguation_data }
+                )
+        end
+        return nil, PermScraperError("Should be unreachable")
+    elseif disambiguation_request.h then
+        -- TODO: implement disambiguation for this.
+        return NoopEntryTask
+    end
     return NoopEntryTask
 end
 

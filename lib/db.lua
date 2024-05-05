@@ -211,25 +211,19 @@ local queries = {
         get_all_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status, disambiguation_request, disambiguation_data
             FROM queue
             ORDER BY added_on DESC;]],
-        get_all_active_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status
+        get_all_active_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status, disambiguation_request, disambiguation_data
             FROM queue
             WHERE tombstone = 0
             ORDER BY added_on DESC;]],
         get_queue_entry_count = [[SELECT COUNT(*) AS count FROM "queue";]],
-        get_queue_entries_page_1 = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
+        get_queue_entries_paginated = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
             FROM queue
             ORDER BY added_on DESC
-            LIMIT ?;]],
-        get_queue_entries_page_forward = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
+            LIMIT ?
+            OFFSET ?;]],
+        get_queue_entry_by_id = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status, disambiguation_request, disambiguation_data
             FROM queue
-            WHERE added_on < ?
-            ORDER BY added_on DESC
-            LIMIT ?;]],
-        get_queue_entries_page_backward = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
-            FROM queue
-            WHERE added_on > ?
-            ORDER BY added_on DESC
-            LIMIT ?;]],
+            WHERE qid = ?;]],
         get_queue_image_by_id = [[SELECT image, image_mime_type FROM queue
             WHERE qid = ?;]],
         get_recent_image_entries = [[SELECT image_id, file
@@ -285,8 +279,14 @@ local queries = {
         update_queue_item_status = [[UPDATE "queue"
             SET "status" = ?, "tombstone" = ?
             WHERE qid = ?;]],
-        update_queue_item_disambiguation = [[UPDATE "queue"
+        update_queue_item_status_to_zero = [[UPDATE "queue"
+            SET "tombstone" = 0
+            WHERE qid = ?;]],
+        update_queue_item_disambiguation_req = [[UPDATE "queue"
             SET "disambiguation_request" = ?
+            WHERE qid = ?;]],
+        update_queue_item_disambiguation_data = [[UPDATE "queue"
+            SET "disambiguation_data" = ?
             WHERE qid = ?;]],
     },
 }
@@ -328,30 +328,20 @@ function Model:getQueueEntryCount()
 end
 
 ---@param options { after: string?, before: string? }
-function Model:getPaginatedQueueEntries(per_page, options)
-    options = options or {}
-    if options.after then
-        return self.conn:fetchAll(
-            queries.model.get_queue_entries_page_forward,
-            options.after,
-            per_page
-        )
-    elseif options.before then
-        return self.conn:fetchAll(
-            queries.model.get_queue_entries_page_backward,
-            options.before,
-            per_page
-        )
-    else
-        return self.conn:fetchAll(
-            queries.model.get_queue_entries_page_1,
-            per_page
-        )
-    end
+function Model:getPaginatedQueueEntries(page_num, per_page)
+    return self.conn:fetchAll(
+        queries.model.get_queue_entries_paginated,
+        per_page,
+        (page_num - 1) * per_page
+    )
 end
 
 function Model:getRecentImageEntries()
     return self.conn:fetchAll(queries.model.get_recent_image_entries)
+end
+
+function Model:getQueueEntryById(qid)
+    return self.conn:fetchOne(queries.model.get_queue_entry_by_id, qid)
 end
 
 function Model:getQueueImageById(qid)
@@ -386,18 +376,60 @@ function Model:enqueueImage(mime_type, image_data)
     )
 end
 
+function Model:resetQueueItemStatus(queue_ids)
+    local SP_QRESET = "reset_queue_status"
+    self:create_savepoint(SP_QRESET)
+    for _, qid in ipairs(queue_ids) do
+        local ok, err = self.conn:execute(
+            queries.model.update_queue_item_status_to_zero,
+            qid
+        )
+        if not ok then
+            self:rollback(SP_QRESET)
+            return nil, err
+        end
+    end
+    self:release_savepoint(SP_QRESET)
+    return #queue_ids
+end
+
 function Model:setQueueItemStatus(queue_id, tombstone, new_status)
-    return self.conn:execute(
-        queries.model.update_queue_item_status,
-        new_status,
-        tombstone,
-        queue_id
-    )
+    return self:setQueueItemsStatus({ queue_id }, tombstone, new_status)
+end
+
+function Model:setQueueItemsStatus(queue_ids, tombstone, new_status)
+    local SP_QSTATUS = "set_queue_status"
+    self:create_savepoint(SP_QSTATUS)
+    for _, qid in ipairs(queue_ids) do
+        local ok, err = self.conn:execute(
+            queries.model.update_queue_item_status,
+            new_status,
+            tombstone,
+            qid
+        )
+        if not ok then
+            self:rollback(SP_QSTATUS)
+            return nil, err
+        end
+    end
+    self:release_savepoint(SP_QSTATUS)
+    return #queue_ids
 end
 
 function Model:setQueueItemDisambiguationRequest(queue_id, disambiguation_data)
     return self.conn:execute(
-        queries.model.update_queue_item_disambiguation,
+        queries.model.update_queue_item_disambiguation_req,
+        disambiguation_data,
+        queue_id
+    )
+end
+
+function Model:setQueueItemDisambiguationResponse(queue_id, disambiguation_data)
+    if type(disambiguation_data) ~= "string" then
+        disambiguation_data = EncodeJson(disambiguation_data)
+    end
+    return self.conn:fetchOne(
+        queries.model.update_queue_item_disambiguation_data,
         disambiguation_data,
         queue_id
     )
@@ -540,8 +572,19 @@ function Model:addImageToGroupAtEnd(image_id, group_id)
     )
 end
 
-function Model:deleteFromQueue(queue_id)
-    return self.conn:execute(queries.model.delete_item_from_queue, queue_id)
+function Model:deleteFromQueue(queue_ids)
+    local SP_QDEL = "delete_from_queue"
+    self:create_savepoint(SP_QDEL)
+    for _, qid in ipairs(queue_ids) do
+        local ok, errmsg =
+            self.conn:execute(queries.model.delete_item_from_queue, qid)
+        if not ok or errmsg then
+            self:rollback(SP_QDEL)
+            return nil, errmsg
+        end
+    end
+    self:release_savepoint(SP_QDEL)
+    return true
 end
 
 function Model:create_savepoint(name)

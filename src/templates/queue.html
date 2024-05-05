@@ -1,16 +1,25 @@
-{% tombstone_map = { [0] = "To Do", [1] = "Error", [2] = "Done" } %} {% function
-block.content() %}
+{% function block.content() %}
 <h1>Queued Items</h1>
 <p><a href="/enqueue">Add Something</a></p>
-{% if #queue_records == 0 then %}
+{% if pages.current > 1 and #queue_records == 0 then %}
+<p>You've fallen off the end of the page counter!</p>
+{% elseif #queue_records == 0 then %}
 <p>Nothing queued</p>
 {% else %}
 <form method="POST">
+  {% if error and type(error) == "string" then %}
+  <p style="color: red">{%& error %}</p>
+  {% end %}
   <span class="buttons"
-    ><input type="reset" value="Deselect All" /><input
+    ><input type="reset" value="Deselect All" /><button
+      type="button"
+      onclick="document.getElementsByName('qids[]').forEach((e) => { e.checked=true; })"
+    >
+      Select All</button
+    ><input type="submit" name="error" value="Force Error" /><input
       type="submit"
-      name="tryagain"
-      value="Try Again"
+      name="delete"
+      value="Delete" /><input type="submit" name="tryagain" value="Try Again"
   /></span>
   <table>
     <thead>
@@ -26,7 +35,9 @@ block.content() %}
     </thead>
     {% for _, item in ipairs(queue_records) do %}
     <tr>
-      <td class="num"><input type="checkbox" /></td>
+      <td class="num">
+        <input type="checkbox" name="qids[]" value="{%& item.qid %}" />
+      </td>
       <td class="num">{%& item.qid %}</td>
       <td class="txt">
         {% if item.link then %}{%& item.link %}{% else %}N/A{% end %}
@@ -38,8 +49,8 @@ block.content() %}
         />{% else %}N/A{% end %}
       </td>
       <td class="txt">{%& item.added_on %}</td>
-      <td class="txt">{%& tombstone_map[item.tombstone] %}</td>
-      <td class="txt">{%& item.status %}</td>
+      <td class="txt">{% block.status_text(item) %}</td>
+      <td class="txt">{% block.status_desc(item) %}</td>
     </tr>
     {% end %}
   </table>
@@ -48,13 +59,12 @@ block.content() %}
     total entries
   </p>
   <p>
-    {% if pages.before then %}<a
-      href="?before={%& pages.before.key %}&page={%& pages.before.num %}"
+    {% if pages.before then %}<a href="?page={%& pages.before.num %}"
       >&lt; Previous</a
     >{% end %} &nbsp; {% if pages.after then %}<a
-      href="?after={%& pages.after.key %}&page={%& pages.after.num %}"
+      href="?page={%& pages.after.num %}"
       >Next &gt;</a
     >{% end %}
   </p>
 </form>
-{% end %}{% end %}{% render("main_layout", { title = "Home", user = user }) %}
+{% end %}{% end %}{% render("main_layout", { title = "Queue", user = user }) %}

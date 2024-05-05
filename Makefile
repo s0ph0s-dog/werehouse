@@ -26,6 +26,7 @@ SRCS := src/.init.lua \
     src/templates/image.html \
     src/templates/enqueue.html \
     src/templates/queue.html \
+    src/templates/queue_help.html \
     src/templates/main_layout.html \
     src/templates/about.html \
     src/templates/tos.html \
