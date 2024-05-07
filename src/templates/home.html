@@ -33,14 +33,5 @@
 </table>
 {% end %}
 <h1>Recently Archived Items</h1>
-{% if #image_records == 0 then %}
-<p>Nothing archived yet</p>
-{% else %}
-<div class="gallery">
-  {% for _, image in ipairs(image_records) do %}
-  <a href="/image/{%& image.image_id %}">
-    <img src="/image-file/{%& image.file %}" />
-  </a>
-  {% end %}
-</div>
-{% end %}{% end %}{% render("main_layout", { title = "Home", user = user }) %}
+{% render("components/image_gallery", {image_records = image_records}) %}{% end
+%}{% render("layouts/main", { title = "Home", user = user }) %}

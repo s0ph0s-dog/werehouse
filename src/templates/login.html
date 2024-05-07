@@ -1,33 +1,18 @@
 {% function block.content() %}
-<style>
-  body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-  }
-</style>
-<div class="dialog" style="width: 20em">
-  <h1>hyperphantasia</h1>
-  {% if type(error) == "string" then %}
-  <p style="color: red">{%& error %}</p>
-  {% end %}
-  <form class="vbox" method="POST">
-    <label
-      >Username:
-      <input type="text" minlength="2" maxlength="128" name="username" /></label
-    ><label
-      >Password:
-      <input
-        type="password"
-        minlength="16"
-        maxlength="128"
-        name="password" /></label
-    ><span class="buttons"
-      ><input type="reset" /><input type="submit" value="Log In"
-    /></span>
-  </form>
-</div>
-{% end %}{% render("main_layout", { title = "Log In", hide_header = true,
-hide_footer = true }) %}
+<form class="vbox" method="POST">
+  <label
+    >Username:
+    <input type="text" minlength="2" maxlength="128" name="username" /></label
+  ><label
+    >Password:
+    <input
+      type="password"
+      minlength="16"
+      maxlength="128"
+      name="password" /></label
+  ><span class="buttons"
+    ><input type="reset" /><input type="submit" value="Log In"
+  /></span>
+</form>
+{% end %}{% render("layouts/dialog", { title = "Log In", dialog_width = "20em"
+}) %}

@@ -19,15 +19,5 @@
 </ul>
 {% end %}
 <h1>Images</h1>
-{% if #images == 0 then %}
-<p>Nothing archived yet</p>
-{% else %}
-<div class="gallery">
-  {% for _, image in ipairs(images) do %}
-  <a href="/image/{%& image.image_id %}">
-    <img src="/image-file/{%& image.file %}" />
-  </a>
-  {% end %}
-</div>
-{% end %}{% end %}{% render("main_layout", { title = artist.name, user = user })
-%}
+{% render("components/image_gallery", { image_records = images }) %}{% end %}{%
+render("layouts/main", { title = artist.name, user = user }) %}

@@ -36,5 +36,5 @@
   <li><a href="{%& source.link %}">{%& ParseUrl(source.link).host %}</a></li>
   {% end %}
 </ul>
-{% end %}{% end %}{% render("main_layout", { title = "Image " ..
+{% end %}{% end %}{% render("layouts/main", { title = "Image " ..
 tostring(image.image_id), user = user }) %}

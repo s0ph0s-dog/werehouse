@@ -21,6 +21,9 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/network_utils.lua \
 	lib/web.lua
 SRCS := src/.init.lua \
+    src/templates/layouts/main.html \
+    src/templates/layouts/dialog.html \
+    src/templates/components/image_gallery.html \
     src/templates/accept_invite.html \
     src/templates/login.html \
     src/templates/artist.html \
@@ -30,7 +33,6 @@ SRCS := src/.init.lua \
     src/templates/enqueue.html \
     src/templates/queue.html \
     src/templates/queue_help.html \
-    src/templates/main_layout.html \
     src/templates/about.html \
     src/templates/tos.html \
 	src/style.css \

@@ -1,0 +1,26 @@
+{% if pages and pages.current > 1 and #image_records == 0 then %}
+<p>You've fallen off the end of the page counter!</p>
+{% elseif #image_records == 0 then %}
+<p>Nothing archived yet</p>
+{% else %}
+<div class="gallery">
+  {% for _, image in ipairs(image_records) do %}
+  <a href="/image/{%& image.image_id %}">
+    <img src="/image-file/{%& image.file %}" />
+  </a>
+  {% end %}
+</div>
+{% if pages then %}
+<p>
+  {%& pages.first_row %} to {%& pages.last_row %} of {%& image_record_count %}
+  total images
+</p>
+<p>
+  {% if pages.before then %}<a href="?page={%& pages.before.num %}"
+    >&lt; Previous</a
+  >{% end %} &nbsp; {% if pages.after then %}<a
+    href="?page={%& pages.after.num %}"
+    >Next &gt;</a
+  >{% end %}
+</p>
+{% end %}{% end %}

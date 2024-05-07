@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% if title then %}{%& title %} - {% end %}hyperphantasia</title>
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="content">
+      <div
+        class="dialog"
+        style="width: {% if dialog_width then %}{%& dialog_width %}{% else %}24em{% end %}"
+      >
+        <h1>{%& title %}</h1>
+        {% if type(error) == "string" then %}
+        <p style="color: red">{%& error %}</p>
+        {% end %} {% function block.content() %}This page was configured
+        incorrectly and no page content was provided.{% end %}{% block.content()
+        %}
+      </div>
+    </div>
+  </body>
+</html>
