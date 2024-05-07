@@ -121,6 +121,14 @@ function Result:unwrap_or(default)
     end
 end
 
+function Result:map(transformation)
+    if self.result then
+        return Ok(transformation(self.result))
+    else
+        return self
+    end
+end
+
 ---@generic T
 ---@class Ok<T>: ResultInternal
 ---@field result `T`

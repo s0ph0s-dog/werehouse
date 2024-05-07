@@ -177,7 +177,7 @@ TestScraperPipeline = {}
 
 function TestScraperPipeline:testMultipartBody()
     local expected =
-        '--__X_PAW_BOUNDARY__\r\nContent-Disposition: form-data; name="image"; filename="purple.txt"\r\nContent-Type: text/plain\r\n\r\n|test|\r\n--__X_PAW_BOUNDARY__--\r\n\r\n'
+        '--__X_PAW_BOUNDARY__\r\nContent-Disposition: form-data; name="image"; filename="C:\\fakepath\\purple.txt"\r\nContent-Type: text/plain\r\n\r\n|test|\r\n--__X_PAW_BOUNDARY__--\r\n\r\n'
     local result =
         pipeline.multipart_body("__X_PAW_BOUNDARY__", "|test|", "text/plain")
     luaunit.assertEquals(result, expected)
@@ -440,6 +440,7 @@ function TestScraperPipeline:testValidE6Links()
     local inputQueryParamsWithJson =
         "https://e621.net/posts/4366241.json?q=filetype%3Ajpg%2Border%3Ascore"
     local inputThirdPartyEdit = "https://e621.net/posts/4721029"
+    local inputPool = "https://e621.net/pools/40574"
     local expectedRegular = {
         archive = {
             {
@@ -460,6 +461,48 @@ function TestScraperPipeline:testValidE6Links()
                         profile_url = "https://e621.net/posts?tags=reagan_long",
                     },
                 },
+            },
+        },
+    }
+    local expectedPool = {
+        archive = {
+            {
+                additional_sources = {
+                    "https://www.furaffinity.net/view/56522599",
+                    "https://e621.net/pools/40574",
+                },
+                authors = {
+                    {
+                        display_name = "64k",
+                        handle = "64k",
+                        profile_url = "https://e621.net/posts?tags=64k",
+                    },
+                },
+                canonical_domain = "e621.net",
+                height = 3456,
+                mime_type = "image/jpeg",
+                raw_image_uri = "https://static1.e621.net/data/15/1a/151a1af93e572cdf611f919e975c8268.jpg",
+                this_source = "https://e621.net/posts/4763407",
+                width = 4152,
+            },
+            {
+                additional_sources = {
+                    "https://www.furaffinity.net/view/56529598",
+                    "https://e621.net/pools/40574",
+                },
+                authors = {
+                    {
+                        display_name = "64k",
+                        handle = "64k",
+                        profile_url = "https://e621.net/posts?tags=64k",
+                    },
+                },
+                canonical_domain = "e621.net",
+                height = 3144,
+                mime_type = "image/jpeg",
+                raw_image_uri = "https://static1.e621.net/data/b0/e4/b0e4f3473858c235c21cde98336a10bd.jpg",
+                this_source = "https://e621.net/posts/4764946",
+                width = 3648,
             },
         },
     }
@@ -542,6 +585,10 @@ function TestScraperPipeline:testValidE6Links()
                 nil,
             },
         },
+        {
+            input = { inputPool },
+            expected = { expectedPool, nil },
+        },
     }
     local regular_response_body = Slurp("test/e6_regular_example.json")
     local mocks = {
@@ -550,6 +597,7 @@ function TestScraperPipeline:testValidE6Links()
         fetch_mock_head_html_200(inputVideo),
         fetch_mock_head_html_200(inputGif),
         fetch_mock_head_html_200(inputThirdPartyEdit),
+        fetch_mock_head_html_200(inputPool),
         {
             whenCalledWith = inputRegular .. ".json",
             thenReturn = { 200, {}, regular_response_body },
@@ -569,6 +617,22 @@ function TestScraperPipeline:testValidE6Links()
         {
             whenCalledWith = inputThirdPartyEdit .. ".json",
             thenReturn = { 200, {}, Slurp("test/e6_third_party_edit.json") },
+        },
+        {
+            whenCalledWith = inputPool .. ".json",
+            thenReturn = {
+                200,
+                {},
+                [[{"id":40574,"name":"Eclipse_the_Mightyena","created_at":"2024-05-05T21:25:57.601-04:00","updated_at":"2024-05-05T21:25:57.601-04:00","creator_id":414785,"description":"A small miniseries of Eclipse the Mightyena taunting his trainer","is_active":true,"category":"series","post_ids":[4763407,4764946],"creator_name":"64k","post_count":2}]],
+            },
+        },
+        {
+            whenCalledWith = "https://e621.net/posts/4763407.json",
+            thenReturn = { 200, {}, Slurp("test/e6_pool_1.json") },
+        },
+        {
+            whenCalledWith = "https://e621.net/posts/4764946.json",
+            thenReturn = { 200, {}, Slurp("test/e6_pool_2.json") },
         },
     }
     process_entry_framework(tests, mocks)
