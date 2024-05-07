@@ -283,6 +283,40 @@ local queries = {
             WHERE image_artists.artist_id = ?
             ORDER BY images.saved_at DESC
             LIMIT ?;]],
+        get_image_group_count = [[SELECT COUNT(*) AS count FROM image_group;]],
+        get_image_groups_paginated = [[SELECT
+                image_group.ig_id,
+                image_group.name,
+                COUNT(images_in_group.image_id) AS image_count
+            FROM image_group
+            inner JOIN images_in_group ON image_group.ig_id = images_in_group.ig_id
+            GROUP BY image_group.ig_id
+            ORDER BY image_group.ig_id
+            LIMIT ?
+            OFFSET ?;]],
+        get_image_group_by_id = [[SELECT ig_id, name
+            FROM image_group
+            WHERE ig_id = ?;]],
+        get_images_for_group = [[SELECT images_in_group.image_id, images.file
+            FROM images_in_group
+            inner JOIN images ON images_in_group.image_id = images.image_id
+            WHERE ig_id = ?
+            ORDER BY "images_in_group.order";]],
+        get_image_groups_by_image_id = [[SELECT image_group.ig_id, image_group.name
+            FROM image_group
+            JOIN images_in_group ON image_group.ig_id = images_in_group.ig_id
+            WHERE images_in_group.image_id = ?;]],
+        get_prev_next_images_in_group = [[SELECT
+                images_in_group."order" AS my_order,
+                siblings.image_id,
+                siblings."order" AS sibling_order
+            FROM images_in_group
+            JOIN images_in_group AS siblings ON images_in_group.ig_id = siblings.ig_id
+            WHERE
+                images_in_group.ig_id = ?
+                AND images_in_group.image_id = ?
+                AND (siblings."order" = (images_in_group."order" + 1)
+                    OR siblings."order" = (images_in_group."order" - 1));]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
@@ -642,6 +676,50 @@ function Model:createOrAssociateArtistWithImage(image_id, domain, author_info)
     return true
 end
 
+function Model:getImageGroupCount()
+    local result, errmsg =
+        self.conn:fetchOne(queries.model.get_image_group_count)
+    if not result then
+        return nil, errmsg
+    end
+    return result.count
+end
+
+function Model:getPaginatedImageGroups(page_num, per_page)
+    return self.conn:fetchAll(
+        queries.model.get_image_groups_paginated,
+        per_page,
+        (page_num - 1) * per_page
+    )
+end
+
+function Model:getGroupsForImage(image_id)
+    return self.conn:fetchAll(
+        queries.model.get_image_groups_by_image_id,
+        image_id
+    )
+end
+
+function Model:getPrevNextImagesInGroupForImage(ig_id, image_id)
+    local siblings = {}
+    local results, errmsg = self.conn:fetchAll(
+        queries.model.get_prev_next_images_in_group,
+        ig_id,
+        image_id
+    )
+    if not results then
+        return nil, errmsg
+    end
+    for _, result in ipairs(results) do
+        if result.my_order > result.sibling_order then
+            siblings.prev = result.image_id
+        elseif result.my_order < result.sibling_order then
+            siblings.next = result.image_id
+        end
+    end
+    return siblings
+end
+
 function Model:createImageGroup(name)
     return self.conn:fetchOne(queries.model.insert_image_group, name)
 end
@@ -660,6 +738,14 @@ function Model:addImageToGroupAtEnd(image_id, group_id)
         group_id,
         (last_order.max_order or 0) + 1
     )
+end
+
+function Model:getImageGroupById(ig_id)
+    return self.conn:fetchOne(queries.model.get_image_group_by_id, ig_id)
+end
+
+function Model:getImagesForGroup(ig_id)
+    return self.conn:fetchAll(queries.model.get_images_for_group, ig_id)
 end
 
 function Model:deleteFromQueue(queue_ids)

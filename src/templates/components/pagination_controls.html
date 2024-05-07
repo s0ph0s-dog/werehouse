@@ -1,7 +1,7 @@
 {% if pages then %}
 <p>
   {%& pages.first_row %} to {%& pages.last_row %} of {%& pages.item_count %}
-  total images
+  total {%& kind_plural %}
 </p>
 <div class="pages">
   {% if pages.before then %}<a href="?page={%& pages.before.num %}"

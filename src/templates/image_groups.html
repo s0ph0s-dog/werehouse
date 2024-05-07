@@ -1,8 +1,8 @@
 {% function block.content() %}
-<h1>Artists</h1>
-{% if pages.current > 1 and #artist_records == 0 then %}
+<h1>Image Groups</h1>
+{% if pages.current > 1 and #ig_records == 0 then %}
 <p>You've fallen off the end of the page counter!</p>
-{% elseif #artist_records == 0 then %}
+{% elseif #ig_records == 0 then %}
 <p>Nothing queued</p>
 {% else %}
 <form method="POST">
@@ -12,7 +12,7 @@
   <span class="buttons"
     ><input type="reset" value="Deselect All" /><button
       type="button"
-      onclick="document.getElementsByName('qids[]').forEach((e) => { e.checked=true; })"
+      onclick="document.getElementsByName('ig_ids[]').forEach((e) => { e.checked=true; })"
     >
       Select All</button
     ><input type="submit" name="delete" value="Delete"
@@ -23,32 +23,24 @@
         <th class="num"></th>
         <th class="num">ID</th>
         <th class="txt">Name</th>
-        <th class="num">Verified</th>
-        <th class="num">Known Handles</th>
         <th class="num">Saved Images</th>
       </tr>
     </thead>
-    {% for _, item in ipairs(artist_records) do %}
+    {% for _, item in ipairs(ig_records) do %}
     <tr>
       <td class="num">
-        <input
-          type="checkbox"
-          name="artist_ids[]"
-          value="{%& item.artist_id %}"
-        />
+        <input type="checkbox" name="ig_ids[]" value="{%& item.ig_id %}" />
       </td>
-      <td class="num">{%& item.artist_id %}</td>
+      <td class="num">{%& item.ig_id %}</td>
       <td class="txt">
-        <a href="/artist/{%& item.artist_id %}">{%& item.name %}</a>
+        <a href="/image-group/{%& item.ig_id %}">{%& item.name %}</a>
       </td>
-      <td class="num">{%& item.manually_confirmed %}</td>
-      <td class="num">{%& item.handle_count %}</td>
       <td class="num">{%& item.image_count %}</td>
     </tr>
     {% end %}
   </table>
   {% render("components/pagination_controls", { pages = pages, kind_plural =
-  "artists" }) %}
+  "groups" }) %}
 </form>
-{% end %}{% end %}{% render("layouts/main", { title = "Artists", user = user })
-%}
+{% end %}{% end %}{% render("layouts/main", { title = "Image Groups", user =
+user }) %}

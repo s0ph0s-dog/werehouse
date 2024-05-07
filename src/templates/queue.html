@@ -54,6 +54,7 @@
     </tr>
     {% end %}
   </table>
-  {% render("components/pagination_controls", { pages = pages }) %}
+  {% render("components/pagination_controls", { pages = pages, kind_plural =
+  "entries" }) %}
 </form>
 {% end %}{% end %}{% render("layouts/main", { title = "Queue", user = user }) %}

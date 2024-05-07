@@ -256,12 +256,25 @@ local render_image = login_required(function(r)
     if not sources then
         Log(kLogInfo, errmsg4)
     end
+    local groups, group_errmsg = Model:getGroupsForImage(r.params.image_id)
+    if not groups then
+        Log(kLogInfo, group_errmsg)
+    end
+    for _, ig in ipairs(groups) do
+        local siblings, sibling_errmsg =
+            Model:getPrevNextImagesInGroupForImage(ig.ig_id, r.params.image_id)
+        if not siblings then
+            Log(kLogInfo, sibling_errmsg)
+        end
+        ig.siblings = siblings
+    end
     return Fm.serveContent("image", {
         user = user_record,
         image = image,
         artists = artists,
         tags = tags,
         sources = sources,
+        groups = groups,
     })
 end)
 
@@ -536,6 +549,64 @@ local render_artist = login_required(function(r)
     })
 end)
 
+local render_image_groups = login_required(function(r)
+    local per_page = 100
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record or errmsg then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    local ig_count, count_errmsg = Model:getImageGroupCount()
+    if not ig_count then
+        Log(kLogDebug, tostring(count_errmsg))
+        return Fm.serve500()
+    end
+    local cur_page = tonumber(r.params.page or "1")
+    if cur_page < 1 then
+        return Fm.serve400()
+    end
+    local ig_records, ig_errmsg =
+        Model:getPaginatedImageGroups(cur_page, per_page)
+    if not ig_records then
+        Log(kLogInfo, ig_errmsg)
+        return Fm.serve500()
+    end
+    local pages = pagination_data(cur_page, ig_count, per_page, #ig_records)
+    local error = r.session.error
+    r.session.error = nil
+    return Fm.serveContent("image_groups", {
+        user = user_record,
+        error = error,
+        ig_records = ig_records,
+        pages = pages,
+    })
+end)
+
+local render_image_group = login_required(function(r)
+    if not r.params.ig_id then
+        return Fm.serve400()
+    end
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    local ig, ig_errmsg = Model:getImageGroupById(r.params.ig_id)
+    if not ig then
+        Log(kLogInfo, ig_errmsg)
+        return Fm.serve404()
+    end
+    local images, image_errmsg = Model:getImagesForGroup(r.params.ig_id)
+    if not images then
+        Log(kLogInfo, image_errmsg)
+    end
+    return Fm.serveContent("image_group", {
+        user = user_record,
+        ig = ig,
+        images = images,
+    })
+end)
+
 local function setup()
     Fm.setTemplate { "/templates/", html = "fmt" }
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
@@ -562,6 +633,8 @@ local function setup()
     Fm.setRoute(Fm.POST { "/enqueue" }, accept_enqueue)
     Fm.setRoute("/artist", render_artists)
     Fm.setRoute("/artist/:artist_id", render_artist)
+    Fm.setRoute("/image-group", render_image_groups)
+    Fm.setRoute("/image-group/:ig_id", render_image_group)
     -- API routes
     Fm.setRoute(Fm.GET { "/api/queue-image/:id" }, render_queue_image)
     -- Fm.setRoute("/api/telegram-webhook")

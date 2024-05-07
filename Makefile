@@ -31,6 +31,8 @@ SRCS := src/.init.lua \
     src/templates/artists.html \
     src/templates/image.html \
     src/templates/images.html \
+    src/templates/image_groups.html \
+    src/templates/image_group.html \
     src/templates/enqueue.html \
     src/templates/queue.html \
     src/templates/queue_help.html \

@@ -1,0 +1,4 @@
+{% function block.content() %}
+<h1>{%& ig.name %}</h1>
+{% render("components/image_gallery", { image_records = images }) %}{% end %}{%
+render("layouts/main", { title = ig.name, user = user }) %}

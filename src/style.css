@@ -131,3 +131,7 @@ table .num {
   display: flex;
   justify-content: space-between;
 }
+
+.group {
+  margin-top: 1.5em;
+}
