@@ -365,7 +365,16 @@ function Model:getSourcesForImage(image_id)
 end
 
 function Model:enqueueLink(link)
-    return self.conn:execute(queries.model.insert_link_into_queue, link)
+    local ok, result, errmsg = pcall(
+        self.conn.execute,
+        self.conn,
+        queries.model.insert_link_into_queue,
+        link
+    )
+    if not ok then
+        return nil, "Link already in queue"
+    end
+    return result, errmsg
 end
 
 function Model:enqueueImage(mime_type, image_data)
