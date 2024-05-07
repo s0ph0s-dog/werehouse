@@ -10,17 +10,4 @@
   </a>
   {% end %}
 </div>
-{% if pages then %}
-<p>
-  {%& pages.first_row %} to {%& pages.last_row %} of {%& image_record_count %}
-  total images
-</p>
-<p>
-  {% if pages.before then %}<a href="?page={%& pages.before.num %}"
-    >&lt; Previous</a
-  >{% end %} &nbsp; {% if pages.after then %}<a
-    href="?page={%& pages.after.num %}"
-    >Next &gt;</a
-  >{% end %}
-</p>
-{% end %}{% end %}
+{% render("components/pagination_controls", { pages = pages }) %}{% end %}

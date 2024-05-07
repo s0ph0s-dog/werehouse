@@ -24,6 +24,7 @@ SRCS := src/.init.lua \
     src/templates/layouts/main.html \
     src/templates/layouts/dialog.html \
     src/templates/components/image_gallery.html \
+    src/templates/components/pagination_controls.html \
     src/templates/accept_invite.html \
     src/templates/login.html \
     src/templates/artist.html \

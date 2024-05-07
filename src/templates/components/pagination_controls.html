@@ -1,0 +1,14 @@
+{% if pages then %}
+<p>
+  {%& pages.first_row %} to {%& pages.last_row %} of {%& pages.item_count %}
+  total images
+</p>
+<div class="pages">
+  {% if pages.before then %}<a href="?page={%& pages.before.num %}"
+    >← Previous</a
+  >{% end %} &nbsp; {% if pages.after then %}<a
+    href="?page={%& pages.after.num %}"
+    >Next →</a
+  >{% end %}
+</div>
+{% end %}

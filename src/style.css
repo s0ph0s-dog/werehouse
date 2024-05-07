@@ -126,3 +126,8 @@ table .txt {
 table .num {
   text-align: right;
 }
+
+.pages {
+  display: flex;
+  justify-content: space-between;
+}

@@ -54,17 +54,6 @@
     </tr>
     {% end %}
   </table>
-  <p>
-    {%& pages.first_row %} to {%& pages.last_row %} of {%& queue_record_count %}
-    total entries
-  </p>
-  <p>
-    {% if pages.before then %}<a href="?page={%& pages.before.num %}"
-      >&lt; Previous</a
-    >{% end %} &nbsp; {% if pages.after then %}<a
-      href="?page={%& pages.after.num %}"
-      >Next &gt;</a
-    >{% end %}
-  </p>
+  {% render("components/pagination_controls", { pages = pages }) %}
 </form>
 {% end %}{% end %}{% render("layouts/main", { title = "Queue", user = user }) %}

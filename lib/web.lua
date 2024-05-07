@@ -265,6 +265,34 @@ local render_image = login_required(function(r)
     })
 end)
 
+local function pagination_data(
+    current_page,
+    item_count,
+    max_items_per_page,
+    items_this_page
+)
+    local pages = {
+        current = current_page,
+    }
+    if items_this_page > 0 then
+        pages.total = math.ceil(item_count / max_items_per_page)
+        pages.first_row = ((pages.current - 1) * max_items_per_page) + 1
+        pages.last_row = pages.first_row + items_this_page - 1
+        pages.item_count = item_count
+        if pages.current ~= pages.total then
+            pages.after = {
+                num = pages.current + 1,
+            }
+        end
+        if pages.current ~= 1 then
+            pages.before = {
+                num = pages.current - 1,
+            }
+        end
+    end
+    return pages
+end
+
 local render_queue = login_required(function(r)
     local per_page = 100
     local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
@@ -287,30 +315,14 @@ local render_queue = login_required(function(r)
         Log(kLogInfo, queue_errmsg)
         return Fm.serve500()
     end
-    local pages = {}
-    pages.current = cur_page
-    if #queue_records > 0 then
-        pages.total = math.ceil(queue_count / per_page)
-        pages.first_row = ((pages.current - 1) * per_page) + 1
-        pages.last_row = pages.first_row + #queue_records - 1
-        if pages.current ~= pages.total then
-            pages.after = {
-                num = pages.current + 1,
-            }
-        end
-        if pages.current ~= 1 then
-            pages.before = {
-                num = pages.current - 1,
-            }
-        end
-    end
+    local pages =
+        pagination_data(cur_page, queue_count, per_page, #queue_records)
     local error = r.session.error
     r.session.error = nil
     return Fm.serveContent("queue", {
         user = user_record,
         error = error,
         queue_records = queue_records,
-        queue_record_count = queue_count,
         pages = pages,
     })
 end)
@@ -446,30 +458,14 @@ local render_images = login_required(function(r)
         Log(kLogInfo, image_errmsg)
         return Fm.serve500()
     end
-    local pages = {}
-    pages.current = cur_page
-    if #image_records > 0 then
-        pages.total = math.ceil(image_count / per_page)
-        pages.first_row = ((pages.current - 1) * per_page) + 1
-        pages.last_row = pages.first_row + #image_records - 1
-        if pages.current ~= pages.total then
-            pages.after = {
-                num = pages.current + 1,
-            }
-        end
-        if pages.current ~= 1 then
-            pages.before = {
-                num = pages.current - 1,
-            }
-        end
-    end
+    local pages =
+        pagination_data(cur_page, image_count, per_page, #image_records)
     local error = r.session.error
     r.session.error = nil
     return Fm.serveContent("images", {
         user = user_record,
         error = error,
         image_records = image_records,
-        image_record_count = image_count,
         pages = pages,
     })
 end)
@@ -496,30 +492,14 @@ local render_artists = login_required(function(r)
         Log(kLogInfo, artist_errmsg)
         return Fm.serve500()
     end
-    local pages = {}
-    pages.current = cur_page
-    if #artist_records > 0 then
-        pages.total = math.ceil(artist_count / per_page)
-        pages.first_row = ((pages.current - 1) * per_page) + 1
-        pages.last_row = pages.first_row + #artist_records - 1
-        if pages.current ~= pages.total then
-            pages.after = {
-                num = pages.current + 1,
-            }
-        end
-        if pages.current ~= 1 then
-            pages.before = {
-                num = pages.current - 1,
-            }
-        end
-    end
+    local pages =
+        pagination_data(cur_page, artist_count, per_page, #artist_records)
     local error = r.session.error
     r.session.error = nil
     return Fm.serveContent("artists", {
         user = user_record,
         error = error,
         artist_records = artist_records,
-        artist_record_count = artist_count,
         pages = pages,
     })
 end)
