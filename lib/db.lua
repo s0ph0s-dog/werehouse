@@ -94,7 +94,7 @@ local user_setup = [[
         "handle" TEXT NOT NULL,
         "domain" TEXT NOT NULL,
         "profile_url" TEXT NOT NULL,
-        PRIMARY KEY("artist_id"),
+        PRIMARY KEY("domain", "handle"),
         FOREIGN KEY ("artist_id") REFERENCES "artists"("artist_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
@@ -226,10 +226,16 @@ local queries = {
             WHERE qid = ?;]],
         get_queue_image_by_id = [[SELECT image, image_mime_type FROM queue
             WHERE qid = ?;]],
+        get_image_entry_count = [[SELECT COUNT(*) as count FROM images;]],
         get_recent_image_entries = [[SELECT image_id, file
             FROM images
             ORDER BY saved_at DESC
             LIMIT 20;]],
+        get_image_entries_newest_first_paginated = [[SELECT image_id, file
+            FROM images
+            ORDER BY saved_at DESC
+            LIMIT ?
+            OFFSET ?;]],
         get_image_by_id = [[SELECT image_id, file, saved_at, category, rating, kind
             FROM images
             WHERE image_id = ?;]],
@@ -251,6 +257,32 @@ local queries = {
         get_last_order_for_image_group = [[SELECT MAX("order") AS max_order
             FROM images_in_group
             WHERE ig_id = ?;]],
+        get_artist_entry_count = [[SELECT COUNT(*) AS count FROM artists;]],
+        get_artist_entries_paginated = [[SELECT
+                artists.artist_id,
+                artists.name,
+                artists.manually_confirmed,
+                COUNT(artist_handles.domain) AS handle_count,
+                COUNT(image_artists.image_id) AS image_count
+            FROM artists
+            inner JOIN artist_handles ON artists.artist_id = artist_handles.artist_id
+            inner JOIN image_artists ON artists.artist_id = image_artists.artist_id
+            GROUP BY artists.artist_id
+            ORDER BY artists.name COLLATE NOCASE
+            LIMIT ?
+            OFFSET ?;]],
+        get_artist_by_id = [[SELECT artist_id, name, manually_confirmed
+            FROM artists
+            WHERE artist_id = ?;]],
+        get_handles_for_artist = [[SELECT handle, domain, profile_url
+            FROM artist_handles
+            WHERE artist_id = ?;]],
+        get_recent_images_for_artist = [[SELECT images.image_id, images.file
+            FROM images
+            JOIN image_artists ON images.image_id = image_artists.image_id
+            WHERE image_artists.artist_id = ?
+            ORDER BY images.saved_at DESC
+            LIMIT ?;]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
@@ -327,7 +359,6 @@ function Model:getQueueEntryCount()
     return result.count
 end
 
----@param options { after: string?, before: string? }
 function Model:getPaginatedQueueEntries(page_num, per_page)
     return self.conn:fetchAll(
         queries.model.get_queue_entries_paginated,
@@ -336,8 +367,25 @@ function Model:getPaginatedQueueEntries(page_num, per_page)
     )
 end
 
+function Model:getImageEntryCount()
+    local result, errmsg =
+        self.conn:fetchOne(queries.model.get_image_entry_count)
+    if not result then
+        return nil, errmsg
+    end
+    return result.count
+end
+
 function Model:getRecentImageEntries()
     return self.conn:fetchAll(queries.model.get_recent_image_entries)
+end
+
+function Model:getPaginatedImageEntries(page_num, per_page)
+    return self.conn:fetchAll(
+        queries.model.get_image_entries_newest_first_paginated,
+        per_page,
+        (page_num - 1) * per_page
+    )
 end
 
 function Model:getQueueEntryById(qid)
@@ -487,6 +535,39 @@ function Model:insertSourcesForImage(image_id, sources)
     end
     self:release_savepoint(SP)
     return true
+end
+
+function Model:getArtistCount()
+    local result, errmsg =
+        self.conn:fetchOne(queries.model.get_artist_entry_count)
+    if not result then
+        return nil, errmsg
+    end
+    return result.count
+end
+
+function Model:getPaginatedArtists(page_num, per_page)
+    return self.conn:fetchAll(
+        queries.model.get_artist_entries_paginated,
+        per_page,
+        (page_num - 1) * per_page
+    )
+end
+
+function Model:getArtistById(artist_id)
+    return self.conn:fetchOne(queries.model.get_artist_by_id, artist_id)
+end
+
+function Model:getHandlesForArtist(artist_id)
+    return self.conn:fetchAll(queries.model.get_handles_for_artist, artist_id)
+end
+
+function Model:getRecentImagesForArtist(artist_id, limit)
+    return self.conn:fetchAll(
+        queries.model.get_recent_images_for_artist,
+        artist_id,
+        limit
+    )
 end
 
 ---@param author_info ScrapedAuthor

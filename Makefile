@@ -23,7 +23,10 @@ LIBS := lib/third_party/fullmoon.lua \
 SRCS := src/.init.lua \
     src/templates/accept_invite.html \
     src/templates/login.html \
+    src/templates/artist.html \
+    src/templates/artists.html \
     src/templates/image.html \
+    src/templates/images.html \
     src/templates/enqueue.html \
     src/templates/queue.html \
     src/templates/queue_help.html \

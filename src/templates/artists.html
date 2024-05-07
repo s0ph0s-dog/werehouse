@@ -1,0 +1,64 @@
+{% function block.content() %}
+<h1>Artists</h1>
+{% if pages.current > 1 and #artist_records == 0 then %}
+<p>You've fallen off the end of the page counter!</p>
+{% elseif #artist_records == 0 then %}
+<p>Nothing queued</p>
+{% else %}
+<form method="POST">
+  {% if error and type(error) == "string" then %}
+  <p style="color: red">{%& error %}</p>
+  {% end %}
+  <span class="buttons"
+    ><input type="reset" value="Deselect All" /><button
+      type="button"
+      onclick="document.getElementsByName('qids[]').forEach((e) => { e.checked=true; })"
+    >
+      Select All</button
+    ><input type="submit" name="delete" value="Delete"
+  /></span>
+  <table>
+    <thead>
+      <tr>
+        <th class="num"></th>
+        <th class="num">ID</th>
+        <th class="txt">Name</th>
+        <th class="num">Verified</th>
+        <th class="num">Known Handles</th>
+        <th class="num">Saved Images</th>
+      </tr>
+    </thead>
+    {% for _, item in ipairs(artist_records) do %}
+    <tr>
+      <td class="num">
+        <input
+          type="checkbox"
+          name="artist_ids[]"
+          value="{%& item.artist_id %}"
+        />
+      </td>
+      <td class="num">{%& item.artist_id %}</td>
+      <td class="txt">
+        <a href="/artist/{%& item.artist_id %}">{%& item.name %}</a>
+      </td>
+      <td class="num">{%& item.manually_confirmed %}</td>
+      <td class="num">{%& item.handle_count %}</td>
+      <td class="num">{%& item.image_count %}</td>
+    </tr>
+    {% end %}
+  </table>
+  <p>
+    {%& pages.first_row %} to {%& pages.last_row %} of {%& artist_record_count
+    %} total entries
+  </p>
+  <p>
+    {% if pages.before then %}<a href="?page={%& pages.before.num %}"
+      >&lt; Previous</a
+    >{% end %} &nbsp; {% if pages.after then %}<a
+      href="?page={%& pages.after.num %}"
+      >Next &gt;</a
+    >{% end %}
+  </p>
+</form>
+{% end %}{% end %}{% render("main_layout", { title = "Artists", user = user })
+%}

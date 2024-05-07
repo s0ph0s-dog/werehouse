@@ -424,6 +424,138 @@ local accept_queue_help = login_required(function(r)
     return Fm.serveRedirect(last_page, 302)
 end)
 
+local render_images = login_required(function(r)
+    local per_page = 100
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record or errmsg then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    local image_count, count_errmsg = Model:getImageEntryCount()
+    if not image_count then
+        Log(kLogDebug, count_errmsg)
+        return Fm.serve500()
+    end
+    local cur_page = tonumber(r.params.page or "1")
+    if cur_page < 1 then
+        return Fm.serve400()
+    end
+    local image_records, image_errmsg =
+        Model:getPaginatedImageEntries(cur_page, per_page)
+    if not image_records then
+        Log(kLogInfo, image_errmsg)
+        return Fm.serve500()
+    end
+    local pages = {}
+    pages.current = cur_page
+    if #image_records > 0 then
+        pages.total = math.ceil(image_count / per_page)
+        pages.first_row = ((pages.current - 1) * per_page) + 1
+        pages.last_row = pages.first_row + #image_records - 1
+        if pages.current ~= pages.total then
+            pages.after = {
+                num = pages.current + 1,
+            }
+        end
+        if pages.current ~= 1 then
+            pages.before = {
+                num = pages.current - 1,
+            }
+        end
+    end
+    local error = r.session.error
+    r.session.error = nil
+    return Fm.serveContent("images", {
+        user = user_record,
+        error = error,
+        image_records = image_records,
+        image_record_count = image_count,
+        pages = pages,
+    })
+end)
+
+local render_artists = login_required(function(r)
+    local per_page = 100
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record or errmsg then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    local artist_count, count_errmsg = Model:getArtistCount()
+    if not artist_count then
+        Log(kLogDebug, count_errmsg)
+        return Fm.serve500()
+    end
+    local cur_page = tonumber(r.params.page or "1")
+    if cur_page < 1 then
+        return Fm.serve400()
+    end
+    local artist_records, artist_errmsg =
+        Model:getPaginatedArtists(cur_page, per_page)
+    if not artist_records then
+        Log(kLogInfo, artist_errmsg)
+        return Fm.serve500()
+    end
+    local pages = {}
+    pages.current = cur_page
+    if #artist_records > 0 then
+        pages.total = math.ceil(artist_count / per_page)
+        pages.first_row = ((pages.current - 1) * per_page) + 1
+        pages.last_row = pages.first_row + #artist_records - 1
+        if pages.current ~= pages.total then
+            pages.after = {
+                num = pages.current + 1,
+            }
+        end
+        if pages.current ~= 1 then
+            pages.before = {
+                num = pages.current - 1,
+            }
+        end
+    end
+    local error = r.session.error
+    r.session.error = nil
+    return Fm.serveContent("artists", {
+        user = user_record,
+        error = error,
+        artist_records = artist_records,
+        artist_record_count = artist_count,
+        pages = pages,
+    })
+end)
+
+local render_artist = login_required(function(r)
+    if not r.params.artist_id then
+        return Fm.serve400()
+    end
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    local artist, errmsg1 = Model:getArtistById(r.params.artist_id)
+    if not artist then
+        Log(kLogInfo, errmsg1)
+        return Fm.serve404()
+    end
+    local handles, errmsg2 = Model:getHandlesForArtist(r.params.artist_id)
+    if not handles then
+        Log(kLogInfo, errmsg2)
+    end
+    local images, images_err =
+        Model:getRecentImagesForArtist(r.params.artist_id, 20)
+    if not images then
+        Log(kLogInfo, errmsg2)
+        return Fm.serve500()
+    end
+    return Fm.serveContent("artist", {
+        user = user_record,
+        artist = artist,
+        handles = handles,
+        images = images,
+    })
+end)
+
 local function setup()
     Fm.setTemplate { "/templates/", html = "fmt" }
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
@@ -444,9 +576,12 @@ local function setup()
     Fm.setRoute(Fm.POST { "/queue/:qid/help" }, accept_queue_help)
     Fm.setRoute("/home", render_home)
     Fm.setRoute("/image-file/:filename", render_image_file)
+    Fm.setRoute("/image", render_images)
     Fm.setRoute("/image/:image_id", render_image)
     Fm.setRoute(Fm.GET { "/enqueue" }, render_enqueue)
     Fm.setRoute(Fm.POST { "/enqueue" }, accept_enqueue)
+    Fm.setRoute("/artist", render_artists)
+    Fm.setRoute("/artist/:artist_id", render_artist)
     -- API routes
     Fm.setRoute(Fm.GET { "/api/queue-image/:id" }, render_queue_image)
     -- Fm.setRoute("/api/telegram-webhook")

@@ -13,7 +13,7 @@
 {% else %}
 <ul>
   {% for _, artist in ipairs(artists) do %}
-  <li><a href="/artists/{%& artist.artist_id %}">{%& artist.name %}</a></li>
+  <li><a href="/artist/{%& artist.artist_id %}">{%& artist.name %}</a></li>
   {% end %}
 </ul>
 {% end %}
