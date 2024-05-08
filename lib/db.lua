@@ -10,8 +10,13 @@ local accounts_setup = [[
         "user_id" TEXT NOT NULL UNIQUE,
         "username" TEXT NOT NULL UNIQUE,
         "password" TEXT NOT NULL,
-        "tg_userid" INTEGER,
         PRIMARY KEY("user_id")
+    );
+
+    CREATE TABLE IF NOT EXISTS "telegram_accounts" (
+        "user_id" TEXT NOT NULL,
+        "tg_userid" INTEGER NOT NULL UNIQUE,
+        PRIMARY KEY("tg_userid", "user_id")
     );
 
     CREATE TABLE IF NOT EXISTS "sessions" (
@@ -211,7 +216,10 @@ local queries = {
         get_user_by_session = [[SELECT u.user_id, u.username FROM "users" AS u
             INNER JOIN "sessions" on u.user_id = sessions.user_id
             WHERE sessions.session_id = ?;]],
-        get_user_by_tg_id = [[SELECT user_id, username FROM users WHERE tg_userid = ?;]],
+        get_user_by_tg_id = [[SELECT users.user_id, users.username
+            FROM users
+            JOIN telegram_accounts ON users.user_id = telegram_accounts.user_id
+            WHERE telegram_accounts.tg_userid = ?;]],
         get_all_user_ids = [[SELECT user_id FROM "users";]],
         get_telegram_link_request_by_id = [[SELECT request_id, display_name, username, tg_userid, created_at
             FROM telegram_link_requests
@@ -219,9 +227,9 @@ local queries = {
         insert_telegram_link_request = [[INSERT INTO "telegram_link_requests"
             ("request_id", "display_name", "username", "tg_userid", "created_at")
             VALUES (?, ?, ?, ?, ?);]],
-        update_user_with_telegram_userid = [[UPDATE "users"
-            SET "tg_userid" = ?
-            WHERE "user_id" = ?;]],
+        insert_telegram_account_id = [[INSERT INTO "telegram_accounts"
+            ("user_id", "tg_userid")
+            VALUES (?, ?);]],
         delete_telegram_link_request = [[DELETE FROM telegram_link_requests WHERE request_id = ?;]],
     },
     model = {
@@ -907,14 +915,14 @@ function Accounts:setTelegramUserIDForUserAndDeleteLinkRequest(
 )
     local SP_TGLINK = "link_telegram_to_user"
     self:create_savepoint(SP_TGLINK)
-    local update_ok, update_err = self.conn:execute(
-        queries.accounts.update_user_with_telegram_userid,
-        tg_userid,
-        user_id
+    local insert_ok, insert_err = self.conn:execute(
+        queries.accounts.insert_telegram_account_id,
+        user_id,
+        tg_userid
     )
-    if not update_ok then
+    if not insert_ok then
         self:rollback(SP_TGLINK)
-        return nil, update_err
+        return nil, insert_err
     end
     local delete_ok, delete_err = self.conn:execute(
         queries.accounts.delete_telegram_link_request,

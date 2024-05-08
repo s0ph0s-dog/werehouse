@@ -43,16 +43,18 @@ If you don’t have an account already, this bot only works with an invite-only 
 end
 
 local function get_all_links_from_message(message)
-    if not message.text then
+    if not message.text and not message.caption then
         return {}
     end
-    local links = table.filtermap(message.entities, function(entity)
+    local entities = message.entities or message.caption_entities
+    local text = message.text or message.caption
+    local links = table.filtermap(entities, function(entity)
         return entity and (entity.type == "url" or entity.type == "text_link")
     end, function(entity)
         if entity.type == "url" then
             local start_pos = entity.offset + 1
             local end_pos = start_pos + entity.length
-            return message.text:sub(start_pos, end_pos)
+            return text:sub(start_pos, end_pos)
         elseif entity.type == "text_link" then
             return entity.url
         else
@@ -195,7 +197,7 @@ function api.on_message(message)
     Log(kLogDebug, EncodeJson(message))
     if message.text then
         if message.chat.type == "private" and message.text == "/start" then
-            handle_start(message)
+            return handle_start(message)
         end
     end
     if message.chat.type == "private" then
