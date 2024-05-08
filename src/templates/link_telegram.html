@@ -1,0 +1,33 @@
+{% function block.content() %}
+<p>
+  Would you like to link your Telegram account with HyperphantasiaBot? Your
+  Telegram user ID will be stored, enabling you to:
+</p>
+<ul>
+  <li>
+    Add links and images to your queue by forwarding them to HyperphantasiaBot
+  </li>
+  <li>
+    Send images from your archive to yourself on Telegram for easy forwarding,
+    with artist info and links
+  </li>
+  <li>
+    Share images with attribution and links directly to group chats or channels
+    (if you add the bot to a group or channel)
+  </li>
+</ul>
+<form class="vbox" method="POST">
+  <p>
+    hyperphantasia: {%& user.username %}<br />
+    Telegram: {%& tg.display_name %} (@{%& tg.username %}, {%& tg.tg_userid %})
+  </p>
+  <span class="buttons">
+    <input type="submit" name="cancel" value="Cancel" /><input
+      type="submit"
+      name="link"
+      value="Link"
+    />
+  </span>
+</form>
+{% end %}{% render("layouts/dialog", { title = "Link Telegram Account", user =
+user }) %}

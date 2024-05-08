@@ -3,7 +3,7 @@
 {% if pages.current > 1 and #ig_records == 0 then %}
 <p>You've fallen off the end of the page counter!</p>
 {% elseif #ig_records == 0 then %}
-<p>Nothing queued</p>
+<p>No image groups yet.</p>
 {% else %}
 <form method="POST">
   {% if error and type(error) == "string" then %}

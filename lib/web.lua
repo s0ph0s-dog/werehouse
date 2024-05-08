@@ -607,6 +607,78 @@ local render_image_group = login_required(function(r)
     })
 end)
 
+local render_telegram_link = login_required(function(r)
+    if not r.params.request_id then
+        return Fm.serve404()
+    end
+    local tg, tg_errmsg =
+        Accounts:getTelegramLinkRequestById(r.params.request_id)
+    if not tg then
+        Log(kLogInfo, tg_errmsg)
+        return Fm.serve404()
+    end
+    local now = unix.clock_gettime()
+    if not now then
+        return Fm.serve500()
+    end
+    if tg.created_at - now > (30 * 60) then
+        return Fm.serve404()
+    end
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    return Fm.serveContent("link_telegram", {
+        user = user_record,
+        tg = tg,
+    })
+end)
+
+local accept_telegram_link = login_required(function(r)
+    if not r.params.request_id then
+        return Fm.serve404()
+    end
+    local tg, tg_errmsg =
+        Accounts:getTelegramLinkRequestById(r.params.request_id)
+    if not tg then
+        Log(kLogInfo, tg_errmsg)
+        return Fm.serve404()
+    end
+    local now = unix.clock_gettime()
+    if not now then
+        return Fm.serve500()
+    end
+    if tg.created_at - now > (30 * 60) then
+        return Fm.serve404()
+    end
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    if r.params.link == "Link" then
+        local link_ok, link_err =
+            Accounts:setTelegramUserIDForUserAndDeleteLinkRequest(
+                user_record.user_id,
+                tg.tg_userid,
+                r.params.request_id
+            )
+        if not link_ok then
+            Log(kLogInfo, link_err)
+            return Fm.serve500()
+        end
+    else
+        local delete_ok, delete_err =
+            Accounts:deleteTelegramLinkRequest(r.params.request_id)
+        if not delete_ok then
+            Log(kLogInfo, delete_err)
+            return Fm.serve500()
+        end
+    end
+    return Fm.serveRedirect("/home", 302)
+end)
+
 local function setup()
     Fm.setTemplate { "/templates/", html = "fmt" }
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
@@ -635,6 +707,8 @@ local function setup()
     Fm.setRoute("/artist/:artist_id", render_artist)
     Fm.setRoute("/image-group", render_image_groups)
     Fm.setRoute("/image-group/:ig_id", render_image_group)
+    Fm.setRoute(Fm.GET { "/link-telegram/:request_id" }, render_telegram_link)
+    Fm.setRoute(Fm.POST { "/link-telegram/:request_id" }, accept_telegram_link)
     -- API routes
     Fm.setRoute(Fm.GET { "/api/queue-image/:id" }, render_queue_image)
     -- Fm.setRoute("/api/telegram-webhook")

@@ -8,6 +8,7 @@ LIBS := lib/third_party/fullmoon.lua \
     lib/third_party/htmlparser.lua \
     lib/third_party/htmlparser/ElementNode.lua \
     lib/third_party/htmlparser/voidelements.lua \
+    lib/third_party/multipart.lua \
     lib/db.lua \
 	lib/functools.lua \
 	lib/scraper_pipeline.lua \
@@ -19,6 +20,8 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/scrapers/e621.lua \
 	lib/scrapers/test.lua \
 	lib/network_utils.lua \
+	lib/telegram_lib.lua \
+	lib/tg_bot.lua \
 	lib/web.lua
 SRCS := src/.init.lua \
     src/templates/layouts/main.html \
@@ -26,6 +29,7 @@ SRCS := src/.init.lua \
     src/templates/components/image_gallery.html \
     src/templates/components/pagination_controls.html \
     src/templates/accept_invite.html \
+    src/templates/link_telegram.html \
     src/templates/login.html \
     src/templates/artist.html \
     src/templates/artists.html \

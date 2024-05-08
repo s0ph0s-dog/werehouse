@@ -10,6 +10,7 @@ local accounts_setup = [[
         "user_id" TEXT NOT NULL UNIQUE,
         "username" TEXT NOT NULL UNIQUE,
         "password" TEXT NOT NULL,
+        "tg_userid" INTEGER,
         PRIMARY KEY("user_id")
     );
 
@@ -32,6 +33,15 @@ local accounts_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("invitee") REFERENCES "users"("user_id")
         ON UPDATE CASCADE ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS "telegram_link_requests" (
+        "request_id" TEXT NOT NULL UNIQUE,
+        "display_name" TEXT,
+        "username" TEXT,
+        "tg_userid" INTEGER NOT NULL,
+        "created_at" INTEGER NOT NULL,
+        PRIMARY KEY("request_id")
     );
 
     CREATE TRIGGER IF NOT EXISTS invitee_write_once
@@ -201,7 +211,18 @@ local queries = {
         get_user_by_session = [[SELECT u.user_id, u.username FROM "users" AS u
             INNER JOIN "sessions" on u.user_id = sessions.user_id
             WHERE sessions.session_id = ?;]],
+        get_user_by_tg_id = [[SELECT user_id, username FROM users WHERE tg_userid = ?;]],
         get_all_user_ids = [[SELECT user_id FROM "users";]],
+        get_telegram_link_request_by_id = [[SELECT request_id, display_name, username, tg_userid, created_at
+            FROM telegram_link_requests
+            WHERE request_id = ?;]],
+        insert_telegram_link_request = [[INSERT INTO "telegram_link_requests"
+            ("request_id", "display_name", "username", "tg_userid", "created_at")
+            VALUES (?, ?, ?, ?, ?);]],
+        update_user_with_telegram_userid = [[UPDATE "users"
+            SET "tg_userid" = ?
+            WHERE "user_id" = ?;]],
+        delete_telegram_link_request = [[DELETE FROM telegram_link_requests WHERE request_id = ?;]],
     },
     model = {
         get_recent_queue_entries = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
@@ -851,10 +872,100 @@ function Accounts:findUserBySessionId(session_id)
     return self.conn:fetchOne(queries.accounts.get_user_by_session, session_id)
 end
 
+function Accounts:findUserByTelegramUserID(tg_userid)
+    return self.conn:fetchOne(queries.accounts.get_user_by_tg_id, tg_userid)
+end
+
 function Accounts:getAllUserIds()
     return self.conn:fetchAll(queries.accounts.get_all_user_ids)
 end
 
+function Accounts:addTelegramLinkRequest(
+    request_id,
+    display_name,
+    username,
+    tg_userid
+)
+    local now, clock_err = unix.clock_gettime()
+    if not now then
+        return nil, clock_err
+    end
+    return self.conn:execute(
+        queries.accounts.insert_telegram_link_request,
+        request_id,
+        display_name,
+        username,
+        tg_userid,
+        now
+    )
+end
+
+function Accounts:setTelegramUserIDForUserAndDeleteLinkRequest(
+    user_id,
+    tg_userid,
+    request_id
+)
+    local SP_TGLINK = "link_telegram_to_user"
+    self:create_savepoint(SP_TGLINK)
+    local update_ok, update_err = self.conn:execute(
+        queries.accounts.update_user_with_telegram_userid,
+        tg_userid,
+        user_id
+    )
+    if not update_ok then
+        self:rollback(SP_TGLINK)
+        return nil, update_err
+    end
+    local delete_ok, delete_err = self.conn:execute(
+        queries.accounts.delete_telegram_link_request,
+        request_id
+    )
+    if not delete_ok then
+        self:rollback(SP_TGLINK)
+        return nil, delete_err
+    end
+    self:release_savepoint(SP_TGLINK)
+    return true
+end
+
+function Accounts:getTelegramLinkRequestById(request_id)
+    return self.conn:fetchOne(
+        queries.accounts.get_telegram_link_request_by_id,
+        request_id
+    )
+end
+
+function Accounts:deleteTelegramLinkRequest(request_id)
+    return self.conn:execute(
+        queries.accounts.delete_telegram_link_request,
+        request_id
+    )
+end
+
+function Accounts:create_savepoint(name)
+    if not name or #name < 1 then
+        error("Must provide a savepoint name")
+    end
+    return self.conn:execute("SAVEPOINT " .. name .. ";")
+end
+
+function Accounts:release_savepoint(name)
+    if not name or #name < 1 then
+        error("Must provide a savepoint name")
+    end
+    return self.conn:execute("RELEASE SAVEPOINT " .. name .. ";")
+end
+
+function Accounts:rollback(to_savepoint)
+    if to_savepoint and type(to_savepoint) == "string" then
+        return self.conn:execute(
+            "ROLLBACK TO %s; RELEASE SAVEPOINT %s;"
+                % { to_savepoint, to_savepoint }
+        )
+    else
+        return self.conn:execute("ROLLBACK;")
+    end
+end
 return {
     Accounts = Accounts,
     Model = Model,

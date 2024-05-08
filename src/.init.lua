@@ -4,10 +4,12 @@ Fm = require("third_party.fullmoon")
 DbUtil = require("db")
 Nu = require("network_utils")
 HtmlParser = require("third_party.htmlparser")
+Multipart = require("third_party.multipart")
 local about = require("about")
 local web = require("web")
 local _ = require("functools")
 local scraper_pipeline = require("scraper_pipeline")
+local bot = require("tg_bot")
 
 local session_key = os.getenv("SESSION_KEY")
 if session_key then
@@ -49,6 +51,9 @@ end
 ProgramMaxPayloadSize(10 * 1024 * 1024)
 
 Fm.setSchedule("* * * * *", scraper_pipeline.process_all_queues)
+
+bot.setup(os.getenv("TG_BOT_TOKEN"), true)
+bot.run()
 
 web.setup()
 web.run()

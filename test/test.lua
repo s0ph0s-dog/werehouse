@@ -3,6 +3,7 @@ _ = require("functools")
 local pipeline = require("scraper_pipeline")
 Nu = require("network_utils")
 HtmlParser = require("third_party.htmlparser")
+local multipart = require("third_party.multipart")
 
 TestFunctools = {}
 function TestFunctools:testStartswithWorks()
@@ -736,6 +737,26 @@ function TestScraperPipeline:testValidCohostLinks()
         },
     }
     process_entry_framework(tests, mocks)
+end
+
+TestMultipart = {}
+function TestMultipart:testEncode()
+    local body, boundary = multipart.encode { foo = "bar" }
+    local status, headers, resp_body = Fetch("http://httpbin.org/post", {
+        method = "POST",
+        body = body,
+        headers = {
+            ["Content-Type"] = string.format(
+                'multipart/form-data; boundary="%s"',
+                boundary
+            ),
+        },
+    })
+    luaunit.assertEquals(status, 200)
+    local json, err = DecodeJson(resp_body)
+    luaunit.assertIsNil(err)
+    luaunit.assertNotIsNil(json)
+    luaunit.assertEquals(json.form, { foo = "bar" })
 end
 
 luaunit.run()
