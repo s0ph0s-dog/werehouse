@@ -27,8 +27,8 @@ end
 ---@return (U[])
 function table.map(sequence, transformation)
     local result = {}
-    for i, v in pairs(sequence) do
-        result[i] = transformation(v)
+    for i = 1, #sequence do
+        result[i] = transformation(sequence[i])
     end
     return result
 end
@@ -39,9 +39,9 @@ end
 ---@return (T[])
 function table.filter(sequence, predicate)
     local result = {}
-    for _, v in ipairs(sequence) do
-        if predicate(v) then
-            table.insert(result, v)
+    for i = 1, #sequence do
+        if predicate(sequence[i]) then
+            result[#result + 1] = sequence[i]
         end
     end
     return result
@@ -68,7 +68,14 @@ end
 ---@param transformation (fun(item: T): U)
 ---@return (U[])
 function table.filtermap(sequence, predicate, transformation)
-    return table.map(table.filter(sequence, predicate), transformation)
+    local result = {}
+    for i = 1, #sequence do
+        local item = sequence[i]
+        if predicate(item) then
+            result[#result + 1] = transformation(item)
+        end
+    end
+    return result
 end
 
 --- Given a list-table that contains arbitrarily nested other list-tables, flatten all of the nested lists into one list.
@@ -76,15 +83,16 @@ end
 ---@param result (any[]?)
 ---@return any[]
 function table.flatten(sequence, result)
-    local myResult = result or {}
-    for _, item in ipairs(sequence) do
+    result = result or {}
+    for i = 1, #sequence do
+        local item = sequence[i]
         if type(item) == "table" and #item > 0 then
-            myResult = table.flatten(item, myResult)
+            myResult = table.flatten(item, result)
         else
-            table.insert(myResult, item)
+            result[#result + 1] = item
         end
     end
-    return myResult
+    return result
 end
 
 ---@generic T
