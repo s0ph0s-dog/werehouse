@@ -42,7 +42,7 @@ If you don’t have an account already, this bot only works with an invite-only 
     api.send_message(message, response)
 end
 
-local function get_all_links_from_message(message)
+function bot.get_all_links_from_message(message)
     if not message.text and not message.caption then
         return {}
     end
@@ -53,8 +53,8 @@ local function get_all_links_from_message(message)
     end, function(entity)
         if entity.type == "url" then
             local start_pos = entity.offset + 1
-            local end_pos = start_pos + entity.length
-            return text:sub(start_pos, end_pos)
+            local end_pos = start_pos + entity.length - 1
+            return text:utf16sub(start_pos, end_pos)
         elseif entity.type == "text_link" then
             return entity.url
         else
@@ -103,7 +103,7 @@ local function handle_enqueue(message)
         end
         return
     end
-    local links = get_all_links_from_message(message)
+    local links = bot.get_all_links_from_message(message)
     local best_link = select_best_link(links)
     if best_link then
         local ok, err = model:enqueueLink(best_link)

@@ -4,6 +4,7 @@ local pipeline = require("scraper_pipeline")
 Nu = require("network_utils")
 HtmlParser = require("third_party.htmlparser")
 local multipart = require("third_party.multipart")
+local bot = require("tg_bot")
 
 TestFunctools = {}
 function TestFunctools:testStartswithWorks()
@@ -20,6 +21,24 @@ function TestFunctools:testEndswithWorks()
     local actual2 = s:endswith("wombat")
     luaunit.assertEquals(actual1, true)
     luaunit.assertEquals(actual2, false)
+end
+
+function TestFunctools:testUtf16IndexWorks()
+    local s = "abc"
+    luaunit.assertEquals(s:utf16index(1), 1)
+    luaunit.assertEquals(s:utf16index(2), 2)
+    luaunit.assertEquals(s:utf16index(3), 3)
+    local complex = " · "
+    luaunit.assertEquals(complex:utf16index(1), 1)
+    luaunit.assertEquals(complex:utf16index(2), 2)
+    luaunit.assertEquals(complex:utf16index(3), 4)
+end
+
+function TestFunctools:testUtf16SubWorks()
+    local s = "abc"
+    luaunit.assertEquals(s:utf16sub(2, 3), s:sub(2, 3))
+    local complex = " · asdf"
+    luaunit.assertEquals(complex:utf16sub(2, 3), complex:sub(2, 4))
 end
 
 function TestFunctools:testMapWorks()
@@ -757,6 +776,17 @@ function TestMultipart:testEncode()
     luaunit.assertIsNil(err)
     luaunit.assertNotIsNil(json)
     luaunit.assertEquals(json.form, { foo = "bar" })
+end
+
+TestTgBot = {}
+function TestTgBot:testfindAllLinksOnFoxbotMessage()
+    local input = DecodeJson(Slurp("test/foxbot_tg_message.json"))
+    local expected = {
+        "https://www.furaffinity.net/view/56537131/",
+        "https://e621.net/posts/4766158",
+    }
+    local actual = bot.get_all_links_from_message(input)
+    luaunit.assertEquals(actual, expected)
 end
 
 luaunit.run()

@@ -1,0 +1,42 @@
+{
+  "chat": {
+    "first_name": "s0ph0s",
+    "id": 170274001,
+    "type": "private",
+    "last_name": "\u270a\ud83c\udfff\ud83c\udded\ud83c\uddf0\ud83c\udf3b\ud83c\udff3\ufe0f\u200d\ud83c\udf08",
+    "username": "s0ph0s"
+  },
+  "date": 1715207527,
+  "entities": [
+    { "length": 42, "offset": 54, "type": "url" },
+    { "length": 30, "offset": 106, "type": "url" }
+  ],
+  "forward_date": 1715099039,
+  "forward_from": {
+    "first_name": "FoxBot",
+    "id": 102869086,
+    "is_bot": true,
+    "username": "FoxBot"
+  },
+  "forward_origin": {
+    "date": 1715099039,
+    "sender_user": {
+      "first_name": "FoxBot",
+      "id": 102869086,
+      "is_bot": true,
+      "username": "FoxBot"
+    },
+    "type": "user"
+  },
+  "from": {
+    "first_name": "s0ph0s",
+    "id": 170274001,
+    "is_bot": false,
+    "language_code": "eo",
+    "last_name": "\u270a\ud83c\udfff\ud83c\udded\ud83c\uddf0\ud83c\udf3b\ud83c\udff3\ufe0f\u200d\ud83c\udf08",
+    "username": "s0ph0s"
+  },
+  "link_preview_options": { "is_disabled": true },
+  "message_id": 80,
+  "text": "I found a few places this image may have come from:\n\u00b7 https://www.furaffinity.net/view/56537131/ (NSFW)\n\u00b7 https://e621.net/posts/4766158 (NSFW)"
+}

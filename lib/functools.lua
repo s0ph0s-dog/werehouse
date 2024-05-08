@@ -21,6 +21,34 @@ function string.endswith(s, suffix)
     return suffix == maybe_suffix
 end
 
+--- Given a UTF16 code unit count, return the corresponding index into the string.
+---@param s string
+---@param utf16i integer
+---@return integer
+function string.utf16index(s, utf16i)
+    local code_units_so_far = 0
+    for i = 1, #s do
+        local char = string.byte(s, i)
+        if (char & 192) ~= 128 then
+            if (char & 240) == 240 then
+                code_units_so_far = code_units_so_far + 2
+            else
+                code_units_so_far = code_units_so_far + 1
+            end
+        end
+        if code_units_so_far >= utf16i then
+            return i
+        end
+    end
+    return nil
+end
+
+function string.utf16sub(s, i, j)
+    local real_i = s:utf16index(i)
+    local real_j = s:utf16index(j)
+    return s:sub(real_i, real_j)
+end
+
 ---@generic T : any, U : any
 ---@param sequence (T[])
 ---@param transformation (fun(item: T): U)
