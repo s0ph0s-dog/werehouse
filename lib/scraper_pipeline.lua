@@ -92,6 +92,15 @@ local function fuzzysearch_image(image_data, mime_type)
     return transform_fuzzysearch_response(json)
 end
 
+local function can_process_uri(uri)
+    for i = 1, #scrapers do
+        if scrapers[i].can_process_uri(uri) then
+            return true
+        end
+    end
+    return false
+end
+
 ---@param uri (string) A single URI pointing to a webpage on an art gallery or social media site at which an artist has posted an image.
 ---@return Result<ScrapedSourceData, ScraperError> # All of the scraped data objects from the first scraper that could process the URI.
 local function process_source_uri(uri)
@@ -707,6 +716,7 @@ end
 
 return {
     process_all_queues = process_all_queues,
+    can_process_uri = can_process_uri,
     process_entry = process_entry,
     scrape_sources = scrape_sources,
     multipart_body = multipart_body,

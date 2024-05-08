@@ -43,6 +43,9 @@ function api.request(endpoint, parameters, file)
     if status ~= 200 then
         return nil, headers
     end
+    if api.debug then
+        Log(kLogDebug, resp_body)
+    end
     local json, json_err = DecodeJson(resp_body)
     if not json then
         return nil, json_err
@@ -90,6 +93,9 @@ function api.send_message(
     reply_markup
 ) -- https://core.telegram.org/bots/api#sendmessage
     entities = type(entities) == "table" and EncodeJson(entities) or entities
+    if not link_preview_options then
+        link_preview_options = { is_disabled = true }
+    end
     link_preview_options = type(link_preview_options) == "table"
             and EncodeJson(link_preview_options)
         or link_preview_options
@@ -104,9 +110,6 @@ function api.send_message(
     parse_mode = (type(parse_mode) == "boolean" and parse_mode == true)
             and "plaintext"
         or parse_mode
-    if disable_web_page_preview == nil then
-        disable_web_page_preview = true
-    end
     local ok, err =
         api.request(config.endpoint .. api.token .. "/sendMessage", {
             ["chat_id"] = message,
@@ -121,6 +124,36 @@ function api.send_message(
             ["reply_markup"] = reply_markup,
         })
     return ok, err
+end
+
+function api.get_file(file_id) -- https://core.telegram.org/bots/api#getfile
+    local success, res =
+        api.request(config.endpoint .. api.token .. "/getFile", {
+            ["file_id"] = file_id,
+        })
+    return success, res
+end
+
+function api.download_file(file_id)
+    local file, err = api.get_file(file_id)
+    if not file then
+        return nil, err
+    end
+    local file_path = file.result.file_path
+    if not file_path then
+        return nil, "bad response from Telegram"
+    end
+    local file_url = "https://api.telegram.org/file/bot%s/%s"
+        % {
+            api.token,
+            file_path,
+        }
+    local status, headers, body = Fetch(file_url)
+    if status ~= 200 then
+        return nil, headers
+    end
+    local mime_type = headers["Content-Type"]
+    return { data = body, mime_type = mime_type }
 end
 
 function api.on_update(_) end

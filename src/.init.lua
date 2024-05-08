@@ -52,7 +52,7 @@ ProgramMaxPayloadSize(10 * 1024 * 1024)
 
 Fm.setSchedule("* * * * *", scraper_pipeline.process_all_queues)
 
-bot.setup(os.getenv("TG_BOT_TOKEN"), true)
+bot.setup(os.getenv("TG_BOT_TOKEN"), true, scraper_pipeline.can_process_uri)
 bot.run()
 
 web.setup()
