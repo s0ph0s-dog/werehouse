@@ -99,10 +99,59 @@ footer {
   border-color: VisitedText;
 }
 
+.sidebar-grid {
+  margin-top: 1em;
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  grid-template-areas: "sidebar main";
+  column-gap: 0.5em;
+}
+
+.sidebar {
+  grid-area: sidebar;
+  border: 1px solid CanvasText;
+  border-radius: 3px;
+  padding: 0 1em;
+  font-size: 1rem;
+}
+
+.sidebar h1 {
+  font-size: 1.2em;
+  margin-bottom: 0.2em;
+  margin-top: 1em;
+}
+
+.sidebar ul {
+  margin-top: 0;
+  padding-left: 1.25em;
+}
+
 .main-image {
+  grid-area: main;
+}
+
+.main-image img {
   max-width: 100%;
-  margin: 1.5em auto 0 auto;
+  margin: 0 auto;
   display: block;
+}
+
+.main-image label {
+  display: inline-block;
+}
+
+.main-image input:checked ~ img {
+  max-height: 95vh;
+}
+
+@media (max-width: 639px) {
+  .sidebar-grid {
+    display: block;
+  }
+  .sidebar {
+    border: none;
+    padding: 0;
+  }
 }
 
 table {

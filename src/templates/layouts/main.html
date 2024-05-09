@@ -1,14 +1,13 @@
-{% function block.status_text(queue_item) %}{% if queue_item.tombstone == 1 then
-%}Error{% elseif queue_item.tombstone == 2 then %}Archived{% elseif
-queue_item.disambiguation_data then %}To Do (again){% elseif
-queue_item.disambiguation_request then %}Help Needed{% else %}To Do{% end %} {%
-end %}{% function block.status_desc(queue_item) %}{% if queue_item.tombstone ==
-2 then %}{% elseif queue_item.disambiguation_data then %}{%& queue_item.status
-%}{% elseif queue_item.disambiguation_request then %}<a
-  href="/queue/{%& queue_item.qid %}/help"
-  >Provide Help</a
->{% else %}{%& queue_item.status %}{% end %}{% end %}{% function block.navbar()
-%}
+{% function block.status_text(queue_item) %} {% if queue_item.tombstone == 1
+then %} Error {% elseif queue_item.tombstone == 2 then %} Archived {% elseif
+queue_item.disambiguation_data then %} To Do (again) {% elseif
+queue_item.disambiguation_request then %} Help Needed {% else %} To Do {% end %}
+{% end %} {% function block.status_desc(queue_item) %} {% if
+queue_item.disambiguation_data then %} {%& queue_item.status %} {% elseif
+queue_item.disambiguation_request then %}
+<a href="/queue/{%& queue_item.qid %}/help">Provide Help</a>
+{% else %} {%& queue_item.status %} {% end %} {% end %} {% function
+block.navbar() %}
 <nav>
   <h1>hyperphantasia</h1>
   <span class="links">

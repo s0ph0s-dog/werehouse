@@ -11,42 +11,53 @@
   >{% else %}<span>Next →</span>{% end %}
 </div>
 {% end %}
-<img class="main-image" src="/image-file/{%& image.file %}" />
-<h1>Metadata</h1>
-<ul>
-  <li>Saved at: <time>{%& image.saved_at %}</time></li>
-  <li>Category: {%& image.category %}</li>
-  <li>Rating: {%& image.rating %}</li>
-  <li>Kind: {%& image.kind %}</li>
-</ul>
-<h1>Artists</h1>
-{% if #artists == 0 then %}
-<p>No artists recorded for this image yet.</p>
-{% else %}
-<ul>
-  {% for _, artist in ipairs(artists) do %}
-  <li><a href="/artist/{%& artist.artist_id %}">{%& artist.name %}</a></li>
-  {% end %}
-</ul>
-{% end %}
-<h1>Tags</h1>
-{% if #tags == 0 then %}
-<p>No tags for this image yet.</p>
-{% else %}
-<ul>
-  {% for _, tag in ipairs(tags) do %}
-  <li>{%& tag.name %}</li>
-  {% end %}
-</ul>
-{% end %}
-<h1>Sources</h1>
-{% if #sources == 0 then %}
-<p>No sources for this image yet.</p>
-{% else %}
-<ul>
-  {% for _, source in ipairs(sources) do %}
-  <li><a href="{%& source.link %}">{%& ParseUrl(source.link).host %}</a></li>
-  {% end %}
-</ul>
-{% end %}{% end %}{% render("layouts/main", { title = "Image " ..
+<div class="sidebar-grid">
+  <div class="main-image">
+    <input id="fit-to-screen" type="checkbox" />
+    <label for="fit-to-screen"> Fit to screen</label>
+    <img src="/image-file/{%& image.file %}" />
+  </div>
+  <div class="sidebar">
+    <h1>Metadata</h1>
+    <ul>
+      <li>Saved at: <time>{%& image.saved_at %}</time></li>
+      <li>Category: {%& image.category %}</li>
+      <li>Rating: {%& image.rating %}</li>
+      <li>Kind: {%& image.kind %}</li>
+    </ul>
+    <h1>Artists</h1>
+    {% if #artists == 0 then %}
+    <p>No artists recorded for this image yet.</p>
+    {% else %}
+    <ul>
+      {% for _, artist in ipairs(artists) do %}
+      <li><a href="/artist/{%& artist.artist_id %}">{%& artist.name %}</a></li>
+      {% end %}
+    </ul>
+    {% end %}
+    <h1>Tags</h1>
+    {% if #tags == 0 then %}
+    <p>No tags for this image yet.</p>
+    {% else %}
+    <ul>
+      {% for _, tag in ipairs(tags) do %}
+      <li>{%& tag.name %}</li>
+      {% end %}
+    </ul>
+    {% end %}
+    <h1>Sources</h1>
+    {% if #sources == 0 then %}
+    <p>No sources for this image yet.</p>
+    {% else %}
+    <ul>
+      {% for _, source in ipairs(sources) do %}
+      <li>
+        <a href="{%& source.link %}">{%& ParseUrl(source.link).host %}</a>
+      </li>
+      {% end %}
+    </ul>
+    {% end %}
+  </div>
+</div>
+{% end %}{% render("layouts/main", { title = "Image " ..
 tostring(image.image_id), user = user }) %}
