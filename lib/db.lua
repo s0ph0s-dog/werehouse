@@ -276,7 +276,7 @@ local queries = {
             FROM tags INNER JOIN image_tags
             ON image_tags.tag_id = tags.tag_id
             WHERE image_tags.image_id = ?;]],
-        get_sources_for_image = [[SELECT link
+        get_sources_for_image = [[SELECT source_id, link
             FROM sources
             WHERE image_id = ?;]],
         get_source_by_link = [[SELECT DISTINCT image_id FROM sources
@@ -353,8 +353,8 @@ local queries = {
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (NULL, ?, ?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
         insert_image_into_images = [[INSERT INTO
-            "images" ("file", "mime_type", "width", "height", "saved_at")
-            VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            "images" ("file", "mime_type", "width", "height", "kind", "saved_at")
+            VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
             RETURNING image_id;]],
         insert_source_for_image = [[INSERT INTO "sources" ("image_id", "link")
             VALUES (?, ?);]],
@@ -555,13 +555,14 @@ function Model:setQueueItemDisambiguationResponse(queue_id, disambiguation_data)
     )
 end
 
-function Model:insertImage(image_file, mime_type, width, height)
+function Model:insertImage(image_file, mime_type, width, height, kind)
     return self.conn:fetchOne(
         queries.model.insert_image_into_images,
         image_file,
         mime_type,
         width,
-        height
+        height,
+        kind
     )
 end
 
@@ -977,4 +978,20 @@ end
 return {
     Accounts = Accounts,
     Model = Model,
+    k = {
+        ImageKindImage = 1,
+        ImageKindVideo = 2,
+        ImageKindAudio = 3,
+        ImageKindFlash = 4,
+
+        RatingGeneral = 0,
+        RatingAdult = 1,
+        RatingExplicit = 2,
+        RatingHardKink = 3,
+
+        CategoryStash = 1,
+        CategoryReference = 2,
+        CategoryMoodBoard = 4,
+        CategorySharing = 8,
+    },
 }

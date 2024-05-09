@@ -436,8 +436,13 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
         local filename = save_image(body, content_type)
         Log(kLogInfo, "Saved image to disk")
         -- 3. Add image, sources, etc. to database.
-        local image, errmsg2 =
-            model:insertImage(filename, content_type, data.width, data.height)
+        local image, errmsg2 = model:insertImage(
+            filename,
+            content_type,
+            data.width,
+            data.height,
+            DbUtil.k.ImageKindImage
+        )
         if not image then
             Log(kLogInfo, "Database error 1: %s" % { errmsg2 })
             model:rollback(SP_QUEUE)

@@ -6,8 +6,9 @@ queue_item.disambiguation_request then %} Help Needed {% else %} To Do {% end %}
 queue_item.disambiguation_data then %} {%& queue_item.status %} {% elseif
 queue_item.disambiguation_request then %}
 <a href="/queue/{%& queue_item.qid %}/help">Provide Help</a>
-{% else %} {%& queue_item.status %} {% end %} {% end %} {% function
-block.navbar() %}
+{% else %} {%& queue_item.status %} {% end %} {% end %} {% image_kinds = {
+"Image", "Video", "Audio", "Flash" } function block.image_kinds(kind) %}{%&
+image_kinds[kind] %}{% end %}{% function block.navbar() %}
 <nav>
   <h1>hyperphantasia</h1>
   <span class="links">

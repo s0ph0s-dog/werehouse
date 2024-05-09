@@ -268,7 +268,11 @@ local render_image = login_required(function(r)
         end
         ig.siblings = siblings
     end
-    return Fm.serveContent("image", {
+    local template_name = "image"
+    if r.path:endswith("/edit") then
+        template_name = "image_edit"
+    end
+    return Fm.serveContent(template_name, {
         user = user_record,
         image = image,
         artists = artists,
@@ -701,6 +705,7 @@ local function setup()
     Fm.setRoute("/image-file/:filename", render_image_file)
     Fm.setRoute("/image", render_images)
     Fm.setRoute("/image/:image_id", render_image)
+    Fm.setRoute(Fm.GET { "/image/:image_id/edit" }, render_image)
     Fm.setRoute(Fm.GET { "/enqueue" }, render_enqueue)
     Fm.setRoute(Fm.POST { "/enqueue" }, accept_enqueue)
     Fm.setRoute("/artist", render_artists)

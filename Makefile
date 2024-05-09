@@ -34,6 +34,7 @@ SRCS := src/.init.lua \
     src/templates/artist.html \
     src/templates/artists.html \
     src/templates/image.html \
+    src/templates/image_edit.html \
     src/templates/images.html \
     src/templates/image_groups.html \
     src/templates/image_group.html \

@@ -99,6 +99,17 @@ footer {
   border-color: VisitedText;
 }
 
+.edit {
+  display: block;
+  width: 100%;
+  text-align: right;
+  margin-top: 1em;
+}
+
+.edit + h1 {
+  margin-top: 0.5em !important;
+}
+
 .sidebar-grid {
   margin-top: 1em;
   display: grid;
@@ -111,7 +122,7 @@ footer {
   grid-area: sidebar;
   border: 1px solid CanvasText;
   border-radius: 3px;
-  padding: 0 1em;
+  padding: 0 1em 1em 1em;
   font-size: 1rem;
 }
 
@@ -124,6 +135,12 @@ footer {
 .sidebar ul {
   margin-top: 0;
   padding-left: 1.25em;
+}
+
+.baseline {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25em;
 }
 
 .main-image {

@@ -18,12 +18,13 @@
     <img src="/image-file/{%& image.file %}" />
   </div>
   <div class="sidebar">
+    <a class="edit" href="/image/{%& image.image_id %}/edit">Edit</a>
     <h1>Metadata</h1>
     <ul>
       <li>Saved at: <time>{%& image.saved_at %}</time></li>
-      <li>Category: {%& image.category %}</li>
+      <li>Categories: {%& image.category %}</li>
       <li>Rating: {%& image.rating %}</li>
-      <li>Kind: {%& image.kind %}</li>
+      <li>Kind: {%& block.image_kinds(image.kind) %}</li>
     </ul>
     <h1>Artists</h1>
     {% if #artists == 0 then %}
