@@ -477,7 +477,7 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
             end
         end
     end
-    local ok, errmsg3 = model:setQueueItemStatus(queue_entry.qid, 2, "Archived")
+    local ok, errmsg3 = model:setQueueItemStatus(queue_entry.qid, 2, "")
     if not ok then
         model:rollback(SP_QUEUE)
         return nil,
