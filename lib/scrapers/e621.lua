@@ -4,6 +4,11 @@ local ALLOWED_EXTS = {
     png = true,
     gif = true,
 }
+local RATING_MAP = {
+    s = DbUtil.k.RatingGeneral,
+    q = DbUtil.k.RatingAdult,
+    e = DbUtil.k.RatingExplicit,
+}
 local CANONICAL_DOMAIN = "e621.net"
 
 local function can_process_uri(uri)
@@ -92,6 +97,7 @@ local function process_post(json, clean_uri, pool_uri)
             mime_type = Nu.ext_to_mime[file.ext],
             canonical_domain = CANONICAL_DOMAIN,
             authors = authors,
+            rating = RATING_MAP[json.post.rating],
         },
     }
 end

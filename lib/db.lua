@@ -555,14 +555,18 @@ function Model:setQueueItemDisambiguationResponse(queue_id, disambiguation_data)
     )
 end
 
-function Model:insertImage(image_file, mime_type, width, height, kind)
+function Model:insertImage(image_file, mime_type, width, height, kind, rating)
+    if not rating then
+        rating = DbUtil.k.RatingGeneral
+    end
     return self.conn:fetchOne(
         queries.model.insert_image_into_images,
         image_file,
         mime_type,
         width,
         height,
-        kind
+        kind,
+        rating
     )
 end
 
@@ -978,6 +982,7 @@ end
 return {
     Accounts = Accounts,
     Model = Model,
+    -- k is for konstant! I passed spelling :)
     k = {
         ImageKindImage = 1,
         ImageKindVideo = 2,

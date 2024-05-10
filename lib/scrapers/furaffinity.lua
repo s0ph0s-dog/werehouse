@@ -3,6 +3,11 @@ local FA_URI_EXP = assert(
         [[^https?://(www\.)?(fx|x)?furaffinity\.net/(view|full)/([0-9]+)]]
     )
 )
+local RATING_MAP = {
+    General = DbUtil.k.RatingGeneral,
+    Mature = DbUtil.k.RatingAdult,
+    Adult = DbUtil.k.RatingExplicit,
+}
 local FA_SIZE_EXP = assert(re.compile([[(\d+) x (\d+)]]))
 local FA_AUTH_COOKIES = os.getenv("FA_AUTH_COOKIES")
 local CANONICAL_DOMAIN = "www.furaffinity.net"
@@ -55,6 +60,16 @@ local function scrape_image_metadata(root)
         return nil, PermScraperError("Invalid image tag in post.")
     end
     local full_image_src = "https:" .. maybe_image_src
+    local maybe_rating = first(root:select(".rating-box"))
+    if not maybe_rating then
+        return nil, PermScraperError("No rating for this post")
+    end
+    local rating_text = maybe_rating:getcontent()
+    rating_text = rating_text:strip()
+    local rating = RATING_MAP[rating_text]
+    if not rating then
+        Log(kLogWarn, "Unknown rating from FA: %s" % { rating_text })
+    end
     local maybe_sidebar_size = last(root:select(".info div span"))
     if not maybe_sidebar_size then
         return nil, PermScraperError("No size metadata in post.")
@@ -90,6 +105,7 @@ local function scrape_image_metadata(root)
                 handle = display_name,
             },
         },
+        rating = rating,
     }
 end
 

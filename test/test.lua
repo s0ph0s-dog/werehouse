@@ -1,3 +1,4 @@
+DbUtil = require("db")
 local luaunit = require("third_party.luaunit")
 _ = require("functools")
 local pipeline = require("scraper_pipeline")
@@ -377,6 +378,7 @@ function TestScraperPipeline:testValidTwitterLinks()
                 raw_image_uri = item,
                 width = 1600,
                 authors = { author },
+                rating = DbUtil.k.RatingAdult,
             }
         end),
     }
@@ -429,6 +431,7 @@ function TestScraperPipeline:testValidFuraffinityLinks()
                 raw_image_uri = "https://d.furaffinity.net/art/glopossum/1589320262/1589320262.glopossum_chloelatex.png",
                 this_source = regularWithFull,
                 width = 960,
+                rating = DbUtil.k.RatingAdult,
             },
         },
     }
@@ -474,6 +477,7 @@ function TestScraperPipeline:testValidE6Links()
                     "https://pbs.twimg.com/media/F9AR0lUagAAq1wc?format=jpg&name=orig",
                 },
                 width = 880,
+                rating = DbUtil.k.RatingExplicit,
                 authors = {
                     {
                         display_name = "reagan_long",
@@ -504,6 +508,7 @@ function TestScraperPipeline:testValidE6Links()
                 raw_image_uri = "https://static1.e621.net/data/15/1a/151a1af93e572cdf611f919e975c8268.jpg",
                 this_source = "https://e621.net/posts/4763407",
                 width = 4152,
+                rating = DbUtil.k.RatingExplicit,
             },
             {
                 additional_sources = {
@@ -523,6 +528,7 @@ function TestScraperPipeline:testValidE6Links()
                 raw_image_uri = "https://static1.e621.net/data/b0/e4/b0e4f3473858c235c21cde98336a10bd.jpg",
                 this_source = "https://e621.net/posts/4764946",
                 width = 3648,
+                rating = DbUtil.k.RatingExplicit,
             },
         },
     }
@@ -568,6 +574,7 @@ function TestScraperPipeline:testValidE6Links()
                                     profile_url = "https://e621.net/posts?tags=its_a_mok",
                                 },
                             },
+                            rating = DbUtil.k.RatingExplicit,
                         },
                     },
                 },
@@ -599,6 +606,7 @@ function TestScraperPipeline:testValidE6Links()
                                     profile_url = "https://e621.net/posts?tags=mukinky",
                                 },
                             },
+                            rating = DbUtil.k.RatingExplicit,
                         },
                     },
                 },
@@ -684,6 +692,7 @@ function TestScraperPipeline:testValidCohostLinks()
                             mime_type = "image/png",
                             raw_image_uri = "https://staging.cohostcdn.org/attachment/bc0436cc-262d-47a1-b444-f954a3f81c6c/eyes.png",
                             width = 1630,
+                            rating = DbUtil.k.RatingGeneral,
                         },
                     },
                 },
@@ -708,6 +717,7 @@ function TestScraperPipeline:testValidCohostLinks()
                             mime_type = "image/png",
                             raw_image_uri = "https://staging.cohostcdn.org/attachment/40e2ebfc-a548-458d-abde-6551929a6ae3/tumblr_nbrmyhYBa41t46mxyo2_1280.png",
                             width = 1280,
+                            rating = DbUtil.k.RatingExplicit,
                         },
                         {
                             authors = {
@@ -722,6 +732,7 @@ function TestScraperPipeline:testValidCohostLinks()
                             mime_type = "image/png",
                             raw_image_uri = "https://staging.cohostcdn.org/attachment/0164799d-c699-48fd-bdaf-558f6f947aa3/bayli%20aftersex%20resize.png",
                             width = 857,
+                            rating = DbUtil.k.RatingExplicit,
                         },
                     },
                 },

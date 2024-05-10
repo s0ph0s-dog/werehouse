@@ -21,6 +21,10 @@ function string.endswith(s, suffix)
     return suffix == maybe_suffix
 end
 
+function string.strip(s)
+    return s:gsub("^%s+", ""):gsub("%s+$", "")
+end
+
 --- Given a UTF16 code unit count, return the corresponding index into the string.
 ---@param s string
 ---@param utf16i integer

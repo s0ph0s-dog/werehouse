@@ -29,6 +29,10 @@ local function process_image_embeds(json)
     if not json.author then
         return nil
     end
+    local rating = DbUtil.k.RatingGeneral
+    if json.possibly_sensitive then
+        rating = DbUtil.k.RatingAdult
+    end
     local author = {
         handle = json.author.screen_name,
         profile_url = json.author.url,
@@ -48,6 +52,7 @@ local function process_image_embeds(json)
             height = twitter_photo.height,
             width = twitter_photo.width,
             canonical_domain = "twitter.com",
+            rating = rating,
         }
     end)
 end

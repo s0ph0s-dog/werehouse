@@ -441,7 +441,8 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
             content_type,
             data.width,
             data.height,
-            DbUtil.k.ImageKindImage
+            DbUtil.k.ImageKindImage,
+            data.rating
         )
         if not image then
             Log(kLogInfo, "Database error 1: %s" % { errmsg2 })

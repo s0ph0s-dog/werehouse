@@ -32,6 +32,10 @@ local function process_attachment_blocks(post)
     then
         return nil
     end
+    local rating = DbUtil.k.RatingGeneral
+    if post.effectiveAdultContent then
+        rating = DbUtil.k.RatingExplicit
+    end
     local author = {
         handle = post.postingProject.handle,
         profile_url = "https://cohost.org/" .. post.postingProject.handle,
@@ -51,6 +55,7 @@ local function process_attachment_blocks(post)
             height = block.attachment.height,
             width = block.attachment.width,
             canonical_domain = CANONICAL_DOMAIN,
+            rating = rating,
         }
     end)
 end
