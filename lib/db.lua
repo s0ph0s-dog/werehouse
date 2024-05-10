@@ -358,8 +358,8 @@ local queries = {
             RETURNING image_id;]],
         insert_source_for_image = [[INSERT INTO "sources" ("image_id", "link")
             VALUES (?, ?);]],
-        insert_artist = [[INSERT INTO "artists" ("name")
-            VALUES (?)
+        insert_artist = [[INSERT INTO "artists" ("name", "manually_confirmed")
+            VALUES (?, ?)
             RETURNING artist_id;]],
         insert_image_artist = [[INSERT INTO "image_artists" ("image_id", "artist_id")
             VALUES (?, ?);]],
@@ -645,33 +645,64 @@ function Model:getRecentImagesForArtist(artist_id, limit)
     )
 end
 
----@param author_info ScrapedAuthor
----@param domain string
-function Model:createArtistAndFirstHandle(author_info, domain)
-    local SP = "create_artist"
-    self:create_savepoint(SP)
-    local artist, errmsg = self.conn:fetchOne(
-        queries.model.insert_artist,
-        author_info.display_name
-    )
-    if not artist or artist == self.conn.NONE then
-        self:rollback(SP)
-        return nil, errmsg
-    end
-    local artist_id = artist.artist_id
-    local result2, errmsg2 = self.conn:execute(
+function Model:createHandleForArtist(artist_id, handle, domain, profile_url)
+    return self.conn:execute(
         queries.model.insert_artist_handle,
         artist_id,
-        author_info.handle,
+        handle,
         domain,
-        author_info.profile_url
+        profile_url
     )
-    if not result2 then
+end
+
+function Model:createArtist(name, manually_verified)
+    local artist, errmsg =
+        self.conn:fetchOne(queries.model.insert_artist, name, manually_verified)
+    if not artist or artist == self.conn.NONE then
+        return nil, errmsg
+    end
+    return artist.artist_id
+end
+
+function Model:createArtistWithHandles(name, manually_verified, handles)
+    local SP = "create_artist_with_several_handles"
+    self:create_savepoint(SP)
+    local artist_id, errmsg = self:createArtist(name, manually_verified)
+    if not artist_id then
         self:rollback(SP)
-        return nil, errmsg2
+        Log(kLogInfo, errmsg)
+        return nil, errmsg
+    end
+    for i = 1, #handles do
+        local handle = handles[i]
+        local handle_ok, handle_err = self:createHandleForArtist(
+            artist_id,
+            handle.handle,
+            handle.domain,
+            handle.profile_url
+        )
+        if not handle_ok then
+            self:rollback(SP)
+            Log(kLogInfo, handle_err)
+            return nil, handle_err
+        end
     end
     self:release_savepoint(SP)
     return artist_id
+end
+
+---@param author_info ScrapedAuthor
+---@param domain string
+function Model:createArtistAndFirstHandle(author_info, domain)
+    local name = author_info.display_name
+    local handles = {
+        {
+            handle = author_info.handle,
+            domain = domain,
+            profile_url = author_info.profile_url,
+        },
+    }
+    return self:createArtistWithHandles(name, 0, handles)
 end
 
 ---@param image_id integer

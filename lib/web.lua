@@ -578,6 +578,47 @@ local render_artist = login_required(function(r)
     })
 end)
 
+local render_add_artist = login_required(function(r)
+    return Fm.serveContent("add_artist")
+end)
+
+local accept_add_artist = login_required(function(r)
+    local usernames = r.params.usernames
+    local profile_urls = r.params.profile_urls
+    if not r.params.name then
+        return Fm.serveError(400, "Artist name is required")
+    end
+    if not usernames then
+        return Fm.serveError(400, "At least one username is required")
+    end
+    if not profile_urls then
+        return Fm.serveError(400, "At least one profile URL is required")
+    end
+    if #usernames ~= #profile_urls then
+        return Fm.serveError(
+            400,
+            "The number of usernames and profile URLs must match"
+        )
+    end
+    local handles = {}
+    for i = 1, #usernames do
+        local profile_url = profile_urls[i]
+        local parts = ParseUrl(profile_url)
+        handles[#handles + 1] = {
+            profile_url = profile_url,
+            domain = parts.host,
+            username = usernames[i],
+        }
+    end
+    local artist_id, err =
+        Model:createArtistWithHandles(r.params.name, 1, handles)
+    if not artist_id then
+        Log(kLogInfo, err)
+        return Fm.serve500(err)
+    end
+    return Fm.serveRedirect("/artist/" .. artist_id, 302)
+end)
+
 local render_image_groups = login_required(function(r)
     local per_page = 100
     local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
@@ -735,7 +776,9 @@ local function setup()
     Fm.setRoute(Fm.POST { "/enqueue" }, accept_enqueue)
     Fm.setRoute(Fm.GET { "/artist" }, render_artists)
     Fm.setRoute(Fm.POST { "/artist" }, accept_artists)
-    Fm.setRoute("/artist/:artist_id", render_artist)
+    Fm.setRoute(Fm.GET { "/artist/add" }, render_add_artist)
+    Fm.setRoute(Fm.POST { "/artist/add" }, accept_add_artist)
+    Fm.setRoute("/artist/:artist_id[%d]", render_artist)
     Fm.setRoute("/image-group", render_image_groups)
     Fm.setRoute("/image-group/:ig_id", render_image_group)
     Fm.setRoute(Fm.GET { "/link-telegram/:request_id" }, render_telegram_link)

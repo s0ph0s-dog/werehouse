@@ -31,6 +31,7 @@ SRCS := src/.init.lua \
     src/templates/accept_invite.html \
     src/templates/link_telegram.html \
     src/templates/login.html \
+    src/templates/add_artist.html \
     src/templates/artist.html \
     src/templates/artists.html \
     src/templates/image.html \

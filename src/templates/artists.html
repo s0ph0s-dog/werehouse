@@ -1,5 +1,6 @@
 {% function block.content() %}
 <h1>Artists</h1>
+<p><a href="/artist/add">Add Artist…</a></p>
 {% if pages.current > 1 and #artist_records == 0 then %}
 <p>You've fallen off the end of the page counter!</p>
 {% elseif #artist_records == 0 then %}
