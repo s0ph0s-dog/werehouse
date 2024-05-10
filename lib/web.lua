@@ -521,8 +521,34 @@ local render_artists = login_required(function(r)
     })
 end)
 
+local accept_artists = login_required(function(r)
+    local redirect_path = r.makePath(r.path, r.params)
+    if r.params.delete == "Delete" then
+        local ok, errmsg = Model:deleteArtists(r.params.artist_ids)
+        if not ok then
+            Log(kLogInfo, errmsg)
+            return Fm.serve500()
+        end
+    elseif r.params.merge == "Merge" then
+        local artist_ids = r.params.artist_ids
+        if #artist_ids < 2 then
+            r.session.error = "You must select at least two artists to merge!"
+            return Fm.serveRedirect(redirect_path, 302)
+        end
+        local merge_into_id = artist_ids[#artist_ids]
+        artist_ids[#artist_ids] = nil
+        local ok, errmsg = Model:mergeArtists(merge_into_id, artist_ids)
+        if not ok then
+            Log(kLogInfo, errmsg)
+            return Fm.serve500()
+        end
+    end
+    return Fm.serveRedirect(redirect_path, 302)
+end)
+
 local render_artist = login_required(function(r)
-    if not r.params.artist_id then
+    local artist_id = r.params.artist_id
+    if not artist_id then
         return Fm.serve400()
     end
     local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
@@ -530,17 +556,16 @@ local render_artist = login_required(function(r)
         Log(kLogDebug, errmsg)
         return Fm.serve500()
     end
-    local artist, errmsg1 = Model:getArtistById(r.params.artist_id)
+    local artist, errmsg1 = Model:getArtistById(artist_id)
     if not artist then
         Log(kLogInfo, errmsg1)
         return Fm.serve404()
     end
-    local handles, errmsg2 = Model:getHandlesForArtist(r.params.artist_id)
+    local handles, errmsg2 = Model:getHandlesForArtist(artist_id)
     if not handles then
         Log(kLogInfo, errmsg2)
     end
-    local images, images_err =
-        Model:getRecentImagesForArtist(r.params.artist_id, 20)
+    local images, images_err = Model:getRecentImagesForArtist(artist_id, 20)
     if not images then
         Log(kLogInfo, errmsg2)
         return Fm.serve500()
@@ -708,7 +733,8 @@ local function setup()
     Fm.setRoute(Fm.GET { "/image/:image_id/edit" }, render_image)
     Fm.setRoute(Fm.GET { "/enqueue" }, render_enqueue)
     Fm.setRoute(Fm.POST { "/enqueue" }, accept_enqueue)
-    Fm.setRoute("/artist", render_artists)
+    Fm.setRoute(Fm.GET { "/artist" }, render_artists)
+    Fm.setRoute(Fm.POST { "/artist" }, accept_artists)
     Fm.setRoute("/artist/:artist_id", render_artist)
     Fm.setRoute("/image-group", render_image_groups)
     Fm.setRoute("/image-group/:ig_id", render_image_group)

@@ -371,6 +371,7 @@ local queries = {
         insert_image_in_group = [[INSERT INTO images_in_group (image_id, ig_id, "order")
             VALUES (?, ?, ?);]],
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
+        delete_artist_by_id = [[DELETE FROM "artists" WHERE artist_id = ?;]],
         update_queue_item_status = [[UPDATE "queue"
             SET "status" = ?, "tombstone" = ?
             WHERE qid = ?;]],
@@ -383,6 +384,12 @@ local queries = {
         update_queue_item_disambiguation_data = [[UPDATE "queue"
             SET "disambiguation_data" = ?
             WHERE qid = ?;]],
+        update_handles_to_other_artist = [[UPDATE "artist_handles"
+            SET "artist_id" = ?
+            WHERE "artist_id" = ?]],
+        update_image_artists_to_other_artist = [[UPDATE "image_artists"
+            SET "artist_id" = ?
+            WHERE "artist_id" = ?;]],
     },
 }
 
@@ -708,6 +715,53 @@ function Model:createOrAssociateArtistWithImage(image_id, domain, author_info)
     end
     self:release_savepoint(SP)
     return true
+end
+
+function Model:deleteArtists(artist_ids)
+    for i = 1, #artist_ids do
+        local ok, errmsg =
+            self.conn:execute(queries.model.delete_artist_by_id, artist_ids[i])
+        if not ok then
+            return nil, errmsg
+        end
+    end
+    return true
+end
+
+function Model:mergeArtists(merge_into_id, merge_from_ids)
+    local SP_MERGE = "merge_artists"
+    self:create_savepoint(SP_MERGE)
+    for i = 1, #merge_from_ids do
+        local merge_from_id = merge_from_ids[i]
+        local handle_ok, handle_err = self.conn:execute(
+            queries.model.update_handles_to_other_artist,
+            merge_into_id,
+            merge_from_id
+        )
+        if not handle_ok then
+            self:rollback(SP_MERGE)
+            Log(kLogInfo, handle_err)
+            return nil, handle_err
+        end
+        local image_ok, image_err = self.conn:execute(
+            queries.model.update_image_artists_to_other_artist,
+            merge_into_id,
+            merge_from_id
+        )
+        if not image_ok then
+            self:rollback(SP_MERGE)
+            Log(kLogInfo, image_err)
+            return nil, image_err
+        end
+    end
+    local delete_ok, delete_err = self:deleteArtists(merge_from_ids)
+    if not delete_ok then
+        self:rollback(SP_MERGE)
+        Log(kLogInfo, delete_err)
+        return nil, delete_err
+    end
+    self:release_savepoint(SP_MERGE)
+    return delete_ok
 end
 
 function Model:getImageGroupCount()
