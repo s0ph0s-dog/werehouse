@@ -358,8 +358,8 @@ local queries = {
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (NULL, ?, ?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
         insert_image_into_images = [[INSERT INTO
-            "images" ("file", "mime_type", "width", "height", "kind", "saved_at")
-            VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            "images" ("file", "mime_type", "width", "height", "kind", "rating", "saved_at")
+            VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
             RETURNING image_id;]],
         insert_source_for_image = [[INSERT INTO "sources" ("image_id", "link")
             VALUES (?, ?);]],
@@ -397,6 +397,16 @@ local queries = {
             WHERE "artist_id" = ?;]],
     },
 }
+
+local function fetchOneExactly(conn, query, ...)
+    local result, err = conn:fetchOne(query, ...)
+    if not result then
+        return nil, err
+    elseif result == conn.NONE then
+        return nil, "No records returned"
+    end
+    return result
+end
 
 ---@class Model
 ---@field conn table
@@ -464,15 +474,15 @@ function Model:getPaginatedImageEntries(page_num, per_page)
 end
 
 function Model:getQueueEntryById(qid)
-    return self.conn:fetchOne(queries.model.get_queue_entry_by_id, qid)
+    return fetchOneExactly(self.conn, queries.model.get_queue_entry_by_id, qid)
 end
 
 function Model:getQueueImageById(qid)
-    return self.conn:fetchOne(queries.model.get_queue_image_by_id, qid)
+    return fetchOneExactly(self.conn, queries.model.get_queue_image_by_id, qid)
 end
 
 function Model:getImageById(image_id)
-    return self.conn:fetchOne(queries.model.get_image_by_id, image_id)
+    return fetchOneExactly(self.conn, queries.model.get_image_by_id, image_id)
 end
 
 function Model:getArtistsForImage(image_id)
@@ -635,7 +645,7 @@ function Model:getPaginatedArtists(page_num, per_page)
 end
 
 function Model:getArtistById(artist_id)
-    return self.conn:fetchOne(queries.model.get_artist_by_id, artist_id)
+    return fetchOneExactly(self.conn, queries.model.get_artist_by_id, artist_id)
 end
 
 function Model:getHandlesForArtist(artist_id)
@@ -865,7 +875,14 @@ function Model:addImageToGroupAtEnd(image_id, group_id)
 end
 
 function Model:getImageGroupById(ig_id)
-    return self.conn:fetchOne(queries.model.get_image_group_by_id, ig_id)
+    local group, err =
+        self.conn:fetchOne(queries.model.get_image_group_by_id, ig_id)
+    if not group then
+        return nil, err
+    elseif group == self.conn.NONE then
+        return nil, "No such group"
+    end
+    return group
 end
 
 function Model:getImagesForGroup(ig_id)
@@ -953,7 +970,11 @@ function Accounts:acceptInvite(invite_id, username, password_hash)
 end
 
 function Accounts:findUser(username)
-    return self.conn:fetchOne(queries.accounts.find_user_by_name, username)
+    return fetchOneExactly(
+        self.conn,
+        queries.accounts.find_user_by_name,
+        username
+    )
 end
 
 function Accounts:createSessionForUser(user_id)
@@ -968,15 +989,23 @@ function Accounts:createSessionForUser(user_id)
 end
 
 function Accounts:findSessionById(session_id)
-    return self.conn:fetchOne(queries.accounts.get_session, session_id)
+    return fetchOneExactly(self.conn, queries.accounts.get_session, session_id)
 end
 
 function Accounts:findUserBySessionId(session_id)
-    return self.conn:fetchOne(queries.accounts.get_user_by_session, session_id)
+    return fetchOneExactly(
+        self.conn,
+        queries.accounts.get_user_by_session,
+        session_id
+    )
 end
 
 function Accounts:findUserByTelegramUserID(tg_userid)
-    return self.conn:fetchOne(queries.accounts.get_user_by_tg_id, tg_userid)
+    return fetchOneExactly(
+        self.conn,
+        queries.accounts.get_user_by_tg_id,
+        tg_userid
+    )
 end
 
 function Accounts:getAllUserIds()
@@ -1032,7 +1061,8 @@ function Accounts:setTelegramUserIDForUserAndDeleteLinkRequest(
 end
 
 function Accounts:getTelegramLinkRequestById(request_id)
-    return self.conn:fetchOne(
+    return fetchOneExactly(
+        self.conn,
         queries.accounts.get_telegram_link_request_by_id,
         request_id
     )
@@ -1069,6 +1099,7 @@ function Accounts:rollback(to_savepoint)
         return self.conn:execute("ROLLBACK;")
     end
 end
+
 return {
     Accounts = Accounts,
     Model = Model,
