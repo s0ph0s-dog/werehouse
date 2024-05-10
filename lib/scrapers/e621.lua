@@ -70,7 +70,7 @@ local function process_post(json, clean_uri, pool_uri)
         artist_tags = {}
     end
     artist_tags = table.filter(artist_tags, function(x)
-        return x ~= "third-party_edit"
+        return x ~= "third-party_edit" and x ~= "conditional_dnp"
     end)
     ---@cast artist_tags string[]
     local authors = table.map(artist_tags, function(item)
