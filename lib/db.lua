@@ -85,6 +85,7 @@ local user_setup = [[
         "tag_id" INTEGER NOT NULL,
         PRIMARY KEY("image_id", "tag_id"),
         FOREIGN KEY ("tag_id") REFERENCES "tags"("tag_id")
+        FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
 
@@ -119,6 +120,7 @@ local user_setup = [[
         "artist_id" INTEGER NOT NULL,
         PRIMARY KEY("image_id", "artist_id"),
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
+        FOREIGN KEY ("artist_id") REFERENCES "artists"("artist_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
 
@@ -144,6 +146,7 @@ local user_setup = [[
         "tag_id" INTEGER NOT NULL,
         PRIMARY KEY("spl_entry_id", "tag_id"),
         FOREIGN KEY ("spl_entry_id") REFERENCES "share_ping_list_entry"("spl_entry_id")
+        FOREIGN KEY ("tag_id") REFERENCES "tags"("tag_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
 
@@ -152,6 +155,7 @@ local user_setup = [[
         "tag_id" INTEGER NOT NULL,
         PRIMARY KEY("spl_entry_id", "tag_id"),
         FOREIGN KEY ("spl_entry_id") REFERENCES "share_ping_list_entry"("spl_entry_id")
+        FOREIGN KEY ("tag_id") REFERENCES "tags"("tag_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
 
@@ -167,6 +171,7 @@ local user_setup = [[
         "order" INTEGER,
         PRIMARY KEY("image_id", "ig_id"),
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
+        FOREIGN KEY ("ig_id") REFERENCES "image_group"("ig_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
 
