@@ -1,5 +1,5 @@
-local ACCOUNTS_DB_FILE = "hyperphantasia-accounts.sqlite3"
-local USER_DB_FILE_TEMPLATE = "hyperphantasia-%s.sqlite3"
+local ACCOUNTS_DB_FILE = "db/hyperphantasia-accounts.sqlite3"
+local USER_DB_FILE_TEMPLATE = "db/hyperphantasia-%s.sqlite3"
 
 local accounts_setup = [[
     PRAGMA journal_mode=WAL;
