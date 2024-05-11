@@ -66,7 +66,8 @@ end
 
 local function select_best_link(links)
     if #links == 1 then
-        return links[1]
+        local link = links[1]
+        return link, bot.score_link(link)
     end
     local max_score = 0
     local best_link = nil
@@ -78,7 +79,7 @@ local function select_best_link(links)
             max_score = score
         end
     end
-    return best_link
+    return best_link, max_score
 end
 
 local function handle_enqueue(message)
@@ -94,37 +95,47 @@ local function handle_enqueue(message)
     end
     if not message.text and not message.photo then
         if message.video then
-            api.send_message(message, "I can’t save videos yet, sorry :(")
+            api.reply_to_message(message, "I can’t save videos yet, sorry :(")
         else
-            api.send_message(
+            api.reply_to_message(
                 message,
-                "I can’t find anything to save in that message."
+                "I can’t find anything to save in this message."
             )
         end
         return
     end
     local links = bot.get_all_links_from_message(message)
-    local best_link = select_best_link(links)
+    local best_link, score = select_best_link(links)
     if best_link then
-        local ok, err = model:enqueueLink(best_link)
-        if not ok then
-            Log(kLogInfo, "Error while enqueuing from bot: %s" % { err })
-            api.send_message(
-                message,
-                "I encountered an error while trying to add that to the queue: %s"
-                    % { err }
-            )
+        -- If score is greater than 0 or there's no photo part of the message,
+        -- try adding the link to the queue.
+        -- Score of 0 means none of the scraper plugins could process the link,
+        -- so it's either a raw file URL or an unsupported URL.  Raw files might
+        -- work, but unsupported URLs won't.  If there's an image, that has a
+        -- better shot at finding something, so prefer that.
+        if score > 0 or not message.photo then
+            local ok, err = model:enqueueLink(best_link)
+            if not ok then
+                Log(kLogInfo, "Error while enqueuing from bot: %s" % { err })
+                api.reply_to_message(
+                    message,
+                    "I encountered an error while trying to add this to the queue: %s"
+                        % { err }
+                )
+                return
+            end
+            if #links == 1 then
+                api.reply_to_message(message, "Added this to the queue!")
+            else
+                api.reply_to_message(
+                    message,
+                    "Added %s to the queue!" % { best_link }
+                )
+            end
             return
         end
-        if #links == 1 then
-            api.send_message(message, "Added that to the queue!")
-        else
-            api.send_message(message, "Added %s to the queue!" % { best_link })
-        end
-        return
     end
     if message.photo then
-        print("processing photo")
         local max_width = 0
         local max_height = 0
         local largest_photo = nil
@@ -138,32 +149,30 @@ local function handle_enqueue(message)
             end
         end
         if not largest_photo then
-            print("No photos in list")
+            Log(kLogDebug, "No photos in list")
             return
         end
-        print("downloading image file", largest_photo.file_id)
         local photo_data, photo_err = api.download_file(largest_photo.file_id)
         if not photo_data then
             Log(kLogInfo, photo_err)
             return
         end
-        print("adding to queue")
         local ok, err =
             model:enqueueImage(photo_data.mime_type, photo_data.data)
         if not ok then
             Log(kLogInfo, err)
-            api.send_message(
+            api.reply_to_message(
                 message,
-                "I couldn’t add that photo to the queue: %s" % { err }
+                "I couldn’t add this photo to the queue: %s" % { err }
             )
             return
         end
-        api.send_message(message, "Added that to the queue!")
+        api.reply_to_message(message, "Added this to the queue!")
         return
     end
-    api.send_message(
+    api.reply_to_message(
         message,
-        "I encountered an error while trying to add that to the queue."
+        "I encountered an error while trying to add this to the queue."
     )
 end
 
@@ -173,7 +182,7 @@ function bot.setup(token, debug, link_checker)
 end
 
 function bot.score_link(link)
-    local score = 1
+    local score = 0
     if bot.link_checker(link) then
         score = score + 1
     end

@@ -14,7 +14,7 @@ local CANONICAL_DOMAIN = "www.furaffinity.net"
 
 local function normalize_fa_uri(uri)
     local match, _, _, _, id = FA_URI_EXP:search(uri)
-    if not match then
+    if not match or not id then
         return nil
     end
     return "https://www.furaffinity.net/full/%s" % { id }

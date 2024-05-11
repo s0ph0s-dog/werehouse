@@ -126,6 +126,12 @@ function api.send_message(
     return ok, err
 end
 
+function api.reply_to_message(message, text)
+    return api.send_message(message, text, nil, nil, nil, nil, nil, nil, {
+        message_id = message.message_id,
+    })
+end
+
 function api.get_file(file_id) -- https://core.telegram.org/bots/api#getfile
     local success, res =
         api.request(config.endpoint .. api.token .. "/getFile", {
