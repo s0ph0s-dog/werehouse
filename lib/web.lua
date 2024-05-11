@@ -513,6 +513,7 @@ local render_artists = login_required(function(r)
         pagination_data(cur_page, artist_count, per_page, #artist_records)
     local error = r.session.error
     r.session.error = nil
+    r.session.after_action = r.makePath(r.path, r.params)
     return Fm.serveContent("artists", {
         user = user_record,
         error = error,
@@ -522,7 +523,8 @@ local render_artists = login_required(function(r)
 end)
 
 local accept_artists = login_required(function(r)
-    local redirect_path = r.makePath(r.path, r.params)
+    local redirect_path = r.session.after_action or r.makePath(r.path, r.params)
+    r.session.after_action = nil
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteArtists(r.params.artist_ids)
         if not ok then
@@ -531,12 +533,15 @@ local accept_artists = login_required(function(r)
         end
     elseif r.params.merge == "Merge" then
         local artist_ids = r.params.artist_ids
+        artist_ids = table.map(artist_ids, tonumber)
+        table.sort(artist_ids)
         if #artist_ids < 2 then
             r.session.error = "You must select at least two artists to merge!"
             return Fm.serveRedirect(redirect_path, 302)
         end
-        local merge_into_id = artist_ids[#artist_ids]
-        artist_ids[#artist_ids] = nil
+        -- Yes, this is slower because it moves everything down, but it preserves
+        -- earlier artist IDs, which makes me happier.
+        local merge_into_id = table.remove(artist_ids, 1)
         local ok, errmsg = Model:mergeArtists(merge_into_id, artist_ids)
         if not ok then
             Log(kLogInfo, errmsg)
@@ -644,12 +649,42 @@ local render_image_groups = login_required(function(r)
     local pages = pagination_data(cur_page, ig_count, per_page, #ig_records)
     local error = r.session.error
     r.session.error = nil
+    r.session.after_action = r.makePath(r.path, r.params)
     return Fm.serveContent("image_groups", {
         user = user_record,
         error = error,
         ig_records = ig_records,
         pages = pages,
     })
+end)
+
+local accept_image_groups = login_required(function(r)
+    local redirect_path = r.session.after_action or r.makePath(r.path, r.params)
+    r.session.after_action = nil
+    print("will redirect to " .. redirect_path)
+    if r.params.delete == "Delete" then
+        local ok, errmsg = Model:deleteImageGroups(r.params.ig_ids)
+        if not ok then
+            Log(kLogInfo, errmsg)
+            return Fm.serve500()
+        end
+    elseif r.params.merge == "Merge" then
+        local ig_ids = r.params.ig_ids
+        ig_ids = table.map(ig_ids, tonumber)
+        table.sort(ig_ids)
+        if #ig_ids < 2 then
+            r.session.error =
+                "You must select at least two image groups to merge!"
+            return Fm.serveRedirect(redirect_path, 302)
+        end
+        local merge_into_id = table.remove(ig_ids, 1)
+        local ok, errmsg = Model:mergeImageGroups(merge_into_id, ig_ids)
+        if not ok then
+            Log(kLogInfo, errmsg)
+            return Fm.serve500()
+        end
+    end
+    return Fm.serveRedirect(redirect_path, 302)
 end)
 
 local render_image_group = login_required(function(r)
@@ -779,7 +814,8 @@ local function setup()
     Fm.setRoute(Fm.GET { "/artist/add" }, render_add_artist)
     Fm.setRoute(Fm.POST { "/artist/add" }, accept_add_artist)
     Fm.setRoute("/artist/:artist_id[%d]", render_artist)
-    Fm.setRoute("/image-group", render_image_groups)
+    Fm.setRoute(Fm.GET { "/image-group" }, render_image_groups)
+    Fm.setRoute(Fm.POST { "/image-group" }, accept_image_groups)
     Fm.setRoute("/image-group/:ig_id", render_image_group)
     Fm.setRoute(Fm.GET { "/link-telegram/:request_id" }, render_telegram_link)
     Fm.setRoute(Fm.POST { "/link-telegram/:request_id" }, accept_telegram_link)

@@ -377,6 +377,7 @@ local queries = {
             VALUES (?, ?, ?);]],
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
         delete_artist_by_id = [[DELETE FROM "artists" WHERE artist_id = ?;]],
+        delete_image_group_by_id = [[DELETE FROM "image_group" WHERE ig_id = ?;]],
         update_queue_item_status = [[UPDATE "queue"
             SET "status" = ?, "tombstone" = ?
             WHERE qid = ?;]],
@@ -395,6 +396,14 @@ local queries = {
         update_image_artists_to_other_artist = [[UPDATE "image_artists"
             SET "artist_id" = ?
             WHERE "artist_id" = ?;]],
+        update_images_to_other_group_preserving_order = [[UPDATE images_in_group
+            SET
+                ig_id = ?,
+                "order" = (
+                    (SELECT MAX("order") FROM images_in_group WHERE ig_id = ?)
+                    + "order"
+                )
+            WHERE ig_id = ?;]],
     },
 }
 
@@ -887,6 +896,53 @@ end
 
 function Model:getImagesForGroup(ig_id)
     return self.conn:fetchAll(queries.model.get_images_for_group, ig_id)
+end
+
+function Model:deleteImageGroups(ig_ids)
+    for i = 1, #ig_ids do
+        local ok, errmsg =
+            self.conn:execute(queries.model.delete_image_group_by_id, ig_ids[i])
+        if not ok then
+            return nil, errmsg
+        end
+    end
+    return true
+end
+
+function Model:moveAllImagesToOtherGroup(to_ig_id, from_ig_id)
+    return self.conn:execute(
+        queries.model.update_images_to_other_group_preserving_order,
+        to_ig_id,
+        to_ig_id,
+        from_ig_id
+    )
+end
+
+function Model:mergeImageGroups(merge_into_id, merge_from_ids)
+    local SP_MERGE = "merge_image_groups"
+    self:create_savepoint(SP_MERGE)
+    for i = 1, #merge_from_ids do
+        local merge_from_id = merge_from_ids[i]
+        local group_ok, group_err = self.conn:execute(
+            queries.model.update_images_to_other_group_preserving_order,
+            merge_into_id,
+            merge_into_id,
+            merge_from_id
+        )
+        if not group_ok then
+            self:rollback(SP_MERGE)
+            Log(kLogInfo, group_err)
+            return nil, group_err
+        end
+    end
+    local delete_ok, delete_err = self:deleteImageGroups(merge_from_ids)
+    if not delete_ok then
+        self:rollback(SP_MERGE)
+        Log(kLogInfo, delete_err)
+        return nil, delete_err
+    end
+    self:release_savepoint(SP_MERGE)
+    return delete_ok
 end
 
 function Model:deleteFromQueue(queue_ids)
