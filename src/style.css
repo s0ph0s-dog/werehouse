@@ -194,6 +194,14 @@ table .num {
   text-align: right;
 }
 
+table img {
+  display: block;
+  max-width: 12em;
+  max-height: 12em;
+  width: auto;
+  height: auto;
+}
+
 .pages {
   display: flex;
   justify-content: space-between;

@@ -712,6 +712,69 @@ local render_image_group = login_required(function(r)
     })
 end)
 
+local render_edit_image_group = login_required(function(r)
+    if not r.params.ig_id then
+        return Fm.serve400()
+    end
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    local ig, ig_errmsg = Model:getImageGroupById(r.params.ig_id)
+    if not ig then
+        Log(kLogInfo, ig_errmsg)
+        return Fm.serve404()
+    end
+    local images, image_errmsg = Model:getImagesForGroup(r.params.ig_id)
+    if not images then
+        Log(kLogInfo, image_errmsg)
+    end
+    r.session.after_action = r.headers.Referer
+    return Fm.serveContent("edit_image_group", {
+        user = user_record,
+        ig = ig,
+        images = images,
+    })
+end)
+
+local accept_edit_image_group = login_required(function(r)
+    local redirect_url = r.params.after_action or r.makePath(r.path, r.params)
+    r.params.after_action = nil
+    local ig_id = r.params.ig_id
+    local image_ids = r.params.image_ids
+    local new_orders = r.params.new_orders
+    local new_name = r.params.name
+    if not ig_id or not image_ids or not new_orders or not new_name then
+        return Fm.serve400()
+    end
+    if #image_ids ~= #new_orders then
+        return Fm.serveError(
+            400,
+            "Must have the same number of image_ids as new_orders"
+        )
+    end
+    local SP = "reorder_images_in_group"
+    Model:create_savepoint(SP)
+    local rename_ok, rename_err = Model:renameImageGroup(ig_id, new_name)
+    if not rename_ok then
+        Model:rollback(SP)
+        Log(kLogInfo, rename_err)
+        return Fm.serve500()
+    end
+    for i = 1, #image_ids do
+        local reorder_ok, reorder_err =
+            Model:setOrderForImageInGroup(ig_id, image_ids[i], new_orders[i])
+        if not reorder_ok then
+            Model:rollback(SP)
+            Log(kLogInfo, reorder_err)
+            return Fm.serve500()
+        end
+    end
+    Model:release_savepoint(SP)
+    return Fm.serveRedirect(redirect_url, 302)
+end)
+
 local render_telegram_link = login_required(function(r)
     if not r.params.request_id then
         return Fm.serve404()
@@ -800,13 +863,13 @@ local function setup()
     Fm.setRoute(Fm.POST { "/login", _ = login_validator }, accept_login)
     Fm.setRoute(Fm.GET { "/queue" }, render_queue)
     Fm.setRoute(Fm.POST { "/queue" }, accept_queue)
-    Fm.setRoute(Fm.GET { "/queue/:qid/help" }, render_queue_help)
-    Fm.setRoute(Fm.POST { "/queue/:qid/help" }, accept_queue_help)
+    Fm.setRoute(Fm.GET { "/queue/:qid[%d]/help" }, render_queue_help)
+    Fm.setRoute(Fm.POST { "/queue/:qid[%d]/help" }, accept_queue_help)
     Fm.setRoute("/home", render_home)
     Fm.setRoute("/image-file/:filename", render_image_file)
     Fm.setRoute("/image", render_images)
     Fm.setRoute("/image/:image_id", render_image)
-    Fm.setRoute(Fm.GET { "/image/:image_id/edit" }, render_image)
+    Fm.setRoute(Fm.GET { "/image/:image_id[%d]/edit" }, render_image)
     Fm.setRoute(Fm.GET { "/enqueue" }, render_enqueue)
     Fm.setRoute(Fm.POST { "/enqueue" }, accept_enqueue)
     Fm.setRoute(Fm.GET { "/artist" }, render_artists)
@@ -816,7 +879,15 @@ local function setup()
     Fm.setRoute("/artist/:artist_id[%d]", render_artist)
     Fm.setRoute(Fm.GET { "/image-group" }, render_image_groups)
     Fm.setRoute(Fm.POST { "/image-group" }, accept_image_groups)
-    Fm.setRoute("/image-group/:ig_id", render_image_group)
+    Fm.setRoute("/image-group/:ig_id[%d]", render_image_group)
+    Fm.setRoute(
+        Fm.GET { "/image-group/:ig_id[%d]/edit" },
+        render_edit_image_group
+    )
+    Fm.setRoute(
+        Fm.POST { "/image-group/:ig_id[%d]/edit" },
+        accept_edit_image_group
+    )
     Fm.setRoute(Fm.GET { "/link-telegram/:request_id" }, render_telegram_link)
     Fm.setRoute(Fm.POST { "/link-telegram/:request_id" }, accept_telegram_link)
     -- API routes

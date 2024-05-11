@@ -1,4 +1,5 @@
 {% function block.content() %}
 <h1>{%& ig.name %}</h1>
+<p><a href="/image-group/{%& ig.ig_id %}/edit">Edit…</a></p>
 {% render("components/image_gallery", { image_records = images }) %}{% end %}{%
 render("layouts/main", { title = ig.name, user = user }) %}

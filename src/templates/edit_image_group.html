@@ -1,0 +1,59 @@
+{% function block.content() %}
+<form method="POST">
+  <label>
+    Image Group Name:
+    <input
+      type="text"
+      name="name"
+      autocapitalize="words"
+      value="{%& ig.name %}"
+    />
+  </label>
+  <datalist id="orders">
+    {% for i = 1, #images do %}
+    <option>{%& images[i].order %}</option>
+    {% end %}
+  </datalist>
+  <table>
+    <thead>
+      <tr>
+        <th class="txt">Image</th>
+        <th class="num">Order</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for i = 1, #images do local image = images[i] %}
+      <tr>
+        <td>
+          <img
+            src="/image-file/{%& image.file %}"
+            width="{%& image.width %}"
+            height="{%& image.height %}"
+          />
+        </td>
+        <td>
+          <input
+            type="hidden"
+            name="image_ids[]"
+            value="{%& image.image_id %}"
+          />
+          <input
+            type="number"
+            required
+            min="1"
+            name="new_orders[]"
+            list="orders"
+            value="{%& image.order %}"
+          />
+        </td>
+        {% end %}
+      </tr>
+    </tbody>
+  </table>
+  <span class="buttons">
+    <input type="reset" />
+    <input type="submit" name="update" value="Update" />
+  </span>
+</form>
+{% end %}{% render("layouts/dialog", { title = "Edit Image Group", dialog_width
+= "30em" }) %}

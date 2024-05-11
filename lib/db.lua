@@ -331,11 +331,11 @@ local queries = {
         get_image_group_by_id = [[SELECT ig_id, name
             FROM image_group
             WHERE ig_id = ?;]],
-        get_images_for_group = [[SELECT images_in_group.image_id, images.file
+        get_images_for_group = [[SELECT images_in_group.image_id, images_in_group."order", images.file, images.width, images.height
             FROM images_in_group
             inner JOIN images ON images_in_group.image_id = images.image_id
             WHERE ig_id = ?
-            ORDER BY "images_in_group.order";]],
+            ORDER BY images_in_group."order";]],
         get_image_groups_by_image_id = [[SELECT image_group.ig_id, image_group.name
             FROM image_group
             JOIN images_in_group ON image_group.ig_id = images_in_group.ig_id
@@ -404,6 +404,12 @@ local queries = {
                     + "order"
                 )
             WHERE ig_id = ?;]],
+        update_name_for_image_group_by_id = [[UPDATE image_group
+            SET name = ?
+            WHERE ig_id = ?;]],
+        update_order_for_image_in_image_group = [[UPDATE images_in_group
+            SET "order" = ?
+            WHERE ig_id = ? AND image_id = ?;]],
     },
 }
 
@@ -836,6 +842,14 @@ function Model:getPaginatedImageGroups(page_num, per_page)
     )
 end
 
+function Model:renameImageGroup(ig_id, new_name)
+    return self.conn:execute(
+        queries.model.update_name_for_image_group_by_id,
+        new_name,
+        ig_id
+    )
+end
+
 function Model:getGroupsForImage(image_id)
     return self.conn:fetchAll(
         queries.model.get_image_groups_by_image_id,
@@ -896,6 +910,15 @@ end
 
 function Model:getImagesForGroup(ig_id)
     return self.conn:fetchAll(queries.model.get_images_for_group, ig_id)
+end
+
+function Model:setOrderForImageInGroup(ig_id, image_id, new_order)
+    return self.conn:execute(
+        queries.model.update_order_for_image_in_image_group,
+        new_order,
+        ig_id,
+        image_id
+    )
 end
 
 function Model:deleteImageGroups(ig_ids)
