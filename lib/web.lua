@@ -391,16 +391,17 @@ local accept_edit_image = login_required(function(r)
         return Fm.serveRedirect(redirect_url, 302)
     end
     -- Validation & Cleanup
+    Log(kLogDebug, "Beginning validation & cleanup")
     local rating = tonumber(r.params.rating)
     if r.params.rating and not rating then
-        return Fm.serve400()
+        return Fm.serveError(400, "Bad rating")
     end
     r.params.rating = rating
     local categories = table.reduce(r.params.category or {}, function(acc, next)
         return (acc or 0) | (tonumber(next) or 0)
     end)
     if not categories and r.params.category then
-        return Fm.serve400()
+        return Fm.serveError(400, "Bad categories")
     end
     r.params.category = categories
     local pending_artists = r.params.pending_artists
@@ -462,7 +463,7 @@ local accept_edit_image = login_required(function(r)
         local image_id = r.params.image_id
         -- Image Metadata
         if not r.params.category or not r.params.rating then
-            return Fm.serve400()
+            return Fm.serveError(400, "Missing category or rating")
         end
         local metadata_ok, metadata_err = Model:updateImageMetadata(
             image_id,

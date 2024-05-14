@@ -717,7 +717,7 @@ local function process_all_queues()
             kLogInfo,
             "Finished processing queue entries for user %s" % { user_id }
         )
-        model:close()
+        model.conn:close()
     end
     Log(kLogInfo, "Ending queue processing.")
 end

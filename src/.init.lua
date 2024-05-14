@@ -49,10 +49,10 @@ function OnWorkerStart()
 end
 function OnWorkerStop()
     if Accounts then
-        Accounts:close()
+        Accounts.conn:close()
     end
     if Model then
-        Model:close()
+        Model.conn:close()
     end
 end
 -- 10MB, a reasonable limit for images.
