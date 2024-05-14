@@ -4,9 +4,9 @@ local FA_URI_EXP = assert(
     )
 )
 local RATING_MAP = {
-    General = DbUtil.k.RatingGeneral,
-    Mature = DbUtil.k.RatingAdult,
-    Adult = DbUtil.k.RatingExplicit,
+    General = DbUtil.k.Rating.General,
+    Mature = DbUtil.k.Rating.Adult,
+    Adult = DbUtil.k.Rating.Explicit,
 }
 local FA_SIZE_EXP = assert(re.compile([[(\d+) x (\d+)]]))
 local FA_AUTH_COOKIES = os.getenv("FA_AUTH_COOKIES")

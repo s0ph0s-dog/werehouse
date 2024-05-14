@@ -5,9 +5,9 @@ local ALLOWED_EXTS = {
     gif = true,
 }
 local RATING_MAP = {
-    s = DbUtil.k.RatingGeneral,
-    q = DbUtil.k.RatingAdult,
-    e = DbUtil.k.RatingExplicit,
+    s = DbUtil.k.Rating.General,
+    q = DbUtil.k.Rating.Adult,
+    e = DbUtil.k.Rating.Explicit,
 }
 local CANONICAL_DOMAIN = "e621.net"
 

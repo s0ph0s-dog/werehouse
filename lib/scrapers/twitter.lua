@@ -29,9 +29,9 @@ local function process_image_embeds(json)
     if not json.author then
         return nil
     end
-    local rating = DbUtil.k.RatingGeneral
+    local rating = DbUtil.k.Rating.General
     if json.possibly_sensitive then
-        rating = DbUtil.k.RatingAdult
+        rating = DbUtil.k.Rating.Adult
     end
     local author = {
         handle = json.author.screen_name,

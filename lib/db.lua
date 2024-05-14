@@ -75,13 +75,13 @@ local user_setup = [[
 
     CREATE TABLE IF NOT EXISTS "tags" (
         "tag_id" INTEGER NOT NULL UNIQUE,
-        "name" TEXT NOT NULL,
+        "name" TEXT NOT NULL UNIQUE,
         "description" TEXT NOT NULL,
         PRIMARY KEY("tag_id")
     );
 
     CREATE TABLE IF NOT EXISTS "image_tags" (
-        "image_id" INTEGER NOT NULL UNIQUE,
+        "image_id" INTEGER NOT NULL,
         "tag_id" INTEGER NOT NULL,
         PRIMARY KEY("image_id", "tag_id"),
         FOREIGN KEY ("tag_id") REFERENCES "tags"("tag_id")
@@ -101,7 +101,7 @@ local user_setup = [[
     CREATE TABLE IF NOT EXISTS "artists" (
         "artist_id" INTEGER NOT NULL UNIQUE,
         "manually_confirmed" INTEGER NOT NULL DEFAULT 0,
-        "name" TEXT NOT NULL,
+        "name" TEXT NOT NULL UNIQUE,
         PRIMARY KEY("artist_id")
     );
 
@@ -277,10 +277,12 @@ local queries = {
             FROM artists INNER JOIN image_artists
             ON image_artists.artist_id = artists.artist_id
             WHERE image_artists.image_id = ?;]],
+        get_tag_id_by_name = [[SELECT tag_id FROM tags WHERE name = ?;]],
         get_tags_for_image = [[SELECT tags.tag_id, tags.name
             FROM tags INNER JOIN image_tags
             ON image_tags.tag_id = tags.tag_id
             WHERE image_tags.image_id = ?;]],
+        get_all_tags = [[SELECT tag_id, name FROM tags;]],
         get_sources_for_image = [[SELECT source_id, link
             FROM sources
             WHERE image_id = ?;]],
@@ -291,6 +293,7 @@ local queries = {
         get_last_order_for_image_group = [[SELECT MAX("order") AS max_order
             FROM images_in_group
             WHERE ig_id = ?;]],
+        get_all_artists = [[SELECT artist_id, name FROM artists;]],
         get_artist_entry_count = [[SELECT COUNT(*) AS count FROM artists;]],
         get_artist_entries_paginated = [[SELECT
                 artists.artist_id,
@@ -308,6 +311,7 @@ local queries = {
         get_artist_by_id = [[SELECT artist_id, name, manually_confirmed
             FROM artists
             WHERE artist_id = ?;]],
+        get_artist_id_by_name = [[SELECT artist_id FROM artists WHERE name = ?;]],
         get_handles_for_artist = [[SELECT handle, domain, profile_url
             FROM artist_handles
             WHERE artist_id = ?;]],
@@ -361,6 +365,11 @@ local queries = {
             "images" ("file", "mime_type", "width", "height", "kind", "rating", "saved_at")
             VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
             RETURNING image_id;]],
+        insert_tag = [[INSERT INTO "tags" ("name", "description")
+            VALUES (?, ?)
+            RETURNING tag_id;]],
+        insert_image_tag = [[INSERT INTO "image_tags" ("image_id", "tag_id")
+            VALUES (?, ?);]],
         insert_source_for_image = [[INSERT INTO "sources" ("image_id", "link")
             VALUES (?, ?);]],
         insert_artist = [[INSERT INTO "artists" ("name", "manually_confirmed")
@@ -378,6 +387,11 @@ local queries = {
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
         delete_artist_by_id = [[DELETE FROM "artists" WHERE artist_id = ?;]],
         delete_image_group_by_id = [[DELETE FROM "image_group" WHERE ig_id = ?;]],
+        delete_image_artist_by_id = [[DELETE FROM image_artists
+            WHERE image_id = ? AND artist_id = ?;]],
+        delete_image_tags_by_id = [[DELETE FROM "image_tags"
+            WHERE image_id = ? AND tag_id = ?;]],
+        delete_source_by_id = [[DELETE FROM "sources" WHERE source_id = ? AND image_id = ?;]],
         update_queue_item_status = [[UPDATE "queue"
             SET "status" = ?, "tombstone" = ?
             WHERE qid = ?;]],
@@ -410,6 +424,8 @@ local queries = {
         update_order_for_image_in_image_group = [[UPDATE images_in_group
             SET "order" = ?
             WHERE ig_id = ? AND image_id = ?;]],
+        update_category_rating_for_image_by_id = [[UPDATE images SET category = ?, rating = ?
+            WHERE image_id = ?;]],
     },
 }
 
@@ -508,8 +524,43 @@ function Model:getTagsForImage(image_id)
     return self.conn:fetchAll(queries.model.get_tags_for_image, image_id)
 end
 
+function Model:deleteTagsForImageById(image_id, tag_ids)
+    local SP = "delete_image_tags"
+    self:create_savepoint(SP)
+    for i = 1, #tag_ids do
+        local ok, err = self.conn:execute(
+            queries.model.delete_image_tags_by_id,
+            image_id,
+            tag_ids[i]
+        )
+        if not ok then
+            self:rollback(SP)
+            return nil, err
+        end
+    end
+    self:release_savepoint(SP)
+    return true
+end
+
+function Model:createTag(tag_name, description)
+    return self.conn:fetchOne(queries.model.insert_tag, tag_name, description)
+end
+
+function Model:getAllTags()
+    return self.conn:fetchAll(queries.model.get_all_tags)
+end
+
 function Model:getSourcesForImage(image_id)
     return self.conn:fetchAll(queries.model.get_sources_for_image, image_id)
+end
+
+function Model:updateImageMetadata(image_id, category, rating)
+    return self.conn:execute(
+        queries.model.update_category_rating_for_image_by_id,
+        category,
+        rating,
+        image_id
+    )
 end
 
 function Model:enqueueLink(link)
@@ -594,7 +645,7 @@ end
 
 function Model:insertImage(image_file, mime_type, width, height, kind, rating)
     if not rating then
-        rating = DbUtil.k.RatingGeneral
+        rating = DbUtil.k.Rating.General
     end
     return self.conn:fetchOne(
         queries.model.insert_image_into_images,
@@ -642,6 +693,25 @@ function Model:insertSourcesForImage(image_id, sources)
     return true
 end
 
+-- Just the source ID should be enough to identify it, but I'm adding in the image_id as a hedge against my own stupidity.
+function Model:deleteSourcesForImageById(image_id, source_ids)
+    local SP = "delete_sources"
+    self:create_savepoint(SP)
+    for i = 1, #source_ids do
+        local ok, err = self.conn:execute(
+            queries.model.delete_source_by_id,
+            source_ids[i],
+            image_id
+        )
+        if not ok then
+            self:rollback(SP)
+            return nil, err
+        end
+    end
+    self:release_savepoint(SP)
+    return true
+end
+
 function Model:getArtistCount()
     local result, errmsg =
         self.conn:fetchOne(queries.model.get_artist_entry_count)
@@ -649,6 +719,10 @@ function Model:getArtistCount()
         return nil, errmsg
     end
     return result.count
+end
+
+function Model:getAllArtists()
+    return self.conn:fetchAll(queries.model.get_all_artists)
 end
 
 function Model:getPaginatedArtists(page_num, per_page)
@@ -721,6 +795,10 @@ function Model:createArtistWithHandles(name, manually_verified, handles)
     return artist_id
 end
 
+function Model:associateTagWithImage(image_id, tag_id)
+    return self.conn:execute(queries.model.insert_image_tag, image_id, tag_id)
+end
+
 ---@param author_info ScrapedAuthor
 ---@param domain string
 function Model:createArtistAndFirstHandle(author_info, domain)
@@ -778,6 +856,72 @@ function Model:createOrAssociateArtistWithImage(image_id, domain, author_info)
     return true
 end
 
+function Model:addArtistsForImageByName(image_id, artist_names)
+    local SP = "add_artists_for_image_by_name"
+    self:create_savepoint(SP)
+    for i = 1, #artist_names do
+        local artist, errmsg = self.conn:fetchOne(
+            queries.model.get_artist_id_by_name,
+            artist_names[i]
+        )
+        if not artist then
+            self:rollback(SP)
+            return nil, errmsg
+        end
+        local artist_id = artist.artist_id
+        if artist == self.conn.NONE then
+            artist_id, errmsg = self:createArtist(artist_names[i], 1)
+            if not artist_id then
+                self:rollback(SP)
+                return nil, errmsg
+            end
+        end
+        local link_ok, link_err =
+            self:associateArtistWithImage(image_id, artist_id)
+        if not link_ok then
+            self:rollback(SP)
+            return nil, link_err
+        end
+    end
+    self:release_savepoint(SP)
+    return true
+end
+
+function Model:addTagsForImageByName(image_id, tag_names)
+    local SP = "add_tags_for_image_by_name"
+    self:create_savepoint(SP)
+    for i = 1, #tag_names do
+        local tag_name = tag_names[i]
+        local tag, errmsg =
+            self.conn:fetchOne(queries.model.get_tag_id_by_name, tag_name)
+        if not tag then
+            self:rollback(SP)
+            Log(kLogDebug, errmsg)
+            return nil, errmsg
+        end
+        local tag_id = tag.tag_id
+        if tag == self.conn.NONE then
+            tag, errmsg = self:createTag(tag_name, "")
+            if not tag then
+                self:rollback(SP)
+                Log(kLogDebug, errmsg)
+                return nil, errmsg
+            end
+            print(EncodeJson(tag))
+            tag_id = tag.tag_id
+        end
+        print("ids: ", image_id, tag_id)
+        local link_ok, link_err = self:associateTagWithImage(image_id, tag_id)
+        if not link_ok then
+            self:rollback(SP)
+            Log(kLogDebug, link_err)
+            return nil, link_err
+        end
+    end
+    self:release_savepoint(SP)
+    return true
+end
+
 function Model:deleteArtists(artist_ids)
     for i = 1, #artist_ids do
         local ok, errmsg =
@@ -823,6 +967,24 @@ function Model:mergeArtists(merge_into_id, merge_from_ids)
     end
     self:release_savepoint(SP_MERGE)
     return delete_ok
+end
+
+function Model:deleteArtistsForImageById(image_id, artist_ids)
+    local SP = "delete_image_artists"
+    self:create_savepoint(SP)
+    for i = 1, #artist_ids do
+        local ok, err = self.conn:execute(
+            queries.model.delete_image_artist_by_id,
+            image_id,
+            artist_ids[i]
+        )
+        if not ok then
+            self:rollback(SP)
+            return nil, err
+        end
+    end
+    self:release_savepoint(SP)
+    return true
 end
 
 function Model:getImageGroupCount()
@@ -1179,24 +1341,52 @@ function Accounts:rollback(to_savepoint)
     end
 end
 
+local ImageKind = {
+    Image = 1,
+    Video = 2,
+    Audio = 3,
+    Flash = 4,
+}
+local Rating = {
+    General = 1,
+    Adult = 2,
+    Explicit = 3,
+    HardKink = 4,
+}
+local Category = {
+    Stash = 1,
+    Reference = 2,
+    Moodboard = 4,
+    Sharing = 8,
+    OwnArt = 16,
+}
+local ImageKindLoopable = {}
+local RatingLoopable = {}
+local CategoryLoopable = {}
+
+for k, v in pairs(ImageKind) do
+    ImageKindLoopable[v] = k
+end
+for k, v in pairs(Rating) do
+    RatingLoopable[v] = k
+end
+for k, v in pairs(Category) do
+    CategoryLoopable[#CategoryLoopable + 1] = { v, k }
+end
+table.sort(CategoryLoopable, function(a, b)
+    return a[1] < b[1]
+end)
+
 return {
     Accounts = Accounts,
     Model = Model,
     -- k is for konstant! I passed spelling :)
     k = {
-        ImageKindImage = 1,
-        ImageKindVideo = 2,
-        ImageKindAudio = 3,
-        ImageKindFlash = 4,
-
-        RatingGeneral = 0,
-        RatingAdult = 1,
-        RatingExplicit = 2,
-        RatingHardKink = 3,
-
-        CategoryStash = 1,
-        CategoryReference = 2,
-        CategoryMoodBoard = 4,
-        CategorySharing = 8,
+        ImageKind = ImageKind,
+        Rating = Rating,
+        Category = Category,
+        ImageKindLoopable = ImageKindLoopable,
+        RatingLoopable = RatingLoopable,
+        CategoryLoopable = CategoryLoopable,
     },
 }

@@ -230,31 +230,87 @@ local render_image_file = login_required(function(r)
     return Fm.serveAsset(path)
 end)
 
-local render_image = login_required(function(r)
+local image_functions = {
+    category_str = function(category)
+        if not category then
+            return "None"
+        end
+        local cs = DbUtil.k.CategoryLoopable
+        local result = {}
+        for i = 1, #cs do
+            local c = cs[i]
+            if (category & c[1]) == c[1] then
+                result[#result + 1] = c[2]
+            end
+        end
+        if #result < 1 then
+            return "None"
+        end
+        return table.concat(result, ", ")
+    end,
+    rating_str = function(rating)
+        return DbUtil.k.RatingLoopable[rating]
+    end,
+    kind_str = function(kind)
+        return DbUtil.k.ImageKindLoopable[kind]
+    end,
+}
+
+local function not_emptystr(x)
+    return x and #x > 0
+end
+
+local function render_image_internal(r)
     if not r.params.image_id then
         return Fm.serve400()
     end
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    local user_record, user_err = Accounts:findUserBySessionId(r.session.token)
     if not user_record then
-        Log(kLogDebug, errmsg)
+        Log(kLogDebug, user_err)
         return Fm.serve500()
     end
-    local image, errmsg1 = Model:getImageById(r.params.image_id)
+    local image, image_err = Model:getImageById(r.params.image_id)
     if not image then
-        Log(kLogInfo, errmsg1)
+        Log(kLogInfo, image_err)
         return Fm.serve404()
     end
-    local artists, errmsg2 = Model:getArtistsForImage(r.params.image_id)
+    local artists, artists_err = Model:getArtistsForImage(r.params.image_id)
     if not artists then
-        Log(kLogInfo, errmsg2)
+        Log(kLogInfo, artists_err)
     end
-    local tags, errmsg3 = Model:getTagsForImage(r.params.image_id)
+    local delete_artists = r.params.delete_artists
+    if delete_artists then
+        artists = table.filter(artists, function(a)
+            return table.find(delete_artists, a.artist_id) ~= nil
+        end)
+    end
+    local allartists, allartists_err = Model:getAllArtists()
+    if not allartists then
+        Log(kLogInfo, allartists_err)
+    end
+    local tags, tags_err = Model:getTagsForImage(r.params.image_id)
     if not tags then
-        Log(kLogInfo, errmsg3)
+        Log(kLogInfo, tags_err)
     end
-    local sources, errmsg4 = Model:getSourcesForImage(r.params.image_id)
+    local delete_tags = r.params.delete_tags
+    if delete_tags then
+        tags = table.filter(tags, function(t)
+            return table.find(delete_tags, t.tag_id) ~= nil
+        end)
+    end
+    local alltags, alltags_err = Model:getAllTags()
+    if not alltags then
+        Log(kLogInfo, alltags_err)
+    end
+    local sources, sources_err = Model:getSourcesForImage(r.params.image_id)
     if not sources then
-        Log(kLogInfo, errmsg4)
+        Log(kLogInfo, sources_err)
+    end
+    local delete_sources = r.params.delete_sources
+    if delete_sources then
+        sources = table.filter(sources, function(s)
+            return table.find(delete_sources, s.source_id) ~= nil
+        end)
     end
     local groups, group_errmsg = Model:getGroupsForImage(r.params.image_id)
     if not groups then
@@ -268,6 +324,18 @@ local render_image = login_required(function(r)
         end
         ig.siblings = siblings
     end
+    local pending_artists = r.params.pending_artists
+    if pending_artists then
+        pending_artists = table.filter(pending_artists, not_emptystr)
+    end
+    local pending_tags = r.params.pending_tags
+    if pending_tags then
+        pending_tags = table.filter(pending_tags, not_emptystr)
+    end
+    local pending_sources = r.params.pending_sources
+    if pending_sources then
+        pending_sources = table.filter(pending_sources, not_emptystr)
+    end
     local template_name = "image"
     if r.path:endswith("/edit") then
         template_name = "image_edit"
@@ -276,10 +344,196 @@ local render_image = login_required(function(r)
         user = user_record,
         image = image,
         artists = artists,
+        delete_artists = delete_artists,
+        pending_artists = pending_artists,
+        allartists = allartists,
         tags = tags,
+        delete_tags = delete_tags,
+        pending_tags = pending_tags,
+        alltags = alltags,
         sources = sources,
+        delete_sources = delete_sources,
+        pending_sources = pending_sources,
         groups = groups,
+        category = r.params.category or image.category,
+        rating = r.params.rating or image.rating,
+        fn = image_functions,
+        DbUtilK = DbUtil.k,
     })
+end
+
+local render_image = login_required(render_image_internal)
+
+local function delete_from_primary_and_return(r, list_key, index_key)
+    local to_delete = r.params[list_key] or {}
+    to_delete[#to_delete + 1] = r.params[index_key]
+    r.params[list_key] = to_delete
+    r.params[index_key] = nil
+    return render_image_internal(r)
+end
+
+local function delete_from_pending_and_return(r, list_key, index_key)
+    local pending = r.params[list_key]
+    local index = tonumber(r.params[index_key])
+    if not index then
+        return Fm.serve400()
+    end
+    table.remove(pending, index)
+    r.params[list_key] = pending
+    r.params[index_key] = nil
+    return render_image_internal(r)
+end
+
+local accept_edit_image = login_required(function(r)
+    local redirect_url = "/image/" .. r.params.image_id
+    if r.params.cancel == "Cancel" then
+        Log(kLogDebug, "Cancelling edit")
+        return Fm.serveRedirect(redirect_url, 302)
+    end
+    -- Validation & Cleanup
+    local rating = tonumber(r.params.rating)
+    if r.params.rating and not rating then
+        return Fm.serve400()
+    end
+    r.params.rating = rating
+    local categories = table.reduce(r.params.category or {}, function(acc, next)
+        return (acc or 0) | (tonumber(next) or 0)
+    end)
+    if not categories and r.params.category then
+        return Fm.serve400()
+    end
+    r.params.category = categories
+    local pending_artists = r.params.pending_artists
+    if pending_artists then
+        r.params.pending_artists = table.filter(pending_artists, not_emptystr)
+    end
+    local pending_tags = r.params.pending_tags
+    if pending_tags then
+        r.params.pending_tags = table.filter(pending_tags, not_emptystr)
+    end
+    local pending_sources = r.params.pending_sources
+    if pending_sources then
+        r.params.pending_sources = table.filter(pending_sources, not_emptystr)
+    end
+    -- Submit handlers
+    if r.params.delete_artist then
+        return delete_from_primary_and_return(
+            r,
+            "delete_artists",
+            "delete_artist"
+        )
+    end
+    if r.params.delete_pending_artist then
+        return delete_from_pending_and_return(
+            r,
+            "pending_artists",
+            "delete_pending_artist"
+        )
+    end
+    if r.params.delete_tag then
+        return delete_from_primary_and_return(r, "delete_tags", "delete_tag")
+    end
+    if r.params.delete_pending_tag then
+        return delete_from_pending_and_return(
+            r,
+            "pending_tags",
+            "delete_pending_tag"
+        )
+    end
+    if r.params.delete_source then
+        return delete_from_primary_and_return(
+            r,
+            "delete_sources",
+            "delete_source"
+        )
+    end
+    if r.params.delete_pending_source then
+        return delete_from_pending_and_return(
+            r,
+            "pending_sources",
+            "delete_pending_source"
+        )
+    end
+    if r.params.add_artist or r.params.add_tag or r.params.add_source then
+        return render_image_internal(r)
+    end
+    -- Save handler
+    if r.params.save then
+        local image_id = r.params.image_id
+        -- Image Metadata
+        if not r.params.category or not r.params.rating then
+            return Fm.serve400()
+        end
+        local metadata_ok, metadata_err = Model:updateImageMetadata(
+            image_id,
+            r.params.category,
+            r.params.rating
+        )
+        if not metadata_ok then
+            Log(kLogInfo, metadata_err)
+            return Fm.serve500()
+        end
+        -- Artists
+        if r.params.delete_artists then
+            local dartists_ok, dartists_err = Model:deleteArtistsForImageById(
+                image_id,
+                r.params.delete_artists
+            )
+            if not dartists_ok then
+                Log(kLogInfo, dartists_err)
+                return Fm.serve500()
+            end
+        end
+        if r.params.pending_artists then
+            local aartists_ok, aartists_err = Model:addArtistsForImageByName(
+                image_id,
+                r.params.pending_artists
+            )
+            if not aartists_ok then
+                Log(kLogInfo, aartists_err)
+                return Fm.serve500()
+            end
+        end
+        -- Tags
+        if r.params.delete_tags then
+            local dtags_ok, dtags_err =
+                Model:deleteTagsForImageById(image_id, r.params.delete_tags)
+            if not dtags_ok then
+                Log(kLogInfo, dtags_err)
+                return Fm.serve500()
+            end
+        end
+        if r.params.pending_tags then
+            local atags_ok, atags_err =
+                Model:addTagsForImageByName(image_id, r.params.pending_tags)
+            if not atags_ok then
+                Log(kLogInfo, atags_err)
+                return Fm.serve500()
+            end
+        end
+        -- Sources
+        if r.params.delete_sources then
+            local dsources_ok, dsources_err = Model:deleteSourcesForImageById(
+                image_id,
+                r.params.delete_sources
+            )
+            if not dsources_ok then
+                Log(kLogInfo, dsources_err)
+                return Fm.serve500()
+            end
+        end
+        if r.params.pending_sources then
+            local asources_ok, asources_err =
+                Model:insertSourcesForImage(image_id, r.params.pending_sources)
+            if not asources_ok then
+                Log(kLogInfo, asources_err)
+                return Fm.serve500()
+            end
+        end
+        -- Done!
+        return Fm.serveRedirect("/image/" .. r.params.image_id, 302)
+    end
+    return render_image_internal(r)
 end)
 
 local function pagination_data(
@@ -584,7 +838,7 @@ local render_artist = login_required(function(r)
 end)
 
 local render_add_artist = login_required(function(r)
-    return Fm.serveContent("add_artist")
+    return Fm.serveContent("artist_add")
 end)
 
 local accept_add_artist = login_required(function(r)
@@ -731,7 +985,7 @@ local render_edit_image_group = login_required(function(r)
         Log(kLogInfo, image_errmsg)
     end
     r.session.after_action = r.headers.Referer
-    return Fm.serveContent("edit_image_group", {
+    return Fm.serveContent("image_group_edit", {
         user = user_record,
         ig = ig,
         images = images,
@@ -870,6 +1124,7 @@ local function setup()
     Fm.setRoute("/image", render_images)
     Fm.setRoute("/image/:image_id", render_image)
     Fm.setRoute(Fm.GET { "/image/:image_id[%d]/edit" }, render_image)
+    Fm.setRoute(Fm.POST { "/image/:image_id[%d]/edit" }, accept_edit_image)
     Fm.setRoute(Fm.GET { "/enqueue" }, render_enqueue)
     Fm.setRoute(Fm.POST { "/enqueue" }, accept_enqueue)
     Fm.setRoute(Fm.GET { "/artist" }, render_artists)

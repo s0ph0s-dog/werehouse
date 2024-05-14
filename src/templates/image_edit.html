@@ -1,3 +1,11 @@
+{% function input_cell(type, name, value, list, button_verb, button_value) %}
+<li>
+  <div class="input-cell">
+    <input data-1p-ignore type="{%& type %}" name="{%& name %}s[]" value="{%& value %}"{% if list then %} list="{%& list %}"{% end %} autocomplete="off" />
+    <button type="submit" name="delete_{%& name %}" value="{%& button_value %}">{%& button_verb %}</button>
+  </div>
+</li>
+{% end %}
 {% function block.content() %}{% for _, ig in ipairs(groups) do %}
 <div class="pages group">
   {% if ig.siblings and ig.siblings.prev then %}
@@ -11,7 +19,7 @@
   >{% else %}<span>Next →</span>{% end %}
 </div>
 {% end %}
-<div class="sidebar-grid">
+<div class="sidebar-grid wide">
   <div class="main-image">
     <input id="fit-to-screen" type="checkbox" />
     <label for="fit-to-screen"> Fit to screen</label>
@@ -25,59 +33,90 @@
         <li>
           <span class="baseline">
             Categories:
-            <select name="category" multiple="true">
-              <option value="1">Stash</option>
-              <option value="2">Reference</option>
-              <option value="4">Mood Board</option>
-              <option value="8">Sharing</option>
+            <select name="category[]" multiple="true" size="{%& #DbUtilK.CategoryLoopable %}">
+              {% local cs = DbUtilK.CategoryLoopable for i = 1, #cs do local c =
+              cs[i] %}
+              <option value="{%& c[1] %}"{% if ((category or 0) & c[1]) == c[1] then %} selected{% end %}>{%& c[2] %}</option>
+              {% end %}
             </select>
           </span>
         </li>
         <li>
           Rating:
           <select name="rating">
-            <option value="0">General</option>
-            <option value="1">Adult</option>
-            <option value="2">Explicit</option>
-            <option value="3">Hard Kink</option>
+            {% local rs = DbUtilK.RatingLoopable for i = 1, #rs do %}
+            <option value="{%& i %}"{% if rating == i then %} selected{% end %}>{%& rs[i] %}</option>
+            {% end %}
           </select>
         </li>
-        <li>Kind: {%& block.image_kinds(image.kind) %}</li>
+        <li>Kind: {%& fn.kind_str(image.kind) %}</li>
       </ul>
       <h1>Artists</h1>
-      {% if #artists == 0 then %}
-      <p>No artists recorded for this image yet.</p>
-      {% else %}
+      <datalist id="all-artists">
+        {% for i = 1, #allartists do %}
+        <option>{%& allartists[i].name %}</option>
+        {% end %}
+      </datalist>
+      {% if delete_artists then for i = 1, #delete_artists do %}
+      <input type="hidden" name="delete_artists[]" value="{%& delete_artists[i] %}" />
+      {% end end %}
       <ul>
-        {% for _, artist in ipairs(artists) do %}
+        {% for i = 1, #artists do local artist = artists[i] %}
         <li>
-          <a href="/artist/{%& artist.artist_id %}">{%& artist.name %}</a>
+          {%& artist.name %} <button type="submit" name="delete_artist" value="{%& artist.artist_id %}">Unlink</button>
         </li>
         {% end %}
+        {% if pending_artists then for i = 1, #pending_artists do local artist = pending_artists[i] %}
+          {% input_cell("text", "pending_artist", artist, "all-artists", "Unlink", i) %}
+        {% end end %}
+        <li><input data-1p-ignore type="text" name="pending_artists[]" list="all-artists" placeholder="Add Artist" /></li>
       </ul>
-      {% end %}
+      <button type="submit" name="add_artist" value="add_artist">Add Another Artist…</button>
       <h1>Tags</h1>
-      <textarea name="tags" rows="20">{%& table.concat(tags, ", ") %}</textarea>
-      <h1>Sources</h1>
-      <ul>
-        {% for _, source in ipairs(sources) do %}
-        <li>
-          <input
-            type="hidden"
-            name="source_ids[]"
-            value="{%& source.source_id %}"
-          /><input type="url" name="sources[]" value="{%& source.link %}" />
-        </li>
+      <datalist id="all-tags">
+        {% for i = 1, #alltags do %}
+        <option>{%& alltags[i].name %}</option>
         {% end %}
+      </datalist>
+      {% if delete_tags then for i = 1, #delete_tags do %}
+      <input type="hidden" name="delete_tags[]" value="{%& delete_tags[i] %}" />
+      {% end end %}
+      <ul>
+        {% for i = 1, #tags do %}
+        <li>{%& tags[i].name %} <button type="submit" name="delete_tag" value="{%& tags[i].tag_id %}">Unlink</button></li>
+        {% end %}
+        {% if pending_tags then for i = 1, #pending_tags do local tag = pending_tags[i] %}
+          {% input_cell("text", "pending_tag", tag, "all-tags", "Unlink", i) %}
+        {% end end %}
+        <li><input data-1p-ignore type="text" name="pending_tags[]" placeholder="Add Tag" list="all-tags" /></li>
+      </ul>
+      <button type="submit" name="add_tag" value="add_tag">Add Another Tag…</button>
+      <h1>Sources</h1>
+      {% if delete_sources then for i = 1, #delete_sources do %}
+      <input type="hidden" name="delete_sources[]" value="{%& delete_sources[i] %}" />
+      {% end end %}
+      <ul>
+        {% for i = 1, #sources do local source = sources[i] %}
+<li>
+  <div class="input-cell">
+    <input type="hidden" name="source_ids[]" value="{%& source.source_id %}" />
+    <input data-1p-ignore type="url" name="sources[]" value="{%& source.link %}" autocomplete="off" disabled />
+    <button type="submit" name="delete_source" value="{%& source.source_id %}">Delete</button>
+  </div>
+</li>
+        {% end %}
+        {% if pending_sources then for i = 1, #pending_sources do local source = pending_sources[i] %}
+          {% input_cell("url", "pending_source", source, nil, "Delete", i) %}
+        {% end end %}
         <li>
           <input
             type="url"
-            name="sources[]"
+            name="pending_sources[]"
             value=""
-            placeholder="Add another..."
-          />
+            placeholder="Add Source"/>
         </li>
       </ul>
+      <button type="submit" name="add_source" value="add_source">Add Another Source…</button>
       <span class="buttons">
         <input type="submit" name="cancel" value="Cancel" /><input
           type="submit"
@@ -88,5 +127,5 @@
     </form>
   </div>
 </div>
-{% end %}{% render("layouts/main", { title = "Image " ..
+{% end %}{% render("layouts/main", { title = "Editing Image " ..
 tostring(image.image_id), user = user }) %}

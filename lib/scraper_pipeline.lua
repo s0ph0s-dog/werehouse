@@ -190,12 +190,13 @@ local function get_sources_for_entry(queue_entry)
         end
         return nil, "should be unreachable"
     elseif queue_entry.image then
-        local maybe_source_links, errmsg2 =
+        return nil, "this is currently broken"
+        --[[local maybe_source_links, errmsg2 =
             fuzzysearch_image(queue_entry.image, queue_entry.image_mime_type)
         if not maybe_source_links then
             return nil, errmsg2
         end
-        return maybe_source_links
+        return maybe_source_links]]
     else
         return nil,
             "No link or image data for queue entry %s" % { queue_entry.qid }
@@ -441,7 +442,7 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
             content_type,
             data.width,
             data.height,
-            DbUtil.k.ImageKindImage,
+            DbUtil.k.ImageKind.Image,
             data.rating
         )
         if not image then
@@ -716,6 +717,7 @@ local function process_all_queues()
             kLogInfo,
             "Finished processing queue entries for user %s" % { user_id }
         )
+        model:close()
     end
     Log(kLogInfo, "Ending queue processing.")
 end

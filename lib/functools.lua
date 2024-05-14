@@ -127,6 +127,18 @@ function table.flatten(sequence, result)
     return result
 end
 
+function table.find(sequence, needle)
+    if not sequence then
+        return nil
+    end
+    for i = 1, #sequence do
+        if sequence[i] == needle then
+            return i
+        end
+    end
+    return nil
+end
+
 ---@generic T
 ---@generic E
 ---@class ResultInternal<T, E>

@@ -32,9 +32,9 @@ local function process_attachment_blocks(post)
     then
         return nil
     end
-    local rating = DbUtil.k.RatingGeneral
+    local rating = DbUtil.k.Rating.General
     if post.effectiveAdultContent then
-        rating = DbUtil.k.RatingExplicit
+        rating = DbUtil.k.Rating.Explicit
     end
     local author = {
         handle = post.postingProject.handle,

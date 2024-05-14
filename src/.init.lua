@@ -47,6 +47,14 @@ function OnWorkerStart()
     assert(unix.unveil(nil, nil))
     reseedUuid()
 end
+function OnWorkerStop()
+    if Accounts then
+        Accounts:close()
+    end
+    if Model then
+        Model:close()
+    end
+end
 -- 10MB, a reasonable limit for images.
 ProgramMaxPayloadSize(10 * 1024 * 1024)
 
