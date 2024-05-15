@@ -1,5 +1,5 @@
 Sqlite3 = require("lsqlite3")
-Uuid = require("third_party.uuid")
+NanoID = require("nanoid")
 Fm = require("third_party.fullmoon")
 DbUtil = require("db")
 Nu = require("network_utils")
@@ -22,17 +22,14 @@ ServerVersion = string.format(
     about.VERSION,
     about.REDBEAN_VERSION
 )
-local function reseedUuid()
-    local seed_str = GetRandomBytes(4)
-    -- Lua has no bit shift operators, so multiplication by powers of two will do.
-    local seed_int = (string.byte(seed_str, 1) * (2 ^ 24))
-        + (string.byte(seed_str, 2) * (2 ^ 16))
-        + (string.byte(seed_str, 3) * (2 ^ 8))
-        + string.byte(seed_str, 4)
-    Uuid.randomseed(seed_int)
-end
 
-reseedUuid()
+IdPrefixes = {
+    user = "u_",
+    session = "s_",
+    csrf = "csrf_",
+    invite = "i_",
+    telegram_link_request = "tglr_",
+}
 
 Accounts = DbUtil.Accounts:new()
 Accounts:bootstrapInvites()
@@ -45,7 +42,6 @@ function OnWorkerStart()
 
     assert(unix.unveil(".", "rw"))
     assert(unix.unveil(nil, nil))
-    reseedUuid()
 end
 function OnWorkerStop()
     if Accounts then

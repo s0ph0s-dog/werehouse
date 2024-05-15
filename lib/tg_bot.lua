@@ -17,9 +17,12 @@ local function handle_start(message)
         )
         return
     end
-    local request_id = Uuid()
-    local display_name = "%s %s"
-        % { message.from.first_name, message.from.last_name }
+    local request_id =
+        NanoID.simple_with_prefix(IdPrefixes.telegram_link_request)
+    local display_name = message.from.first_name
+    if message.from.last_name then
+        display_name = "%s %s" % { display_name, message.from.last_name }
+    end
     local insert_ok, insert_err = Accounts:addTelegramLinkRequest(
         request_id,
         display_name,

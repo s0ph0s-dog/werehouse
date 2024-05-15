@@ -4,7 +4,6 @@ REDBEAN_VERSION := 2.2
 OUTPUT := hyperphantasia.com
 SRV_DIR := srv
 LIBS := lib/third_party/fullmoon.lua \
-    lib/third_party/uuid.lua \
     lib/third_party/htmlparser.lua \
     lib/third_party/htmlparser/ElementNode.lua \
     lib/third_party/htmlparser/voidelements.lua \
@@ -22,6 +21,7 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/network_utils.lua \
 	lib/telegram_lib.lua \
 	lib/tg_bot.lua \
+	lib/nanoid.lua \
 	lib/web.lua
 SRCS := src/.init.lua \
     src/templates/layouts/main.html \
