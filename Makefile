@@ -44,6 +44,7 @@ SRCS := src/.init.lua \
     src/templates/queue.html \
     src/templates/queue_help.html \
     src/templates/about.html \
+    src/templates/account.html \
     src/templates/tos.html \
 	src/style.css \
 	src/templates/home.html

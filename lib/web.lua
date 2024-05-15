@@ -1102,6 +1102,17 @@ local accept_telegram_link = login_required(function(r)
     return Fm.serveRedirect("/home", 302)
 end)
 
+local render_account = login_required(function(r)
+    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
+    if not user_record then
+        Log(kLogDebug, errmsg)
+        return Fm.serve500()
+    end
+    return Fm.serveContent("account", {
+        user = user_record,
+    })
+end)
+
 local function setup()
     Fm.setTemplate { "/templates/", html = "fmt" }
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
@@ -1146,6 +1157,7 @@ local function setup()
     )
     Fm.setRoute(Fm.GET { "/link-telegram/:request_id" }, render_telegram_link)
     Fm.setRoute(Fm.POST { "/link-telegram/:request_id" }, accept_telegram_link)
+    Fm.setRoute("/account", render_account)
     -- API routes
     Fm.setRoute(Fm.GET { "/api/queue-image/:id" }, render_queue_image)
     -- Fm.setRoute("/api/telegram-webhook")

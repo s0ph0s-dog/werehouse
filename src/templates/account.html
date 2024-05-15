@@ -1,0 +1,101 @@
+{% function block.content() %}
+<h1>{%& user.username %}</h1>
+<p>Your account stores:</p>
+<ul>
+  <li>X images</li>
+  <li>X artists</li>
+  <li>X tags</li>
+  <li>X MB of data</li>
+</ul>
+<h1>Sessions</h1>
+<form method="POST" action="/account/end-sessions">
+  <table>
+    <thead>
+      <tr>
+        <th class="txt">Session ID</th>
+        <th class="txt">Created At</th>
+        <th class="txt">Last Seen</th>
+        <th class="txt">User Agent</th>
+        <th class="num">IP Address</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="txt">abc123</td>
+        <td class="txt">2024-05-14T23:52:01Z</td>
+        <td class="txt">2024-05-15T00:27:42Z</td>
+        <td class="txt">
+          Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101
+          Firefox/125.0
+        </td>
+        <td class="num"><code>127.0.0.1</code></td>
+      </tr>
+    </tbody>
+  </table>
+  <input
+    type="submit"
+    name="terminate_all_sessions"
+    value="Terminate All Sessions"
+  />
+</form>
+<h1>Invite Links</h1>
+<p>You have X available.</p>
+<form method="POST" action="/account/invites">
+  <input type="submit" name="make-invite" disabled value="Make Invite Link" />
+</form>
+<table>
+  <thead>
+    <tr>
+      <th class="txt">Link</th>
+      <th class="num">Used</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="txt">
+        <a href="https://hyperphantasia.s0ph0s.dog/accept-invite/defg456"
+          >https://hyperphantasia.s0ph0s.dog/accept-invite/defg456</a
+        >
+      </td>
+      <td class="num">Not Yet</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>Account Management</h1>
+<form class="vbox" method="POST" action="/account/change-password">
+  <h2>Change Password</h2>
+  <label>
+    Current Password:
+    <input type="password" name="current" minlength="16" />
+  </label>
+  <label
+    >New Password:
+    <input type="password" name="new_password" minlength="16" />
+  </label>
+  <label>
+    New Password (again):
+    <input type="password" name="new_password_again" minlength="16" />
+  </label>
+  <span class="buttons">
+    <input type="reset" value="Clear" />
+    <input type="submit" name="change_password" value="Change" />
+  </span>
+</form>
+<form class="vbox" method="POST">
+  <span>
+    <input type="submit" name="export" value="Export Data" />
+    You'll receive a zip file containing all of the data for your account, once
+    the archiving job finishes. If you rename this file to .com instead of .zip
+    (or mark it as executable on Linux/macOS), you can run it to open a
+    stand-alone, read-only copy of this application with all your data!
+  </span>
+  <span>
+    <input type="submit" name="delete" value="Delete Account" />
+    This action is irreversible (but you will be prompted for confirmation
+    first). Images saved by both you <i>and at least one other person</i> will
+    not be deleted. Your data will cycle out of the backups after approximately
+    30 days.
+  </span>
+</form>
+{% end %}{% render("layouts/main", { title = "Profile", user = user }) %}
