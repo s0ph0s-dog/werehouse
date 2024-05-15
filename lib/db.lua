@@ -23,6 +23,9 @@ local accounts_setup = [[
         "session_id" TEXT NOT NULL UNIQUE,
         "created" TEXT NOT NULL,
         "user_id" TEXT NOT NULL,
+        "last_seen" TEXT NOT NULL,
+        "user_agent" TEXT NOT NULL,
+        "ip" TEXT NOT NULL,
         PRIMARY KEY("session_id"),
         FOREIGN KEY ("user_id") REFERENCES "users"("user_id")
         ON UPDATE CASCADE ON DELETE CASCADE
@@ -70,6 +73,7 @@ local user_setup = [[
         "kind" INTEGER,
         "height" INTEGER NOT NULL,
         "width" INTEGER NOT NULL,
+        "file_size" INTEGER NOT NULL,
         PRIMARY KEY("image_id")
     );
 
@@ -85,6 +89,7 @@ local user_setup = [[
         "tag_id" INTEGER NOT NULL,
         PRIMARY KEY("image_id", "tag_id"),
         FOREIGN KEY ("tag_id") REFERENCES "tags"("tag_id")
+        ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
@@ -120,6 +125,7 @@ local user_setup = [[
         "artist_id" INTEGER NOT NULL,
         PRIMARY KEY("image_id", "artist_id"),
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
+        ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("artist_id") REFERENCES "artists"("artist_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
@@ -176,9 +182,13 @@ local user_setup = [[
     );
 
     CREATE TABLE IF NOT EXISTS "thumbnails" (
-        "image_id" INTEGER NOT NULL UNIQUE,
+        "thumbnail_id" INTEGER NOT NULL UNIQUE,
+        "image_id" INTEGER NOT NULL,
         "thumbnail" BLOB NOT NULL,
-        PRIMARY KEY("image_id"),
+        "width" INTEGER NOT NULL,
+        "height" INTEGER NOT NULL,
+        "scale" INTEGER NOT NULL,
+        PRIMARY KEY("thumbnail_id"),
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
@@ -1185,7 +1195,7 @@ function Accounts:bootstrapInvites()
     if not users or users.count < 1 then
         -- TODO: see if there is an unused invite, and retrieve that instead of
         -- making a new one.
-        local invite_id = Uuid()
+        local invite_id = NanoID.simple_with_prefix(IdPrefixes.invite)
         self.conn:execute(queries.accounts.bootstrap_invite, invite_id)
         Log(
             kLogWarn,
@@ -1201,7 +1211,7 @@ function Accounts:findInvite(invite_id)
 end
 
 function Accounts:acceptInvite(invite_id, username, password_hash)
-    local user_id = Uuid()
+    local user_id = NanoID.simple_with_prefix(IdPrefixes.user)
     local result, errmsg = self.conn:execute {
         { queries.accounts.insert_user, user_id, username, password_hash },
         { queries.accounts.assign_invite, user_id, invite_id },
@@ -1219,7 +1229,7 @@ function Accounts:findUser(username)
 end
 
 function Accounts:createSessionForUser(user_id)
-    local session_id = Uuid()
+    local session_id = NanoID.simple_with_prefix(IdPrefixes.session)
     local result, errmsg =
         self.conn:execute(queries.accounts.insert_session, session_id, user_id)
     if not result then
