@@ -34,7 +34,7 @@ local function handle_start(message)
         )
         return
     end
-    local response = [[Hello! To get started with this bot, please connect your account: http://127.0.0.1:8082/link-telegram/%s. This link expires after 30 minutes.
+    local response = [[Hello! To get started with this bot, please connect your account: http://10.4.0.183:8082/link-telegram/%s. This link expires after 30 minutes.
 
 If you don’t have an account already, this bot only works with an invite-only service. You’ll have to be invited by someone else who has an account.]] % {
         request_id,
@@ -87,6 +87,9 @@ local function handle_enqueue(message)
         Accounts:findUserByTelegramUserID(message.from.id)
     if user_err then
         Log(kLogInfo, user_err)
+        return
+    end
+    if user_record == Accounts.conn.NONE then
         return
     end
     local model = DbUtil.Model:new(nil, user_record.user_id)

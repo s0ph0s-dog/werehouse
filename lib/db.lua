@@ -1242,11 +1242,7 @@ function Accounts:findUserBySessionId(session_id)
 end
 
 function Accounts:findUserByTelegramUserID(tg_userid)
-    return fetchOneExactly(
-        self.conn,
-        queries.accounts.get_user_by_tg_id,
-        tg_userid
-    )
+    return self.conn:fetchOne(queries.accounts.get_user_by_tg_id, tg_userid)
 end
 
 function Accounts:getAllUserIds()
