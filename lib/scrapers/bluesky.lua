@@ -42,6 +42,7 @@ local function extract_image_embeds(post_data)
         return nil
     end
     local embed_images = post_data.value.embed.images
+        or post_data.value.embed.media.images
     if not embed_images then
         return nil
     end
