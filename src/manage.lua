@@ -3,6 +3,7 @@ NanoID = require("nanoid")
 Fm = require("third_party.fullmoon")
 FsTools = require("fstools")
 local DbUtil = require("db")
+local _ = require("functools")
 
 local function help()
     print("usage: ./hyperphantasia.com -i /zip/manage.lua <COMMAND> [options]")
@@ -22,6 +23,9 @@ local function help()
     print("                           or with an incorrect size.")
     print(
         "                      -d   dry-run mode (don't write changes, just report changes"
+    )
+    print(
+        "- import_tags <db_filename>: read one tag per line from stdin and insert into the database file listed."
     )
 end
 
@@ -133,9 +137,42 @@ local function update_image_sizes(other_args)
     end
 end
 
+local function import_tags(other_args)
+    local db = Sqlite3.open(other_args[1])
+
+    local insert =
+        [[INSERT INTO "tags" ("name", "description") VALUES (?, '');]]
+    local insert_stmt = db:prepare(insert)
+
+    db:exec([[PRAGMA journal_mode=WAL;
+        PRAGMA busy_timeout = 5000;
+        PRAGMA synchronous=NORMAL;
+        PRAGMA foreign_keys=ON;
+        BEGIN;]])
+
+    local line = io.stdin:read("l*")
+    while line do
+        local line_clean = line:strip()
+        insert_stmt:reset()
+        insert_stmt:bind_values(line_clean)
+        local step_result = insert_stmt:step()
+        if step_result ~= Sqlite3.DONE then
+            db:exec([[ROLLBACK;]])
+            print(step_result, db:errmsg())
+        end
+        line = io.stdin:read("l*")
+    end
+
+    db:exec([[COMMIT;]])
+    insert_stmt:finalize()
+    db:close_vm()
+    db:close()
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
+    import_tags = import_tags,
 }
 
 local remaining_args = arg
