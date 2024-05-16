@@ -1330,6 +1330,7 @@ function Accounts:sessionMaintenance()
     local updated_count = 0
     for i = 1, #sessions do
         local new_token = NanoID.simple_with_prefix(IdPrefixes.csrf)
+        -- TODO: this refreshes the token every hour once it's hit 4 hours old. Is that a problem?
         local t_ok, t_err = self.conn:execute(
             queries.accounts.update_csrf_token_for_session,
             new_token,
