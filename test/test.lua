@@ -1,4 +1,5 @@
 DbUtil = require("db")
+FsTools = require("fstools")
 local luaunit = require("third_party.luaunit")
 _ = require("functools")
 local pipeline = require("scraper_pipeline")
@@ -508,7 +509,7 @@ function TestScraperPipeline:testValidE6Links()
                 raw_image_uri = "https://static1.e621.net/data/15/1a/151a1af93e572cdf611f919e975c8268.jpg",
                 this_source = "https://e621.net/posts/4763407",
                 width = 4152,
-                rating = DbUtil.k.RatingExplicit,
+                rating = DbUtil.k.Rating.Explicit,
             },
             {
                 additional_sources = {
