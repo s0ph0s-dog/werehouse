@@ -801,4 +801,4 @@ function TestTgBot:testfindAllLinksOnFoxbotMessage()
     luaunit.assertEquals(actual, expected)
 end
 
-luaunit.run()
+os.exit(luaunit.run())
