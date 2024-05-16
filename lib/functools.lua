@@ -2,6 +2,12 @@
 ---@param prefix (string) Another string
 ---@return (boolean) # True if prefix is a substring of s at index 1, false otherwise.
 function string.startswith(s, prefix)
+    if not s then
+        return false
+    end
+    if not prefix then
+        return true
+    end
     if #s < #prefix then
         return false
     end
@@ -14,6 +20,12 @@ end
 ---@param suffix (string)
 ---@return (boolean) # True if suffix is a substring of s at index (len(s) - len(suffix)), false otherwise.
 function string.endswith(s, suffix)
+    if not s then
+        return false
+    end
+    if not suffix then
+        return true
+    end
     if #s < #suffix then
         return false
     end
@@ -58,6 +70,9 @@ end
 ---@param transformation (fun(item: T): U)
 ---@return (U[])
 function table.map(sequence, transformation)
+    if not sequence then
+        return {}
+    end
     local result = {}
     for i = 1, #sequence do
         result[i] = transformation(sequence[i])
@@ -70,6 +85,9 @@ end
 ---@param predicate (fun(item: T): boolean)
 ---@return (T[])
 function table.filter(sequence, predicate)
+    if not sequence then
+        return {}
+    end
     local result = {}
     for i = 1, #sequence do
         if predicate(sequence[i]) then
@@ -84,6 +102,9 @@ end
 ---@param operator (fun(accumulator: U?, next: T): U?)
 ---@return (U?)
 function table.reduce(sequence, operator)
+    if not sequence then
+        return {}
+    end
     if #sequence == 0 then
         return nil
     end
@@ -100,6 +121,9 @@ end
 ---@param transformation (fun(item: T): U)
 ---@return (U[])
 function table.filtermap(sequence, predicate, transformation)
+    if not sequence then
+        return {}
+    end
     local result = {}
     for i = 1, #sequence do
         local item = sequence[i]
@@ -115,6 +139,9 @@ end
 ---@param result (any[]?)
 ---@return any[]
 function table.flatten(sequence, result)
+    if not sequence then
+        return {}
+    end
     result = result or {}
     for i = 1, #sequence do
         local item = sequence[i]

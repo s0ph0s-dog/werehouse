@@ -90,6 +90,15 @@ local function render_login(r)
     return Fm.serveContent("login", { error = r.session.error })
 end
 
+local function get_client_ip(r)
+    local ip = r.headers["X-Forwarded-For"]
+    if not ip then
+        local ip_raw = GetClientAddr()
+        ip = FormatIp(ip_raw)
+    end
+    return ip
+end
+
 local function login_required(handler)
     return function(r)
         Log(kLogInfo, "session token: %s" % { EncodeJson(r.session.token) })
@@ -103,9 +112,19 @@ local function login_required(handler)
             r.session.after_login_url = r.url
             return Fm.serveRedirect("/login", 302)
         end
-        -- TODO: enforce session expiry
+        local u_ok, u_err = Accounts:updateSessionLastSeenToNow(r.session.token)
+        if not u_ok then
+            Log(kLogInfo, u_err)
+        end
         Model = DbUtil.Model:new(nil, session.user_id)
-        return handler(r)
+        local ip = get_client_ip(r)
+        local user_record, user_err =
+            Accounts:findUserBySessionId(r.session.token, ip)
+        if not user_record then
+            Log(kLogDebug, user_err)
+            return Fm.serve500()
+        end
+        return handler(r, user_record)
     end
 end
 
@@ -124,8 +143,12 @@ local function accept_login(r)
         r.session.error = "Invalid credentials"
         return Fm.serveRedirect("/login", 302)
     end
-    local session_id, errmsg2 =
-        Accounts:createSessionForUser(user_record.user_id)
+    local ip = get_client_ip(r)
+    local session_id, errmsg2 = Accounts:createSessionForUser(
+        user_record.user_id,
+        r.headers["User-Agent"],
+        ip
+    )
     if not session_id then
         Log(kLogDebug, errmsg2)
         r.session.error = errmsg
@@ -140,12 +163,7 @@ local function accept_login(r)
     return Fm.serveRedirect(redirect_url, 302)
 end
 
-local render_home = login_required(function(r)
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
-    end
+local render_home = login_required(function(r, user_record)
     local queue_records, errmsg2 = Model:getRecentQueueEntries()
     if not queue_records then
         Log(kLogDebug, errmsg2)
@@ -163,7 +181,7 @@ local render_home = login_required(function(r)
     })
 end)
 
-local render_queue_image = login_required(function(r)
+local render_queue_image = login_required(function(r, user_record)
     local result, errmsg = Model:getQueueImageById(r.params.id)
     if not result then
         Log(kLogDebug, errmsg)
@@ -180,12 +198,7 @@ local allowed_image_types = {
     ["image/gif"] = true,
 }
 
-local render_enqueue = login_required(function(r)
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
-    end
+local render_enqueue = login_required(function(r, user_record)
     return Fm.serveContent("enqueue", {
         user = user_record,
     })
@@ -260,14 +273,9 @@ local function not_emptystr(x)
     return x and #x > 0
 end
 
-local function render_image_internal(r)
+local function render_image_internal(r, user_record)
     if not r.params.image_id then
         return Fm.serve400()
-    end
-    local user_record, user_err = Accounts:findUserBySessionId(r.session.token)
-    if not user_record then
-        Log(kLogDebug, user_err)
-        return Fm.serve500()
     end
     local image, image_err = Model:getImageById(r.params.image_id)
     if not image then
@@ -364,15 +372,25 @@ end
 
 local render_image = login_required(render_image_internal)
 
-local function delete_from_primary_and_return(r, list_key, index_key)
+local function delete_from_primary_and_return(
+    r,
+    user_record,
+    list_key,
+    index_key
+)
     local to_delete = r.params[list_key] or {}
     to_delete[#to_delete + 1] = r.params[index_key]
     r.params[list_key] = to_delete
     r.params[index_key] = nil
-    return render_image_internal(r)
+    return render_image_internal(r, user_record)
 end
 
-local function delete_from_pending_and_return(r, list_key, index_key)
+local function delete_from_pending_and_return(
+    r,
+    user_record,
+    list_key,
+    index_key
+)
     local pending = r.params[list_key]
     local index = tonumber(r.params[index_key])
     if not index then
@@ -381,10 +399,10 @@ local function delete_from_pending_and_return(r, list_key, index_key)
     table.remove(pending, index)
     r.params[list_key] = pending
     r.params[index_key] = nil
-    return render_image_internal(r)
+    return render_image_internal(r, user_record)
 end
 
-local accept_edit_image = login_required(function(r)
+local accept_edit_image = login_required(function(r, user_record)
     local redirect_url = "/image/" .. r.params.image_id
     if r.params.cancel == "Cancel" then
         Log(kLogDebug, "Cancelling edit")
@@ -534,7 +552,7 @@ local accept_edit_image = login_required(function(r)
         -- Done!
         return Fm.serveRedirect("/image/" .. r.params.image_id, 302)
     end
-    return render_image_internal(r)
+    return render_image_internal(r, user_record)
 end)
 
 local function pagination_data(
@@ -565,13 +583,8 @@ local function pagination_data(
     return pages
 end
 
-local render_queue = login_required(function(r)
+local render_queue = login_required(function(r, user_record)
     local per_page = 100
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
-    end
     local queue_count, count_errmsg = Model:getQueueEntryCount()
     if not queue_count then
         Log(kLogDebug, count_errmsg)
@@ -625,34 +638,19 @@ local accept_queue = login_required(function(r)
     return Fm.serveRedirect("/queue", 302)
 end)
 
-local function render_about(r)
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if errmsg then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
-    end
+local function render_about(r, user_record)
     return Fm.serveContent("about", {
         user = user_record,
     })
 end
 
-local function render_tos(r)
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if errmsg then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
-    end
+local function render_tos(r, user_record)
     return Fm.serveContent("tos", {
         user = user_record,
     })
 end
 
-local render_queue_help = login_required(function(r)
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record or errmsg then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
-    end
+local render_queue_help = login_required(function(r, user_record)
     local queue_entry, queue_errmsg = Model:getQueueEntryById(r.params.qid)
     if not queue_entry then
         return Fm.serve404()
@@ -708,13 +706,8 @@ local accept_queue_help = login_required(function(r)
     return Fm.serveRedirect(last_page, 302)
 end)
 
-local render_images = login_required(function(r)
+local render_images = login_required(function(r, user_record)
     local per_page = 100
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record or errmsg then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
-    end
     local image_count, count_errmsg = Model:getImageEntryCount()
     if not image_count then
         Log(kLogDebug, count_errmsg)
@@ -742,13 +735,8 @@ local render_images = login_required(function(r)
     })
 end)
 
-local render_artists = login_required(function(r)
+local render_artists = login_required(function(r, user_record)
     local per_page = 100
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record or errmsg then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
-    end
     local artist_count, count_errmsg = Model:getArtistCount()
     if not artist_count then
         Log(kLogDebug, count_errmsg)
@@ -806,15 +794,10 @@ local accept_artists = login_required(function(r)
     return Fm.serveRedirect(redirect_path, 302)
 end)
 
-local render_artist = login_required(function(r)
+local render_artist = login_required(function(r, user_record)
     local artist_id = r.params.artist_id
     if not artist_id then
         return Fm.serve400()
-    end
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
     end
     local artist, errmsg1 = Model:getArtistById(artist_id)
     if not artist then
@@ -879,13 +862,8 @@ local accept_add_artist = login_required(function(r)
     return Fm.serveRedirect("/artist/" .. artist_id, 302)
 end)
 
-local render_image_groups = login_required(function(r)
+local render_image_groups = login_required(function(r, user_record)
     local per_page = 100
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record or errmsg then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
-    end
     local ig_count, count_errmsg = Model:getImageGroupCount()
     if not ig_count then
         Log(kLogDebug, tostring(count_errmsg))
@@ -942,14 +920,9 @@ local accept_image_groups = login_required(function(r)
     return Fm.serveRedirect(redirect_path, 302)
 end)
 
-local render_image_group = login_required(function(r)
+local render_image_group = login_required(function(r, user_record)
     if not r.params.ig_id then
         return Fm.serve400()
-    end
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
     end
     local ig, ig_errmsg = Model:getImageGroupById(r.params.ig_id)
     if not ig then
@@ -967,14 +940,9 @@ local render_image_group = login_required(function(r)
     })
 end)
 
-local render_edit_image_group = login_required(function(r)
+local render_edit_image_group = login_required(function(r, user_record)
     if not r.params.ig_id then
         return Fm.serve400()
-    end
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
     end
     local ig, ig_errmsg = Model:getImageGroupById(r.params.ig_id)
     if not ig then
@@ -1030,7 +998,7 @@ local accept_edit_image_group = login_required(function(r)
     return Fm.serveRedirect(redirect_url, 302)
 end)
 
-local render_telegram_link = login_required(function(r)
+local render_telegram_link = login_required(function(r, user_record)
     if not r.params.request_id then
         return Fm.serve404()
     end
@@ -1046,11 +1014,6 @@ local render_telegram_link = login_required(function(r)
     end
     if tg.created_at - now > (30 * 60) then
         return Fm.serve404()
-    end
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
     end
     return Fm.serveContent("link_telegram", {
         user = user_record,
@@ -1058,7 +1021,7 @@ local render_telegram_link = login_required(function(r)
     })
 end)
 
-local accept_telegram_link = login_required(function(r)
+local accept_telegram_link = login_required(function(r, user_record)
     if not r.params.request_id then
         return Fm.serve404()
     end
@@ -1074,11 +1037,6 @@ local accept_telegram_link = login_required(function(r)
     end
     if tg.created_at - now > (30 * 60) then
         return Fm.serve404()
-    end
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
     end
     if r.params.link == "Link" then
         local link_ok, link_err =
@@ -1102,12 +1060,7 @@ local accept_telegram_link = login_required(function(r)
     return Fm.serveRedirect("/home", 302)
 end)
 
-local render_account = login_required(function(r)
-    local user_record, errmsg = Accounts:findUserBySessionId(r.session.token)
-    if not user_record then
-        Log(kLogDebug, errmsg)
-        return Fm.serve500()
-    end
+local render_account = login_required(function(r, user_record)
     return Fm.serveContent("account", {
         user = user_record,
     })

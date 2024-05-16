@@ -5,6 +5,7 @@ DbUtil = require("db")
 Nu = require("network_utils")
 HtmlParser = require("third_party.htmlparser")
 Multipart = require("third_party.multipart")
+FsTools = require("fstools")
 local about = require("about")
 local web = require("web")
 local _ = require("functools")
@@ -34,6 +35,10 @@ IdPrefixes = {
 Accounts = DbUtil.Accounts:new()
 Accounts:bootstrapInvites()
 
+local function sessionMaintenance()
+    return Accounts:sessionMaintenance()
+end
+
 function OnWorkerStart()
     Accounts = DbUtil.Accounts:new()
 
@@ -55,6 +60,7 @@ end
 ProgramMaxPayloadSize(10 * 1024 * 1024)
 
 Fm.setSchedule("* * * * *", scraper_pipeline.process_all_queues)
+Fm.setSchedule("50 * * * *", sessionMaintenance)
 
 bot.setup(os.getenv("TG_BOT_TOKEN"), true, scraper_pipeline.can_process_uri)
 bot.run()

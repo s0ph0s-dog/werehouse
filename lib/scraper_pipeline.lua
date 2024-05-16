@@ -18,18 +18,11 @@ local scrapers = {
     require_only("scrapers.test"),
 }
 
-local MIME_TO_EXT = {
-    ["image/jpeg"] = ".jpg",
-    ["image/png"] = ".png",
-    ["image/webp"] = ".webp",
-    ["text/plain"] = ".txt",
-}
-
 local function multipart_body(boundary, image_data, content_type)
     local result = '--%s\r\nContent-Disposition: form-data; name="image"; filename="C:\\fakepath\\purple%s"\r\nContent-Type: %s\r\n\r\n%s\r\n--%s--\r\n\r\n'
         % {
             boundary,
-            MIME_TO_EXT[content_type],
+            FsTools.MIME_TO_EXT[content_type],
             content_type,
             image_data,
             boundary,
@@ -337,29 +330,6 @@ local function scrape_sources(source_links)
     return nil, PermScraperError("This should be unreachable")
 end
 
-local function hash_to_filesystem_safe(hash)
-    local b64 = EncodeBase64(hash)
-    local safe = b64:gsub("[+/]", { ["+"] = "-", ["/"] = "_" })
-    return safe
-end
-
-local function save_image(image_data, image_mime_type)
-    local hash_raw = GetCryptoHash("SHA256", image_data)
-    local hash = hash_to_filesystem_safe(hash_raw)
-    local ext = MIME_TO_EXT[image_mime_type] or ""
-    local filename = hash .. ext
-    local parent_dir = "./images/%s/%s/"
-        % {
-            hash:sub(1, 1),
-            hash:sub(2, 2),
-        }
-    Log(kLogInfo, "parent_dir: %s" % { parent_dir })
-    local path = parent_dir .. filename
-    unix.makedirs(parent_dir, 0755)
-    Barf(path, image_data, 0644, unix.O_WRONLY | unix.O_CREAT | unix.O_EXCL)
-    return filename
-end
-
 ---@param model Model
 ---@param scraped_data ScrapedSourceData[]
 ---@param queue_entry table
@@ -434,7 +404,7 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
         end
         local content_type = headers["Content-Type"]
         -- 2. Save image file to disk.
-        local filename = save_image(body, content_type)
+        local filename = FsTools.save_image(body, content_type)
         Log(kLogInfo, "Saved image to disk")
         -- 3. Add image, sources, etc. to database.
         local image, errmsg2 = model:insertImage(
@@ -443,7 +413,8 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
             data.width,
             data.height,
             DbUtil.k.ImageKind.Image,
-            data.rating
+            data.rating,
+            #body
         )
         if not image then
             Log(kLogInfo, "Database error 1: %s" % { errmsg2 })

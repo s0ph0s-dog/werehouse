@@ -865,7 +865,7 @@ local function makeStorage(dbname, sqlsetup, opts)
                 ):format(c.name, r.name, msgdelete)
             end
           end
-          local cols = table.concat(common, ",")
+          local cols = '"' .. table.concat(common, '","') .. '"'
           table.insert(changes, ("INSERT INTO %s (%s) SELECT %s FROM %s")
             :format(tmpname, cols, cols, r.name))
           table.insert(changes, ("DROP TABLE %s"):format(r.name))
@@ -928,8 +928,11 @@ local function makeStorage(dbname, sqlsetup, opts)
       local fkc = prpfk ~= "0" and self:pragma"foreign_key_check"
       if fkc and fkc ~= self.NONE then return nil, "foreign key check failed" end
     end
-    if opts.dryrun then return changes end
+    -- if opts.dryrun then return changes end
     if #changes == 0 then return changes end
+    if opts.dryrun then
+      changes[#changes + 1] = "ROLLBACK TO execute"
+    end
 
     -- disable `pragma foreign_keys`, to avoid triggerring cascading deletes
     ok, err = self:pragma"foreign_keys=0"
@@ -945,8 +948,10 @@ local function makeStorage(dbname, sqlsetup, opts)
     if not ok then return ok, err end
 
     -- clean up the database
-    ok, err = self:execute("VACUUM")
-    if not ok then return ok, err end
+    if not opts.dryrun then
+      ok, err = self:execute("VACUUM")
+      if not ok then return ok, err end
+    end
     return changes
   end
 

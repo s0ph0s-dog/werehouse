@@ -10,6 +10,7 @@ LIBS := lib/third_party/fullmoon.lua \
     lib/third_party/multipart.lua \
     lib/db.lua \
 	lib/functools.lua \
+	lib/fstools.lua \
 	lib/scraper_pipeline.lua \
 	lib/scraper_types.lua \
 	lib/scrapers/bluesky.lua \
@@ -24,6 +25,7 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/nanoid.lua \
 	lib/web.lua
 SRCS := src/.init.lua \
+    src/manage.lua \
     src/templates/layouts/main.html \
     src/templates/layouts/dialog.html \
     src/templates/components/image_gallery.html \
@@ -108,6 +110,9 @@ $(SRV_DIR)/%.html: src/%.html | $$(@D)/.
 	cp $< $@
 
 $(SRV_DIR)/.init.lua: src/.init.lua | $$(@D)/.
+	cp $< $@
+
+$(SRV_DIR)/manage.lua: src/manage.lua | $$(@D)/.
 	cp $< $@
 
 $(SRV_DIR)/%.css: src/%.css | $$(@D)/.

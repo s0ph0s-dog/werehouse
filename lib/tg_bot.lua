@@ -183,7 +183,9 @@ local function handle_enqueue(message)
 end
 
 function bot.setup(token, debug, link_checker)
-    bot.api = api.configure(token, debug)
+    if token then
+        bot.api = api.configure(token, debug)
+    end
     bot.link_checker = link_checker
 end
 
@@ -202,7 +204,14 @@ end
 function bot.run()
     local pid = unix.fork()
     if pid == 0 then
-        api.run(10)
+        if bot.api then
+            bot.api.run(10)
+        else
+            Log(
+                kLogWarn,
+                "Not starting Telegram bot because no token provided."
+            )
+        end
     else
         return pid
     end

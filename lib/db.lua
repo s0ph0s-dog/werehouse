@@ -23,9 +23,10 @@ local accounts_setup = [[
         "session_id" TEXT NOT NULL UNIQUE,
         "created" TEXT NOT NULL,
         "user_id" TEXT NOT NULL,
-        "last_seen" TEXT NOT NULL,
+        "last_seen" INTEGER NOT NULL,
         "user_agent" TEXT NOT NULL,
         "ip" TEXT NOT NULL,
+        "csrf_token" TEXT NOT NULL,
         PRIMARY KEY("session_id"),
         FOREIGN KEY ("user_id") REFERENCES "users"("user_id")
         ON UPDATE CASCADE ON DELETE CASCADE
@@ -111,7 +112,7 @@ local user_setup = [[
     );
 
     CREATE TABLE IF NOT EXISTS "artist_handles" (
-        "artist_id" INTEGER NOT NULL UNIQUE,
+        "artist_id" INTEGER NOT NULL,
         "handle" TEXT NOT NULL,
         "domain" TEXT NOT NULL,
         "profile_url" TEXT NOT NULL,
@@ -224,13 +225,14 @@ local queries = {
         find_user_by_name = [[SELECT "user_id", "username", "password"
             FROM "users"
             WHERE "username" = ?;]],
-        insert_session = [[INSERT INTO "sessions" ("session_id", "user_id", "created")
-            VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));]],
+        insert_session = [[INSERT INTO "sessions" ("session_id", "user_id", "created", "last_seen", "user_agent", "ip", "csrf_token")
+            VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), ?, ?, ?, ?);]],
         get_session = [[SELECT "created", "user_id" from "sessions"
             WHERE "session_id" = ?;]],
-        get_user_by_session = [[SELECT u.user_id, u.username FROM "users" AS u
+        get_sessions_older_than_stamp = [[SELECT session_id FROM sessions WHERE last_seen < ?;]],
+        get_user_by_session_and_ip = [[SELECT u.user_id, u.username FROM "users" AS u
             INNER JOIN "sessions" on u.user_id = sessions.user_id
-            WHERE sessions.session_id = ?;]],
+            WHERE sessions.session_id = ? AND sessions.ip = ?;]],
         get_user_by_tg_id = [[SELECT users.user_id, users.username
             FROM users
             JOIN telegram_accounts ON users.user_id = telegram_accounts.user_id
@@ -245,7 +247,12 @@ local queries = {
         insert_telegram_account_id = [[INSERT INTO "telegram_accounts"
             ("user_id", "tg_userid")
             VALUES (?, ?);]],
+        update_session_last_seen = [[UPDATE "sessions"
+            SET last_seen = ?
+            WHERE session_id = ?;]],
+        update_csrf_token_for_session = [[UPDATE "sessions" SET csrf_token = ? WHERE session_id = ?;]],
         delete_telegram_link_request = [[DELETE FROM telegram_link_requests WHERE request_id = ?;]],
+        delete_sessions_older_than_stamp = [[DELETE FROM "sessions" WHERE last_seen < ?;]],
     },
     model = {
         get_recent_queue_entries = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
@@ -331,6 +338,7 @@ local queries = {
             WHERE image_artists.artist_id = ?
             ORDER BY images.saved_at DESC
             LIMIT ?;]],
+        get_all_images_for_size_check = [[SELECT image_id, file, file_size FROM images;]],
         get_image_group_count = [[SELECT COUNT(*) AS count FROM image_group;]],
         get_image_groups_paginated = [[SELECT
                 image_group.ig_id,
@@ -372,8 +380,8 @@ local queries = {
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (NULL, ?, ?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
         insert_image_into_images = [[INSERT INTO
-            "images" ("file", "mime_type", "width", "height", "kind", "rating", "saved_at")
-            VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            "images" ("file", "mime_type", "width", "height", "kind", "rating", "file_size", "saved_at")
+            VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
             RETURNING image_id;]],
         insert_tag = [[INSERT INTO "tags" ("name", "description")
             VALUES (?, ?)
@@ -436,6 +444,8 @@ local queries = {
             WHERE ig_id = ? AND image_id = ?;]],
         update_category_rating_for_image_by_id = [[UPDATE images SET category = ?, rating = ?
             WHERE image_id = ?;]],
+        update_image_size_by_id = [[UPDATE images SET file_size = ?
+            WHERE image_id = ?;]],
     },
 }
 
@@ -462,6 +472,10 @@ function Model:new(o, user_id)
     setmetatable(o, self)
     self.__index = self
     return o
+end
+
+function Model:migrate(opts)
+    return self.conn:upgrade(opts)
 end
 
 ---@alias RecentQueueEntry {qid: string, link: string, tombstone: integer, added_on: string, status: string}
@@ -524,6 +538,18 @@ end
 
 function Model:getImageById(image_id)
     return fetchOneExactly(self.conn, queries.model.get_image_by_id, image_id)
+end
+
+function Model:getAllImagesForSizeCheck()
+    return self.conn:fetchAll(queries.model.get_all_images_for_size_check)
+end
+
+function Model:updateImageSize(image_id, size)
+    return self.conn:execute(
+        queries.model.update_image_size_by_id,
+        size,
+        image_id
+    )
 end
 
 function Model:getArtistsForImage(image_id)
@@ -653,7 +679,15 @@ function Model:setQueueItemDisambiguationResponse(queue_id, disambiguation_data)
     )
 end
 
-function Model:insertImage(image_file, mime_type, width, height, kind, rating)
+function Model:insertImage(
+    image_file,
+    mime_type,
+    width,
+    height,
+    kind,
+    rating,
+    file_size
+)
     if not rating then
         rating = DbUtil.k.Rating.General
     end
@@ -664,7 +698,8 @@ function Model:insertImage(image_file, mime_type, width, height, kind, rating)
         width,
         height,
         kind,
-        rating
+        rating,
+        file_size
     )
 end
 
@@ -1190,6 +1225,10 @@ function Accounts:new(o)
     return o
 end
 
+function Accounts:migrate(opts)
+    return self.conn:upgrade(opts)
+end
+
 function Accounts:bootstrapInvites()
     local users = self.conn:fetchOne(queries.accounts.count_users)
     if not users or users.count < 1 then
@@ -1228,26 +1267,97 @@ function Accounts:findUser(username)
     )
 end
 
-function Accounts:createSessionForUser(user_id)
+function Accounts:createSessionForUser(user_id, user_agent, ip)
     local session_id = NanoID.simple_with_prefix(IdPrefixes.session)
-    local result, errmsg =
-        self.conn:execute(queries.accounts.insert_session, session_id, user_id)
+    local csrf_token = NanoID.simple_with_prefix(IdPrefixes.csrf)
+    local now = unix.clock_gettime()
+    local result, errmsg = self.conn:execute(
+        queries.accounts.insert_session,
+        session_id,
+        user_id,
+        now,
+        user_agent,
+        ip,
+        csrf_token
+    )
     if not result then
         return result, errmsg
-    else
-        return session_id
     end
+    return session_id
 end
 
 function Accounts:findSessionById(session_id)
     return fetchOneExactly(self.conn, queries.accounts.get_session, session_id)
 end
 
-function Accounts:findUserBySessionId(session_id)
+function Accounts:updateSessionLastSeenToNow(session_id)
+    local now = unix.clock_gettime()
+    return self.conn:execute(
+        queries.accounts.update_session_last_seen,
+        now,
+        session_id
+    )
+end
+
+function Accounts:sessionMaintenance()
+    local now = unix.clock_gettime()
+    -- Expire all sessions that have not been used in 7 days.
+    local expiry_point = now - (7 * 24 * 60 * 60)
+    local delete_count, err
+    self.conn:execute(
+        queries.accounts.delete_sessions_older_than_stamp,
+        expiry_point
+    )
+    if not delete_count then
+        Log(kLogWarn, "Error while deleting untouched sessions: %s" % { err })
+    end
+    Log(kLogInfo, "Deleted %d expired sessions." % { delete_count })
+    -- Regenerate CSRF protection tokens for sessions that have not been used in
+    -- 4 hours. (Avoid doing this too much or you'll break browser sessions.)
+    local token_regen_point = now - (4 * 60 * 60)
+    local sessions, s_err = self.conn:fetchAll(
+        queries.accounts.get_sessions_older_than_stamp,
+        token_regen_point
+    )
+    if not sessions then
+        Log(
+            kLogWarn,
+            "Error while fetching sessions in need of CSRF token updates: %s"
+                % { s_err }
+        )
+        return delete_count
+    end
+    local updated_count = 0
+    for i = 1, #sessions do
+        local new_token = NanoID.simple_with_prefix(IdPrefixes.csrf)
+        local t_ok, t_err = self.conn:execute(
+            queries.accounts.update_csrf_token_for_session,
+            new_token,
+            sessions[i].session_id
+        )
+        if not t_ok then
+            Log(
+                kLogWarn,
+                "Error while updating session %s: %s"
+                    % { sessions[i].session_id, t_err }
+            )
+        else
+            updated_count = updated_count + 1
+        end
+    end
+    Log(
+        kLogInfo,
+        "Updated CSRF protection tokens for %d sessions." % { updated_count }
+    )
+    return delete_count + updated_count
+end
+
+function Accounts:findUserBySessionId(session_id, ip)
     return fetchOneExactly(
         self.conn,
-        queries.accounts.get_user_by_session,
-        session_id
+        queries.accounts.get_user_by_session_and_ip,
+        session_id,
+        ip
     )
 end
 
