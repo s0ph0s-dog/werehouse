@@ -10,6 +10,7 @@ local accounts_setup = [[
         "user_id" TEXT NOT NULL UNIQUE,
         "username" TEXT NOT NULL UNIQUE,
         "password" TEXT NOT NULL,
+        "invites_available" INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY("user_id")
     );
 
@@ -229,8 +230,13 @@ local queries = {
             VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), ?, ?, ?, ?);]],
         get_session = [[SELECT "created", "user_id" from "sessions"
             WHERE "session_id" = ?;]],
+        get_all_sessions_for_user = [[SELECT session_id, created, last_seen, user_agent, ip
+            FROM sessions WHERE user_id = ?;]],
+        get_all_invite_links_created_by_user = [[SELECT
+                invite_id, (invitee IS NOT NULL) AS used
+            FROM invites WHERE inviter = ?;]],
         get_sessions_older_than_stamp = [[SELECT session_id FROM sessions WHERE last_seen < ?;]],
-        get_user_by_session_and_ip = [[SELECT u.user_id, u.username FROM "users" AS u
+        get_user_by_session_and_ip = [[SELECT u.user_id, u.username, u.invites_available FROM "users" AS u
             INNER JOIN "sessions" on u.user_id = sessions.user_id
             WHERE sessions.session_id = ? AND sessions.ip = ?;]],
         get_user_by_tg_id = [[SELECT users.user_id, users.username
@@ -253,6 +259,7 @@ local queries = {
         update_csrf_token_for_session = [[UPDATE "sessions" SET csrf_token = ? WHERE session_id = ?;]],
         delete_telegram_link_request = [[DELETE FROM telegram_link_requests WHERE request_id = ?;]],
         delete_sessions_older_than_stamp = [[DELETE FROM "sessions" WHERE last_seen < ?;]],
+        delete_sessions_for_user = [[DELETE FROM "sessions" WHERE user_id = ?;]],
     },
     model = {
         get_recent_queue_entries = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
@@ -373,6 +380,11 @@ local queries = {
                 AND images_in_group.image_id = ?
                 AND (siblings."order" = (images_in_group."order" + 1)
                     OR siblings."order" = (images_in_group."order" - 1));]],
+        get_tag_entry_count = [[SELECT COUNT(*) AS tag_count FROM tags;]],
+        get_image_stats = [[SELECT kind, COUNT(kind) AS record_count FROM images
+            GROUP BY kind
+            ORDER BY kind;]],
+        get_disk_space_usage = [[SELECT SUM(file_size) AS size_sum FROM images;]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
@@ -476,6 +488,10 @@ end
 
 function Model:migrate(opts)
     return self.conn:upgrade(opts)
+end
+
+function Model:getImageStats()
+    return self.conn:fetchAll(queries.model.get_image_stats)
 end
 
 ---@alias RecentQueueEntry {qid: string, link: string, tombstone: integer, added_on: string, status: string}
@@ -755,6 +771,23 @@ function Model:deleteSourcesForImageById(image_id, source_ids)
     end
     self:release_savepoint(SP)
     return true
+end
+
+function Model:getDiskSpaceUsage()
+    local result, errmsg =
+        self.conn:fetchOne(queries.model.get_disk_space_usage)
+    if not result then
+        return nil, errmsg
+    end
+    return result.size_sum
+end
+
+function Model:getTagCount()
+    local result, errmsg = self.conn:fetchOne(queries.model.get_tag_entry_count)
+    if not result then
+        return nil, errmsg
+    end
+    return result.tag_count
 end
 
 function Model:getArtistCount()
@@ -1249,6 +1282,13 @@ function Accounts:findInvite(invite_id)
     return invite
 end
 
+function Accounts:getAllInvitesCreatedByUser(user_id)
+    return self.conn:fetchAll(
+        queries.accounts.get_all_invite_links_created_by_user,
+        user_id
+    )
+end
+
 function Accounts:acceptInvite(invite_id, username, password_hash)
     local user_id = NanoID.simple_with_prefix(IdPrefixes.user)
     local result, errmsg = self.conn:execute {
@@ -1296,6 +1336,13 @@ function Accounts:updateSessionLastSeenToNow(session_id)
         queries.accounts.update_session_last_seen,
         now,
         session_id
+    )
+end
+
+function Accounts:getAllSessionsForUser(user_id)
+    return self.conn:fetchAll(
+        queries.accounts.get_all_sessions_for_user,
+        user_id
     )
 end
 

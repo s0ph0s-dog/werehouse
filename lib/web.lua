@@ -1061,8 +1061,46 @@ local accept_telegram_link = login_required(function(r, user_record)
 end)
 
 local render_account = login_required(function(r, user_record)
+    local image_stats, stats_err = Model:getImageStats()
+    if not image_stats then
+        Log(kLogDebug, stats_err)
+        return Fm.serve500()
+    end
+    local artist_count, as_err = Model:getArtistCount()
+    if not artist_count then
+        Log(kLogDebug, as_err)
+        return Fm.serve500()
+    end
+    local tag_count, ts_err = Model:getTagCount()
+    if not tag_count then
+        Log(kLogDebug, ts_err)
+        return Fm.serve500()
+    end
+    local data_size, ds_err = Model:getDiskSpaceUsage()
+    if not data_size then
+        Log(kLogDebug, ds_err)
+        return Fm.serve500()
+    end
+    local sessions, sess_err =
+        Accounts:getAllSessionsForUser(user_record.user_id)
+    if not sessions then
+        Log(kLogDebug, sess_err)
+        return Fm.serve50()
+    end
+    local invites, invites_err =
+        Accounts:getAllInvitesCreatedByUser(user_record.user_id)
+    if not invites then
+        Log(kLogDebug, invites_err)
+        return Fm.serve500()
+    end
     return Fm.serveContent("account", {
         user = user_record,
+        image_stats = image_stats,
+        artist_count = artist_count,
+        tag_count = tag_count,
+        data_size = data_size,
+        sessions = sessions,
+        invites = invites,
     })
 end)
 

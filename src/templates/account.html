@@ -2,10 +2,12 @@
 <h1>{%& user.username %}</h1>
 <p>Your account stores:</p>
 <ul>
-  <li>X images</li>
-  <li>X artists</li>
-  <li>X tags</li>
-  <li>X MB of data</li>
+  {% for i = 1, #image_stats do local row = image_stats[i] %}
+  <li>{%& row.record_count %} {%& DbUtil.k.ImageKindLoopable[row.kind] %}s</li>
+  {% end %}
+  <li>{%& artist_count %} artists</li>
+  <li>{%& tag_count %} tags</li>
+  <li>{%& string.format("%.02f MB", data_size / 1024 / 1024 ) %} of data</li>
 </ul>
 <h1>Sessions</h1>
 <form method="POST" action="/account/end-sessions">
@@ -20,16 +22,15 @@
       </tr>
     </thead>
     <tbody>
+      {% for i = 1, #sessions do local session = sessions[i] %}
       <tr>
-        <td class="txt">abc123</td>
-        <td class="txt">2024-05-14T23:52:01Z</td>
-        <td class="txt">2024-05-15T00:27:42Z</td>
-        <td class="txt">
-          Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101
-          Firefox/125.0
-        </td>
-        <td class="num"><code>127.0.0.1</code></td>
+        <td class="txt">{%& session.session_id %}</td>
+        <td class="txt">{%& session.created %}</td>
+        <td class="txt">{%& FormatHttpDateTime(session.last_seen) %}</td>
+        <td class="txt">{%& session.user_agent %}</td>
+        <td class="num"><code>{%& session.ip %}</code></td>
       </tr>
+      {% end %}
     </tbody>
   </table>
   <input
@@ -39,9 +40,24 @@
   />
 </form>
 <h1>Invite Links</h1>
-<p>You have X available.</p>
 <form method="POST" action="/account/invites">
-  <input type="submit" name="make-invite" disabled value="Make Invite Link" />
+  <p>
+    You have {%& user.invites_available %} available.
+    <input
+      type="submit"
+      name="make-invite"
+      {%
+      if
+      user.invites_available
+      <
+      1
+      then
+      %}disabled
+      {%
+      end
+      %}value="Make Invite Link"
+    />
+  </p>
 </form>
 <table>
   <thead>
@@ -51,14 +67,20 @@
     </tr>
   </thead>
   <tbody>
+    {% for i = 1, #invites do local invite = invites[i] %}
     <tr>
       <td class="txt">
-        <a href="https://hyperphantasia.s0ph0s.dog/accept-invite/defg456"
-          >https://hyperphantasia.s0ph0s.dog/accept-invite/defg456</a
+        <a
+          href="https://hyperphantasia.s0ph0s.dog/accept-invite/{%& invite.invite_id %}"
+          >https://hyperphantasia.s0ph0s.dog/accept-invite/{%& invite.invite_id
+          %}</a
         >
       </td>
-      <td class="num">Not Yet</td>
+      <td class="num">
+        {% if invite.used == 1 then %}Yes{% else %}Not Yet{% end %}
+      </td>
     </tr>
+    {% end %}
   </tbody>
 </table>
 
