@@ -37,7 +37,7 @@ local function handle_start(message)
         )
         return
     end
-    local response = [[Hello! To get started with this bot, please connect your account: http://10.4.0.183:8082/link-telegram/%s. This link expires after 30 minutes.
+    local response = [[Hello! To get started with this bot, please connect your account: https://werehouse.s0ph0s.dog/link-telegram/%s. This link expires after 30 minutes.
 
 If you don’t have an account already, this bot only works with an invite-only service. You’ll have to be invited by someone else who has an account.]] % {
         request_id,

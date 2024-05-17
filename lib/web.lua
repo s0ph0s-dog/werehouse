@@ -139,8 +139,15 @@ local function accept_login(r)
         return Fm.serveRedirect("/login", 302)
     end
     Log(kLogDebug, EncodeJson(user_record))
-    if not argon2.verify(user_record.password, r.params.password) then
+    local result, verify_err =
+        argon2.verify(user_record.password, r.params.password)
+    if not result then
         r.session.error = "Invalid credentials"
+        Log(
+            kLogVerbose,
+            "Denying attempted login for %s due to error from argon2: %s"
+                % { r.params.username, verify_err }
+        )
         return Fm.serveRedirect("/login", 302)
     end
     local ip = get_client_ip(r)
