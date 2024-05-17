@@ -1075,23 +1075,23 @@ local render_account = login_required(function(r, user_record)
     end
     local artist_count, as_err = Model:getArtistCount()
     if not artist_count then
-        Log(kLogDebug, as_err)
-        return Fm.serve500()
+        Log(kLogDebug, tostring(as_err))
+        artist_count = 0
     end
     local tag_count, ts_err = Model:getTagCount()
     if not tag_count then
-        Log(kLogDebug, ts_err)
-        return Fm.serve500()
+        Log(kLogDebug, tostring(ts_err))
+        tag_count = 0
     end
     local data_size, ds_err = Model:getDiskSpaceUsage()
     if not data_size then
-        Log(kLogDebug, ds_err)
-        return Fm.serve500()
+        Log(kLogDebug, tostring(ds_err))
+        data_size = 0
     end
     local telegram_accounts, tg_err =
         Accounts:getAllTelegramAccountsForUser(user_record.user_id)
     if not telegram_accounts then
-        Log(kLogDebug, tg_err)
+        Log(kLogDebug, tostring(tg_err))
         return Fm.serve500()
     end
     local sessions, sess_err =
