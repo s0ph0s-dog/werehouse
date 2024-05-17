@@ -138,6 +138,9 @@ local function quirks(link)
         -- FurAffinity also sometimes confuses Redbean's Fetch().
         return true, false
     end
+    if parts.host == "d.furaffinity.net" then
+        return true, true
+    end
     return false
 end
 
