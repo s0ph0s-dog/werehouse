@@ -96,6 +96,11 @@ local user_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE
     );
 
+    CREATE VIEW IF NOT EXISTS "tag_counts" (tag_id, count) AS
+    SELECT image_tags.tag_id, COUNT(*) AS count
+        FROM image_tags
+        GROUP BY image_tags.tag_id;
+
     CREATE TABLE IF NOT EXISTS "sources" (
         "source_id" INTEGER NOT NULL UNIQUE,
         "image_id" INTEGER NOT NULL,
@@ -302,9 +307,10 @@ local queries = {
             ON image_artists.artist_id = artists.artist_id
             WHERE image_artists.image_id = ?;]],
         get_tag_id_by_name = [[SELECT tag_id FROM tags WHERE name = ?;]],
-        get_tags_for_image = [[SELECT tags.tag_id, tags.name
+        get_tags_for_image = [[SELECT tags.tag_id, tags.name, tag_counts.count
             FROM tags INNER JOIN image_tags
             ON image_tags.tag_id = tags.tag_id
+            JOIN tag_counts ON tag_counts.tag_id = image_tags.tag_id
             WHERE image_tags.image_id = ?;]],
         get_all_tags = [[SELECT tag_id, name FROM tags;]],
         get_sources_for_image = [[SELECT source_id, link
@@ -324,11 +330,15 @@ local queries = {
                 artists.name,
                 artists.manually_confirmed,
                 COUNT(artist_handles.domain) AS handle_count,
-                COUNT(image_artists.image_id) AS image_count
+                image_count
             FROM artists
-            inner JOIN artist_handles ON artists.artist_id = artist_handles.artist_id
-            inner JOIN image_artists ON artists.artist_id = image_artists.artist_id
-            GROUP BY artists.artist_id
+            INNER JOIN artist_handles ON artists.artist_id = artist_handles.artist_id
+            INNER JOIN (
+                SELECT artist_id AS artist_id_for_count, COUNT(*) as image_count
+                FROM image_artists
+                GROUP BY artist_id
+            ) ON artists.artist_id = artist_id_for_count
+            GROUP BY artist_handles.artist_id
             ORDER BY artists.name COLLATE NOCASE
             LIMIT ?
             OFFSET ?;]],

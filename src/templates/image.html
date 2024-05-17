@@ -31,7 +31,7 @@ groups }) %}
     {% else %}
     <ul>
       {% for _, tag in ipairs(tags) do %}
-      <li>{%& tag.name %}</li>
+      <li>{%& tag.name %}<span class="count">{%& tag.count %}</span></li>
       {% end %}
     </ul>
     {% end %}

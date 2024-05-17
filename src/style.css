@@ -295,3 +295,9 @@ table img {
 .group {
   margin-top: 1.5em;
 }
+
+.count {
+  color: GrayText;
+  font-size: 0.9em;
+  margin-left: 0.75rem;
+}
