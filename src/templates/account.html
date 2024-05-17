@@ -9,6 +9,23 @@
   <li>{%& tag_count %} tags</li>
   <li>{%& string.format("%.02f MB", data_size / 1024 / 1024 ) %} of data</li>
 </ul>
+<h1>Linked Telegram Accounts</h1>
+{% if #telegram_accounts > 0 then %}
+<ul>
+  {% for i = 1, #telegram_accounts do local tg_acct = telegram_accounts[i] %}
+  <li><code>{%& tg_acct.tg_userid %}</code></li>
+  {% end %}
+</ul>
+{% else %}
+<p>No linked Telegram accounts.</p>
+{% end %}
+<p>
+  To link a Telegram account, send <code>/start</code> to
+  <a href="https://t.me/werehouse_archive_bot"
+    >WerehouseBot (@werehouse_archive_bot)</a
+  >
+  and click the link it sends you.
+</p>
 <h1>Sessions</h1>
 <form method="POST" action="/account/end-sessions">
   <div class="overflow-container">
@@ -74,9 +91,9 @@
       <tr>
         <td class="txt">
           <a
-            href="https://hyperphantasia.s0ph0s.dog/accept-invite/{%& invite.invite_id %}"
-            >https://hyperphantasia.s0ph0s.dog/accept-invite/{%&
-            invite.invite_id %}</a
+            href="https://werehouse.s0ph0s.dog/accept-invite/{%& invite.invite_id %}"
+            >https://werehouse.s0ph0s.dog/accept-invite/{%& invite.invite_id
+            %}</a
           >
         </td>
         <td class="num">

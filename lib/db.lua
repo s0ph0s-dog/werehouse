@@ -1,5 +1,5 @@
-local ACCOUNTS_DB_FILE = "db/hyperphantasia-accounts.sqlite3"
-local USER_DB_FILE_TEMPLATE = "db/hyperphantasia-%s.sqlite3"
+local ACCOUNTS_DB_FILE = "db/werehouse-accounts.sqlite3"
+local USER_DB_FILE_TEMPLATE = "db/werehouse-%s.sqlite3"
 
 local accounts_setup = [[
     PRAGMA journal_mode=WAL;
@@ -252,6 +252,8 @@ local queries = {
         get_telegram_link_request_by_id = [[SELECT request_id, display_name, username, tg_userid, created_at
             FROM telegram_link_requests
             WHERE request_id = ?;]],
+        get_telegram_accounts_by_user_id = [[SELECT tg_userid
+            FROM telegram_accounts WHERE user_id = ?;]],
         insert_telegram_link_request = [[INSERT INTO "telegram_link_requests"
             ("request_id", "display_name", "username", "tg_userid", "created_at")
             VALUES (?, ?, ?, ?, ?);]],
@@ -1421,6 +1423,13 @@ end
 
 function Accounts:findUserByTelegramUserID(tg_userid)
     return self.conn:fetchOne(queries.accounts.get_user_by_tg_id, tg_userid)
+end
+
+function Accounts:getAllTelegramAccountsForUser(user_id)
+    return self.conn:fetchAll(
+        queries.accounts.get_telegram_accounts_by_user_id,
+        user_id
+    )
 end
 
 function Accounts:getAllUserIds()

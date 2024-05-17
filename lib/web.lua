@@ -1081,6 +1081,12 @@ local render_account = login_required(function(r, user_record)
         Log(kLogDebug, ds_err)
         return Fm.serve500()
     end
+    local telegram_accounts, tg_err =
+        Accounts:getAllTelegramAccountsForUser(user_record.user_id)
+    if not telegram_accounts then
+        Log(kLogDebug, tg_err)
+        return Fm.serve500()
+    end
     local sessions, sess_err =
         Accounts:getAllSessionsForUser(user_record.user_id)
     if not sessions then
@@ -1099,6 +1105,7 @@ local render_account = login_required(function(r, user_record)
         artist_count = artist_count,
         tag_count = tag_count,
         data_size = data_size,
+        telegram_accounts = telegram_accounts,
         sessions = sessions,
         invites = invites,
     })

@@ -6,7 +6,7 @@ local DbUtil = require("db")
 local _ = require("functools")
 
 local function help()
-    print("usage: ./hyperphantasia.com -i /zip/manage.lua <COMMAND> [options]")
+    print("usage: ./werehouse.com -i /zip/manage.lua <COMMAND> [options]")
     print("<COMMAND> can be:")
     print(
         "- db_migrate (-d): migrate all database files to the lastest schemas."
