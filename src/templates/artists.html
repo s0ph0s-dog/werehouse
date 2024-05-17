@@ -21,36 +21,36 @@
       name="merge"
       value="Merge"
   /></span>
-  <table>
-    <thead>
+  <div class="overflow-container">
+    <table>
+      <thead>
+        <tr>
+          <th class="num"></th>
+          <th class="txt">Name</th>
+          <th class="num">Verified</th>
+          <th class="num">Known Handles</th>
+          <th class="num">Saved Images</th>
+        </tr>
+      </thead>
+      {% for _, item in ipairs(artist_records) do %}
       <tr>
-        <th class="num"></th>
-        <th class="num">ID</th>
-        <th class="txt">Name</th>
-        <th class="num">Verified</th>
-        <th class="num">Known Handles</th>
-        <th class="num">Saved Images</th>
+        <td class="num">
+          <input
+            type="checkbox"
+            name="artist_ids[]"
+            value="{%& item.artist_id %}"
+          />
+        </td>
+        <td class="txt">
+          <a href="/artist/{%& item.artist_id %}">{%& item.name %}</a>
+        </td>
+        <td class="num">{%& item.manually_confirmed %}</td>
+        <td class="num">{%& item.handle_count %}</td>
+        <td class="num">{%& item.image_count %}</td>
       </tr>
-    </thead>
-    {% for _, item in ipairs(artist_records) do %}
-    <tr>
-      <td class="num">
-        <input
-          type="checkbox"
-          name="artist_ids[]"
-          value="{%& item.artist_id %}"
-        />
-      </td>
-      <td class="num">{%& item.artist_id %}</td>
-      <td class="txt">
-        <a href="/artist/{%& item.artist_id %}">{%& item.name %}</a>
-      </td>
-      <td class="num">{%& item.manually_confirmed %}</td>
-      <td class="num">{%& item.handle_count %}</td>
-      <td class="num">{%& item.image_count %}</td>
-    </tr>
-    {% end %}
-  </table>
+      {% end %}
+    </table>
+  </div>
   {% render("components/pagination_controls", { pages = pages, kind_plural =
   "artists" }) %}
 </form>

@@ -6,19 +6,7 @@
   </div>
 </li>
 {% end %}
-{% function block.content() %}{% for _, ig in ipairs(groups) do %}
-<div class="pages group">
-  {% if ig.siblings and ig.siblings.prev then %}
-  <a href="/image/{%& ig.siblings.prev %}">← Previous</a>{% else %}<span
-    >← Previous</span
-  >{% end %}&nbsp;<a href="/image-group/{%& ig.ig_id %}"
-    >Group: {%& ig.name %}</a
-  >&nbsp;{% if ig.siblings and ig.siblings.next then %}<a
-    href="/image/{%& ig.siblings.next %}"
-    >Next →</a
-  >{% else %}<span>Next →</span>{% end %}
-</div>
-{% end %}
+{% function block.content() %}{% render("components/group_box", { groups = groups }) %}
 <div class="sidebar-grid wide">
   <div class="main-image">
     <input id="fit-to-screen" type="checkbox" />

@@ -10,13 +10,16 @@ queue_item.disambiguation_request then %}
 %}
 <nav>
   <h1>hyperphantasia</h1>
+  <input id="menu-toggle" type="checkbox" />
+  <label class="menu-button-container" for="menu-toggle">Toggle Menu</label>
   <span class="links">
     {% if user and user.username then %}
     <a href="/home">Home</a>
     <a href="/queue">Queue</a>
     <a href="/image">Images</a>
-    <a href="/image-group">Image Groups</a>
+    <a href="/image-group">Groups</a>
     <a href="/artist">Artists</a>
+    <a href="/tags">Tags</a>
     <a href="/account">{%& user.username %}</a>
     {% else %}
     <a href="/">About</a>
