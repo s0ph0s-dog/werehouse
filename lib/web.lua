@@ -1067,6 +1067,34 @@ local accept_telegram_link = login_required(function(r, user_record)
     return Fm.serveRedirect("/home", 302)
 end)
 
+local render_tags = login_required(function(r, user_record)
+    local per_page = 100
+    local tag_count, tagcount_errmsg = Model:getTagCount()
+    if not tag_count then
+        Log(kLogDebug, tostring(tagcount_errmsg))
+        return Fm.serve500()
+    end
+    local cur_page = tonumber(r.params.page or "1")
+    if cur_page < 1 then
+        return Fm.serve400()
+    end
+    local tag_records, tag_errmsg = Model:getPaginatedTags(cur_page, per_page)
+    if not tag_records then
+        Log(kLogInfo, tostring(tag_errmsg))
+        return Fm.serve500()
+    end
+    local pages = pagination_data(cur_page, tag_count, per_page, #tag_records)
+    local error = r.session.error
+    r.session.error = nil
+    r.session.after_action = r.makePath(r.path, r.params)
+    return Fm.serveContent("tags", {
+        user = user_record,
+        error = error,
+        tag_records = tag_records,
+        pages = pages,
+    })
+end)
+
 local render_account = login_required(function(r, user_record)
     local image_stats, stats_err = Model:getImageStats()
     if not image_stats then
@@ -1162,6 +1190,7 @@ local function setup()
     )
     Fm.setRoute(Fm.GET { "/link-telegram/:request_id" }, render_telegram_link)
     Fm.setRoute(Fm.POST { "/link-telegram/:request_id" }, accept_telegram_link)
+    Fm.setRoute(Fm.GET { "/tag" }, render_tags)
     Fm.setRoute("/account", render_account)
     -- API routes
     Fm.setRoute(Fm.GET { "/api/queue-image/:id" }, render_queue_image)

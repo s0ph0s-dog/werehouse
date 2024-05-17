@@ -332,16 +332,27 @@ local queries = {
                 artists.name,
                 artists.manually_confirmed,
                 COUNT(artist_handles.domain) AS handle_count,
-                image_count
+                ifnull(image_count, 0) AS image_count
             FROM artists
-            INNER JOIN artist_handles ON artists.artist_id = artist_handles.artist_id
-            INNER JOIN (
+            LEFT JOIN artist_handles ON artists.artist_id = artist_handles.artist_id
+            LEFT JOIN (
                 SELECT artist_id AS artist_id_for_count, COUNT(*) as image_count
                 FROM image_artists
                 GROUP BY artist_id
             ) ON artists.artist_id = artist_id_for_count
             GROUP BY artist_handles.artist_id
             ORDER BY artists.name COLLATE NOCASE
+            LIMIT ?
+            OFFSET ?;]],
+        get_tag_entries_paginated = [[SELECT
+                tags.tag_id,
+                tags.name,
+                tags.description,
+                COUNT(image_tags.image_id) AS image_count
+            FROM tags
+            LEFT JOIN image_tags ON image_tags.tag_id = tags.tag_id
+            GROUP BY tags.tag_id
+            ORDER BY tags.name COLLATE NOCASE
             LIMIT ?
             OFFSET ?;]],
         get_artist_by_id = [[SELECT artist_id, name, manually_confirmed
@@ -818,6 +829,14 @@ end
 function Model:getPaginatedArtists(page_num, per_page)
     return self.conn:fetchAll(
         queries.model.get_artist_entries_paginated,
+        per_page,
+        (page_num - 1) * per_page
+    )
+end
+
+function Model:getPaginatedTags(page_num, per_page)
+    return self.conn:fetchAll(
+        queries.model.get_tag_entries_paginated,
         per_page,
         (page_num - 1) * per_page
     )
