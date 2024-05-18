@@ -814,6 +814,7 @@ local render_artist = login_required(function(r, user_record)
     local handles, errmsg2 = Model:getHandlesForArtist(artist_id)
     if not handles then
         Log(kLogInfo, errmsg2)
+        return Fm.serve500()
     end
     local images, images_err = Model:getRecentImagesForArtist(artist_id, 20)
     if not images then
@@ -830,6 +831,150 @@ end)
 
 local render_add_artist = login_required(function(r)
     return Fm.serveContent("artist_add")
+end)
+
+local function render_edit_artist_internal(r)
+    local artist_id = r.params.artist_id
+    if not artist_id then
+        return Fm.serve400()
+    end
+    local artist, errmsg1 = Model:getArtistById(artist_id)
+    if not artist then
+        Log(kLogInfo, errmsg1)
+        return Fm.serve404()
+    end
+    local handles, errmsg2 = Model:getHandlesForArtist(artist_id)
+    if not handles then
+        Log(kLogInfo, errmsg2)
+    end
+    local delete_handles = r.params.delete_handles
+    if delete_handles then
+        handles = table.filter(handles, function(h)
+            return table.find(delete_handles, h.handle_id) ~= nil
+        end)
+    end
+    local pending_usernames = r.params.pending_usernames
+    if pending_usernames then
+        pending_usernames = table.filter(pending_usernames, not_emptystr)
+    end
+    local pending_profile_urls = r.params.pending_profile_urls
+    if pending_profile_urls then
+        pending_profile_urls = table.filter(pending_profile_urls, not_emptystr)
+    end
+    return Fm.serveContent("artist_edit", {
+        artist = artist,
+        handles = handles,
+        pending_usernames = pending_usernames,
+        pending_profile_urls = pending_profile_urls,
+        name = r.params.name or artist.name,
+        manually_confirmed = r.params.confirmed or artist.manually_confirmed,
+    })
+end
+
+local render_edit_artist = login_required(render_edit_artist_internal)
+
+local accept_edit_artist = login_required(function(r)
+    local redirect_url = "/artist/" .. r.params.artist_id
+    local pending_usernames = r.params.pending_usernames
+    local pending_profile_urls = r.params.pending_profile_urls
+    local pending_handles = {}
+    if pending_usernames and pending_profile_urls then
+        if #pending_usernames ~= #pending_profile_urls then
+            return Fm.serveError(
+                400,
+                "Number of usernames and profile URLs must match!"
+            )
+        end
+        for i = 1, #pending_usernames do
+            local pending_username = pending_usernames[i]
+            local pending_profile_url = pending_profile_urls[i]
+            if (#pending_username > 0) ~= (#pending_profile_url > 0) then
+                return Fm.serveError(
+                    400,
+                    "Both the username and profile URL are mandatory."
+                )
+            end
+            if (#pending_username ~= 0) and (#pending_profile_url ~= 0) then
+                local domain = ParseUrl(pending_profile_url).host
+                if not domain then
+                    return Fm.serveError(400, "Invalid profile URL.")
+                end
+                pending_handles[#pending_handles + 1] = {
+                    pending_username,
+                    domain,
+                    pending_profile_url,
+                }
+            end
+        end
+        r.params.pending_usernames =
+            table.filter(pending_usernames, not_emptystr)
+        r.params.pending_profile_urls =
+            table.filter(pending_profile_urls, not_emptystr)
+    end
+    if r.params.delete_handle then
+        local to_delete = r.params.delete_handles or {}
+        to_delete[#to_delete + 1] = r.params.delete_handle
+        r.params.delete_handles = to_delete
+        r.params.delete_handle = nil
+        return render_edit_artist_internal(r)
+    end
+    if r.params.delete_pending_handle then
+        local pending_usernames = r.params.pending_usernames
+        local pending_profile_urls = r.params.pending_profile_urls
+        local index = tonumber(r.params.delete_pending_handle)
+        if not index then
+            return Fm.serve400()
+        end
+        table.remove(pending_usernames, index)
+        table.remove(pending_profile_urls, index)
+        r.params.pending_usernames = pending_usernames
+        r.params.pending_profile_urls = pending_profile_urls
+        r.params.delete_pending_handle = nil
+        return render_edit_artist_internal(r)
+    end
+    if r.params.add_handle then
+        return render_edit_artist_internal(r)
+    end
+    if r.params.update then
+        local artist_id = r.params.artist_id
+        if not r.params.name then
+            return Fm.serveError(400, "Missing artist name")
+        end
+        local verified = r.params.confirmed ~= nil
+        local artist_ok, artist_err =
+            Model:updateArtist(artist_id, r.params.name, verified)
+        if not artist_ok then
+            Log(kLogInfo, tostring(artist_err))
+            return Fm.serve500()
+        end
+        if r.params.delete_handles then
+            local delete_ok, delete_err = Model:deleteHandlesForArtistById(
+                artist_id,
+                r.params.delete_handles
+            )
+            if not delete_ok then
+                Log(kLogInfo, tostring(delete_err))
+                return Fm.serve500()
+            end
+        end
+        if #pending_handles > 0 then
+            local SP = "update_artist_handles"
+            Model:create_savepoint(SP)
+            for i = 1, #pending_handles do
+                local add_ok, add_err = Model:createHandleForArtist(
+                    artist_id,
+                    table.unpack(pending_handles[i])
+                )
+                if not add_ok then
+                    Log(kLogInfo, tostring(add_err))
+                    Model:rollback(SP)
+                    return Fm.serve500()
+                end
+            end
+            Model:release_savepoint(SP)
+        end
+        return Fm.serveRedirect("/artist/" .. artist_id, 302)
+    end
 end)
 
 local accept_add_artist = login_required(function(r)
@@ -1280,6 +1425,8 @@ local function setup()
     Fm.setRoute(Fm.GET { "/artist/add" }, render_add_artist)
     Fm.setRoute(Fm.POST { "/artist/add" }, accept_add_artist)
     Fm.setRoute("/artist/:artist_id[%d]", render_artist)
+    Fm.setRoute(Fm.GET { "/artist/:artist_id[%d]/edit" }, render_edit_artist)
+    Fm.setRoute(Fm.POST { "/artist/:artist_id[%d]/edit" }, accept_edit_artist)
     Fm.setRoute(Fm.GET { "/image-group" }, render_image_groups)
     Fm.setRoute(Fm.POST { "/image-group" }, accept_image_groups)
     Fm.setRoute("/image-group/:ig_id[%d]", render_image_group)

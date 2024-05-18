@@ -1,0 +1,118 @@
+{% function block.content() %}
+<form class="vbox" method="POST">
+  <label
+    >Artist Name
+    <input
+      data-1p-ignore
+      type="text"
+      name="name"
+      autocapitalize="words"
+      required
+      value="{%& name %}"
+    />
+  </label>
+  <label class="inline">
+    <input type="checkbox" name="confirmed" value="true" {% if
+    manually_confirmed == "true" or manually_confirmed == 1 then %}checked {%
+    end %} /> This account is an artist (not just a commissioner)
+  </label>
+  <div id="deleted_handle_container">
+    {% if delete_handles then for i = 1, #delete_handles do %}
+    <input
+      type="hidden"
+      name="delete_handles[]"
+      value="{%& delete_handles[i] %}"
+    />
+    {% end end %}
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th class="txt">Username</th>
+        <th class="txt">Profile URL</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for i = 1, #handles do local handle = handles[i] %}
+      <tr>
+        <td class="txt">{%& handle.handle %}</td>
+        <td class="txt">{%& handle.profile_url %}</td>
+        <td>
+          <button
+            type="submit"
+            name="delete_handle"
+            value="{%& handle.handle_id %}"
+          >
+            Delete
+          </button>
+        </td>
+      </tr>
+      {% end %}{% if pending_usernames then for i = 1, #pending_usernames do %}
+      <tr>
+        <td class="txt">
+          <input
+            data-1p-ignore
+            type="text"
+            name="pending_usernames[]"
+            value="{%& pending_usernames[i] %}"
+            autocomplete="off"
+            required
+          />
+        </td>
+        <td class="txt">
+          <input
+            type="url"
+            name="pending_profile_urls[]"
+            value="{%& pending_profile_urls[i] %}"
+            required
+            size="75"
+          />
+        </td>
+        <td>
+          <button type="submit" name="delete_pending_handle" value="{%& i %}">
+            Delete
+          </button>
+        </td>
+      </tr>
+      {% end end %}
+      <tr id="handle_insert_mark">
+        <td class="txt">
+          <input
+            data-1p-ignore
+            type="text"
+            id="add_handle_username_field"
+            name="pending_usernames[]"
+            autocomplete="off"
+            placeholder="Add Username"
+          />
+        </td>
+        <td class="txt">
+          <input
+            type="url"
+            id="add_handle_profile_url_field"
+            name="pending_profile_urls[]"
+            size="75"
+            placeholder="https://example.art/~somebody"
+          />
+        </td>
+        <td></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td>
+          <button type="submit" name="add_handle" value="add_handle">
+            Add Another Handle…
+          </button>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+  <span class="buttons">
+    <input type="reset" />
+    <input type="submit" name="update" value="Update" />
+  </span>
+</form>
+{% end %}{% render("layouts/dialog", { title = "Edit Artist: " .. artist.name,
+dialog_width = "30em" }) %}

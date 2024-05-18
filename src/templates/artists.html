@@ -44,7 +44,9 @@
         <td class="txt">
           <a href="/artist/{%& item.artist_id %}">{%& item.name %}</a>
         </td>
-        <td class="num">{%& item.manually_confirmed %}</td>
+        <td class="num">
+          {% render("components/artist_verified", { artist = item }) %}
+        </td>
         <td class="num">{%& item.handle_count %}</td>
         <td class="num">{%& item.image_count %}</td>
       </tr>

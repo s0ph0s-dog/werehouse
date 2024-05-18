@@ -118,11 +118,12 @@ local user_setup = [[
     );
 
     CREATE TABLE IF NOT EXISTS "artist_handles" (
+        "handle_id" INTEGER NOT NULL,
         "artist_id" INTEGER NOT NULL,
         "handle" TEXT NOT NULL,
         "domain" TEXT NOT NULL,
         "profile_url" TEXT NOT NULL,
-        PRIMARY KEY("domain", "handle"),
+        PRIMARY KEY("handle_id"),
         FOREIGN KEY ("artist_id") REFERENCES "artists"("artist_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
@@ -361,7 +362,7 @@ local queries = {
         get_tag_by_id = [[SELECT tag_id, name, description
             FROM tags WHERE tag_id = ?;]],
         get_artist_id_by_name = [[SELECT artist_id FROM artists WHERE name = ?;]],
-        get_handles_for_artist = [[SELECT handle, domain, profile_url
+        get_handles_for_artist = [[SELECT handle_id, handle, domain, profile_url
             FROM artist_handles
             WHERE artist_id = ?;]],
         get_recent_images_for_artist = [[SELECT images.image_id, images.file
@@ -454,6 +455,8 @@ local queries = {
         delete_image_tags_by_id = [[DELETE FROM "image_tags"
             WHERE image_id = ? AND tag_id = ?;]],
         delete_source_by_id = [[DELETE FROM "sources" WHERE source_id = ? AND image_id = ?;]],
+        delete_handle_for_artist_by_id = [[DELETE FROM "artist_handles"
+            WHERE artist_id = ? AND handle_id = ?;]],
         update_queue_item_status = [[UPDATE "queue"
             SET "status" = ?, "tombstone" = ?
             WHERE qid = ?;]],
@@ -496,6 +499,9 @@ local queries = {
         update_tag_by_id = [[UPDATE tags
             SET name = ?, description = ?
             WHERE tag_id = ?;]],
+        update_artist_by_id = [[UPDATE "artists"
+            SET name = ?, manually_confirmed = ?
+            WHERE artist_id = ?;]],
     },
 }
 
@@ -904,6 +910,15 @@ function Model:createHandleForArtist(artist_id, handle, domain, profile_url)
     )
 end
 
+function Model:updateArtist(artist_id, name, manually_verified)
+    return self.conn:execute(
+        queries.model.update_artist_by_id,
+        name,
+        manually_verified,
+        artist_id
+    )
+end
+
 function Model:createArtist(name, manually_verified)
     local artist, errmsg =
         self.conn:fetchOne(queries.model.insert_artist, name, manually_verified)
@@ -1163,6 +1178,23 @@ function Model:deleteArtistsForImageById(image_id, artist_ids)
     return true
 end
 
+function Model:deleteHandlesForArtistById(artist_id, handle_ids)
+    local SP = "delete_artist_handles"
+    self:create_savepoint(SP)
+    for i = 1, #handle_ids do
+        local ok, err = self.conn:execute(
+            queries.model.delete_artist_handle_by_id,
+            artist_id,
+            handle_ids[i]
+        )
+        if not ok then
+            self:rollback(SP)
+            return nil, err
+        end
+    end
+    self:release_savepoint(SP)
+    return true
+end
 function Model:getImageGroupCount()
     local result, errmsg =
         self.conn:fetchOne(queries.model.get_image_group_count)

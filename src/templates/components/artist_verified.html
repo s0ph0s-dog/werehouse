@@ -1,0 +1,7 @@
+{% if artist.manually_confirmed == 1 then %}<span
+  title="This artist was manually added, or you’ve double checked that the automatic scraper did not get the commissioner by mistake."
+  >✅</span
+>{% else %}<span
+  title="This user was found by the automatic scraper and might not be an artist."
+  >🆕</span
+>{% end %}

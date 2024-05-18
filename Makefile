@@ -28,6 +28,7 @@ SRCS := src/.init.lua \
     src/manage.lua \
     src/templates/layouts/main.html \
     src/templates/layouts/dialog.html \
+    src/templates/components/artist_verified.html \
     src/templates/components/image_gallery.html \
     src/templates/components/pagination_controls.html \
     src/templates/components/group_box.html \
@@ -35,6 +36,7 @@ SRCS := src/.init.lua \
     src/templates/link_telegram.html \
     src/templates/login.html \
     src/templates/artist_add.html \
+    src/templates/artist_edit.html \
     src/templates/artist.html \
     src/templates/artists.html \
     src/templates/image.html \

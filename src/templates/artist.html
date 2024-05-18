@@ -1,15 +1,15 @@
 {% function block.content() %}
-<h1>{%& artist.name %}</h1>
-<ul>
-  <li>ID: {%& artist.artist_id %}</li>
-  <li>Manually confirmed: {%& artist.manually_confirmed %}</li>
-</ul>
-<h1>Handles</h1>
+<h1>
+  {%& artist.name %} {% render("components/artist_verified", { artist = artist
+  }) %}
+</h1>
+<p><a href="/artist/{%& artist.artist_id %}/edit">Edit…</a></p>
+<p>Found online as:</p>
 {% if #handles == 0 then %}
-<p>No handles recorded for this artist yet.</p>
+<p>(No handles added yet!)</p>
 {% else %}
 <ul>
-  {% for _, handle in ipairs(handles) do %}
+  {% for i = 1, #handles do local handle = handles[i] %}
   <li>
     <a href="{%& handle.profile_url %}"
       >{%& handle.handle %} on {%& handle.domain %}</a
