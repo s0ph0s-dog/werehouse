@@ -1095,6 +1095,109 @@ local render_tags = login_required(function(r, user_record)
     })
 end)
 
+local accept_tags = login_required(function(r)
+    local redirect_path = r.session.after_action or r.makePath(r.path, r.params)
+    r.session.after_action = nil
+    if r.params.delete == "Delete" then
+        local ok, errmsg = Model:deleteTags(r.params.tag_ids)
+        if not ok then
+            Log(kLogInfo, errmsg)
+            return Fm.serve500()
+        end
+    elseif r.params.merge == "Merge" then
+        local tag_ids = r.params.tag_ids
+        tag_ids = table.map(tag_ids, tonumber)
+        table.sort(tag_ids)
+        if #tag_ids < 2 then
+            r.session.error = "You must select at least two tags to merge!"
+            return Fm.serveRedirect(redirect_path, 302)
+        end
+        -- Yes, this is slower because it moves everything down, but it preserves
+        -- earlier tag IDs, which makes me happier.
+        local merge_into_id = table.remove(tag_ids, 1)
+        local ok, errmsg = Model:mergeTags(merge_into_id, tag_ids)
+        if not ok then
+            Log(kLogInfo, errmsg)
+            return Fm.serve500()
+        end
+    end
+    return Fm.serveRedirect(redirect_path, 302)
+end)
+
+local render_tag = login_required(function(r, user_record)
+    local tag_id = r.params.tag_id
+    if not tag_id then
+        return Fm.serve400()
+    end
+    local tag_record, tr_err = Model:getTagById(tag_id)
+    if not tag_record then
+        Log(kLogInfo, tr_err)
+        return Fm.serve404()
+    end
+    local images, images_err = Model:getRecentImagesForTag(tag_id, 20)
+    if not images then
+        Log(kLogInfo, images_err)
+        return Fm.serve500()
+    end
+    return Fm.serveContent("tag", {
+        user = user_record,
+        tag = tag_record,
+        images = images,
+    })
+end)
+
+local render_edit_tag = login_required(function(r, user_record)
+    if not r.params.tag_id then
+        return Fm.serve400()
+    end
+    local tag, tag_errmsg = Model:getTagById(r.params.tag_id)
+    if not tag then
+        Log(kLogInfo, tag_errmsg)
+        return Fm.serve404()
+    end
+    r.session.after_action = r.headers.Referer
+    return Fm.serveContent("tag_edit", {
+        user = user_record,
+        tag = tag,
+    })
+end)
+
+local accept_edit_tag = login_required(function(r)
+    local redirect_url = r.params.after_action or r.makePath(r.path, r.params)
+    r.params.after_action = nil
+    local tag_id = r.params.tag_id
+    local new_name = r.params.name
+    local new_desc = r.params.description
+    if not tag_id or not new_name or not new_desc then
+        return Fm.serve400()
+    end
+    local update_ok, update_err = Model:updateTag(tag_id, new_name, new_desc)
+    if not update_ok then
+        Log(kLogInfo, update_err)
+        return Fm.serve500()
+    end
+    return Fm.serveRedirect(redirect_url, 302)
+end)
+
+local render_add_tag = login_required(function(r)
+    return Fm.serveContent("tag_add")
+end)
+
+local accept_add_tag = login_required(function(r)
+    if not r.params.name then
+        return Fm.serveError(400, "Tag name is required")
+    end
+    if not r.params.description then
+        return Fm.serveError(400, "Tag description is required")
+    end
+    local tag_id, err = Model:createTag(r.params.name, r.params.description)
+    if not tag_id then
+        Log(kLogInfo, tostring(err))
+        return Fm.serve500(err)
+    end
+    return Fm.serveRedirect("/tag/" .. tag_id, 302)
+end)
+
 local render_account = login_required(function(r, user_record)
     local image_stats, stats_err = Model:getImageStats()
     if not image_stats then
@@ -1191,6 +1294,12 @@ local function setup()
     Fm.setRoute(Fm.GET { "/link-telegram/:request_id" }, render_telegram_link)
     Fm.setRoute(Fm.POST { "/link-telegram/:request_id" }, accept_telegram_link)
     Fm.setRoute(Fm.GET { "/tag" }, render_tags)
+    Fm.setRoute(Fm.POST { "/tag" }, accept_tags)
+    Fm.setRoute(Fm.GET { "/tag/add" }, render_add_tag)
+    Fm.setRoute(Fm.POST { "/tag/add" }, accept_add_tag)
+    Fm.setRoute(Fm.GET { "/tag/:tag_id[%d]" }, render_tag)
+    Fm.setRoute(Fm.GET { "/tag/:tag_id[%d]/edit" }, render_edit_tag)
+    Fm.setRoute(Fm.POST { "/tag/:tag_id[%d]/edit" }, accept_edit_tag)
     Fm.setRoute("/account", render_account)
     -- API routes
     Fm.setRoute(Fm.GET { "/api/queue-image/:id" }, render_queue_image)

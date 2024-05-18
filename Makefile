@@ -49,6 +49,9 @@ SRCS := src/.init.lua \
     src/templates/about.html \
     src/templates/account.html \
     src/templates/tags.html \
+    src/templates/tag.html \
+    src/templates/tag_edit.html \
+    src/templates/tag_add.html \
     src/templates/tos.html \
 	src/style.css \
 	src/templates/home.html

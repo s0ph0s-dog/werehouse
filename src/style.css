@@ -259,7 +259,7 @@ table {
   border-top: 2px solid CanvasText;
   border-bottom: 2px solid CanvasText;
   border-collapse: collapse;
-  width: 100%;
+  max-width: 100%;
 }
 thead {
   border-bottom: 1px solid CanvasText;

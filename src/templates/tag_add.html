@@ -1,0 +1,22 @@
+{% function block.content() %}
+<form class="vbox" method="POST">
+  <label
+    >Tag Name
+    <input
+      data-1p-ignore
+      type="text"
+      name="name"
+      autocapitalize="words"
+      required
+    />
+  </label>
+  <label>
+    Tag Description:
+    <textarea name="description" rows="5" cols="35"></textarea>
+  </label>
+  <span class="buttons">
+    <input type="reset" value="Clear" />
+    <input type="submit" name="add" value="Add" />
+  </span>
+</form>
+{% end %}{% render("layouts/dialog", { title = "Add Tag" }) %}

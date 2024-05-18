@@ -358,6 +358,8 @@ local queries = {
         get_artist_by_id = [[SELECT artist_id, name, manually_confirmed
             FROM artists
             WHERE artist_id = ?;]],
+        get_tag_by_id = [[SELECT tag_id, name, description
+            FROM tags WHERE tag_id = ?;]],
         get_artist_id_by_name = [[SELECT artist_id FROM artists WHERE name = ?;]],
         get_handles_for_artist = [[SELECT handle, domain, profile_url
             FROM artist_handles
@@ -366,6 +368,12 @@ local queries = {
             FROM images
             JOIN image_artists ON images.image_id = image_artists.image_id
             WHERE image_artists.artist_id = ?
+            ORDER BY images.saved_at DESC
+            LIMIT ?;]],
+        get_recent_images_for_tag = [[SELECT images.image_id, images.file
+            FROM images
+            JOIN image_tags ON images.image_id = image_tags.image_id
+            WHERE image_tags.tag_id = ?
             ORDER BY images.saved_at DESC
             LIMIT ?;]],
         get_all_images_for_size_check = [[SELECT image_id, file, file_size FROM images;]],
@@ -439,6 +447,7 @@ local queries = {
             VALUES (?, ?, ?);]],
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
         delete_artist_by_id = [[DELETE FROM "artists" WHERE artist_id = ?;]],
+        delete_tag_by_id = [[DELETE FROM "tags" WHERE tag_id = ?;]],
         delete_image_group_by_id = [[DELETE FROM "image_group" WHERE ig_id = ?;]],
         delete_image_artist_by_id = [[DELETE FROM image_artists
             WHERE image_id = ? AND artist_id = ?;]],
@@ -460,9 +469,12 @@ local queries = {
         update_handles_to_other_artist = [[UPDATE "artist_handles"
             SET "artist_id" = ?
             WHERE "artist_id" = ?]],
-        update_image_artists_to_other_artist = [[UPDATE "image_artists"
+        update_image_artists_to_other_artist = [[UPDATE OR IGNORE "image_artists"
             SET "artist_id" = ?
             WHERE "artist_id" = ?;]],
+        update_image_tags_to_other_tag = [[UPDATE OR IGNORE "image_tags"
+            SET "tag_id" = ?
+            WHERE "image_id" = ?;]],
         update_images_to_other_group_preserving_order = [[UPDATE images_in_group
             SET
                 ig_id = ?,
@@ -481,6 +493,9 @@ local queries = {
             WHERE image_id = ?;]],
         update_image_size_by_id = [[UPDATE images SET file_size = ?
             WHERE image_id = ?;]],
+        update_tag_by_id = [[UPDATE tags
+            SET name = ?, description = ?
+            WHERE tag_id = ?;]],
     },
 }
 
@@ -618,7 +633,12 @@ function Model:deleteTagsForImageById(image_id, tag_ids)
 end
 
 function Model:createTag(tag_name, description)
-    return self.conn:fetchOne(queries.model.insert_tag, tag_name, description)
+    local tag, errmsg =
+        self.conn:fetchOne(queries.model.insert_tag, tag_name, description)
+    if not tag or tag == self.conn.NONE then
+        return nil, errmsg
+    end
+    return tag.tag_id
 end
 
 function Model:getAllTags()
@@ -846,6 +866,14 @@ function Model:getArtistById(artist_id)
     return fetchOneExactly(self.conn, queries.model.get_artist_by_id, artist_id)
 end
 
+function Model:getTagById(tag_id)
+    return fetchOneExactly(self.conn, queries.model.get_tag_by_id, tag_id)
+end
+
+function Model:updateTag(tag_id, name, desc)
+    return self.conn:execute(queries.model.update_tag_by_id, name, desc, tag_id)
+end
+
 function Model:getHandlesForArtist(artist_id)
     return self.conn:fetchAll(queries.model.get_handles_for_artist, artist_id)
 end
@@ -854,6 +882,14 @@ function Model:getRecentImagesForArtist(artist_id, limit)
     return self.conn:fetchAll(
         queries.model.get_recent_images_for_artist,
         artist_id,
+        limit
+    )
+end
+
+function Model:getRecentImagesForTag(tag_id, limit)
+    return self.conn:fetchAll(
+        queries.model.get_recent_images_for_tag,
+        tag_id,
         limit
     )
 end
@@ -1010,14 +1046,12 @@ function Model:addTagsForImageByName(image_id, tag_names)
         end
         local tag_id = tag.tag_id
         if tag == self.conn.NONE then
-            tag, errmsg = self:createTag(tag_name, "")
-            if not tag then
+            tag_id, errmsg = self:createTag(tag_name, "")
+            if not tag_id then
                 self:rollback(SP)
-                Log(kLogDebug, errmsg)
+                Log(kLogDebug, tostring(errmsg))
                 return nil, errmsg
             end
-            print(EncodeJson(tag))
-            tag_id = tag.tag_id
         end
         print("ids: ", image_id, tag_id)
         local link_ok, link_err = self:associateTagWithImage(image_id, tag_id)
@@ -1031,15 +1065,22 @@ function Model:addTagsForImageByName(image_id, tag_names)
     return true
 end
 
-function Model:deleteArtists(artist_ids)
-    for i = 1, #artist_ids do
-        local ok, errmsg =
-            self.conn:execute(queries.model.delete_artist_by_id, artist_ids[i])
+function Model:_delete_by_id(query, ids)
+    for i = 1, #ids do
+        local ok, errmsg = self.conn:execute(query, ids[i])
         if not ok then
             return nil, errmsg
         end
     end
     return true
+end
+
+function Model:deleteArtists(artist_ids)
+    return self:_delete_by_id(queries.model.delete_artist_by_id, artist_ids)
+end
+
+function Model:deleteTags(tag_ids)
+    return self:_delete_by_id(queries.model.delete_tag_by_id, tag_ids)
 end
 
 function Model:mergeArtists(merge_into_id, merge_from_ids)
@@ -1071,7 +1112,33 @@ function Model:mergeArtists(merge_into_id, merge_from_ids)
     local delete_ok, delete_err = self:deleteArtists(merge_from_ids)
     if not delete_ok then
         self:rollback(SP_MERGE)
-        Log(kLogInfo, delete_err)
+        Log(kLogInfo, tostring(delete_err))
+        return nil, delete_err
+    end
+    self:release_savepoint(SP_MERGE)
+    return delete_ok
+end
+
+function Model:mergeTags(merge_into_id, merge_from_ids)
+    local SP_MERGE = "merge_tags"
+    self:create_savepoint(SP_MERGE)
+    for i = 1, #merge_from_ids do
+        local merge_from_id = merge_from_ids[i]
+        local image_ok, image_err = self.conn:execute(
+            queries.model.update_image_tags_to_other_tag,
+            merge_into_id,
+            merge_from_id
+        )
+        if not image_ok then
+            self:rollback(SP_MERGE)
+            Log(kLogInfo, image_err)
+            return nil, image_err
+        end
+    end
+    local delete_ok, delete_err = self:deleteTags(merge_from_ids)
+    if not delete_ok then
+        self:rollback(SP_MERGE)
+        Log(kLogInfo, tostring(delete_err))
         return nil, delete_err
     end
     self:release_savepoint(SP_MERGE)
