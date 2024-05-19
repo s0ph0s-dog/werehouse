@@ -72,6 +72,19 @@ local function process_post(json, clean_uri, pool_uri)
     artist_tags = table.filter(artist_tags, function(x)
         return x ~= "third-party_edit" and x ~= "conditional_dnp"
     end)
+    local incoming_tags = table.filter(
+        table.flatten {
+            json.post.tags.general,
+            json.post.tags.copyright,
+            json.post.tags.character,
+            json.post.tags.species,
+            json.post.tags.meta,
+            json.post.tags.lore,
+        },
+        function(x)
+            return type(x) == "string"
+        end
+    )
     ---@cast artist_tags string[]
     local authors = table.map(artist_tags, function(item)
         return {
@@ -98,6 +111,7 @@ local function process_post(json, clean_uri, pool_uri)
             canonical_domain = CANONICAL_DOMAIN,
             authors = authors,
             rating = RATING_MAP[json.post.rating],
+            incoming_tags = incoming_tags,
         },
     }
 end

@@ -450,6 +450,9 @@ local queries = {
         get_image_stats = [[SELECT kind, COUNT(kind) AS record_count FROM images
             GROUP BY kind
             ORDER BY kind;]],
+        get_tag_id_by_incoming_name_domain = [[SELECT tag_id
+            FROM tag_rules
+            WHERE incoming_domain = ? AND incoming_name = ?;]],
         get_disk_space_usage = [[SELECT SUM(file_size) AS size_sum FROM images;]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
@@ -1423,6 +1426,37 @@ function Model:createTagRule(incoming_name, incoming_domain, tag_name)
     end
     self:release_savepoint(SP)
     return insert_ok.tag_rule_id
+end
+
+function Model:addIncomingTagsForImage(
+    image_id,
+    incoming_domain,
+    incoming_tag_names
+)
+    local SP = "add_incoming_tags"
+    self:create_savepoint(SP)
+    for i = 1, #incoming_tag_names do
+        local name = incoming_tag_names[i]
+        local tag_rule, tag_rule_err = self.conn:fetchOne(
+            queries.model.get_tag_id_by_incoming_name_domain,
+            incoming_domain,
+            name
+        )
+        if not tag_rule then
+            self:rollback(SP)
+            return nil, tag_rule_err
+        end
+        if tag_rule ~= self.conn.NONE then
+            local tag_ok, tag_err =
+                self:associateTagWithImage(image_id, tag_rule.tag_id)
+            if not tag_ok then
+                self:rollback(SP)
+                return nil, tag_err
+            end
+        end
+    end
+    self:release_savepoint(SP)
+    return true
 end
 
 function Model:create_savepoint(name)

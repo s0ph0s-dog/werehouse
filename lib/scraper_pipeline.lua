@@ -454,6 +454,18 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
                 return nil, TempScraperError(errmsg3)
             end
         end
+        if data.incoming_tags then
+            local add_tags_ok, add_tags_err = model:addIncomingTagsForImage(
+                image.image_id,
+                data.canonical_domain,
+                data.incoming_tags
+            )
+            if not add_tags_ok then
+                Log(kLogInfo, "Error adding tags: " .. tostring(add_tags_err))
+                model:rollback(SP_QUEUE)
+                return nil, TempScraperError(add_tags_err)
+            end
+        end
         if group then
             local result5, errmsg5 =
                 model:addImageToGroupAtEnd(image.image_id, group.ig_id)

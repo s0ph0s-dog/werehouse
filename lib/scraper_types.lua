@@ -1,7 +1,7 @@
 ---@alias ScrapedAuthor { handle: string, display_name: string, profile_url: string }
 
 --- The data produced by a scraper.
----@alias ScrapedSourceData { raw_image_uri: string, mime_type: string, width: integer, height: integer, this_source: string, additional_sources: string[]?, canonical_domain: string, authors: ScrapedAuthor[], rating: integer }
+---@alias ScrapedSourceData { raw_image_uri: string, mime_type: string, width: integer, height: integer, this_source: string, additional_sources: string[]?, canonical_domain: string, authors: ScrapedAuthor[], rating: integer, incoming_tags: string[]? }
 
 --- ScraperProcess function: given a URI, scrape whatever info is needed for archiving
 --- from that website.

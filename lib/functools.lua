@@ -147,6 +147,7 @@ function table.flatten(sequence, result)
         local item = sequence[i]
         if type(item) == "table" and #item > 0 then
             myResult = table.flatten(item, result)
+        elseif type(item) == "table" and not next(item) then
         else
             result[#result + 1] = item
         end

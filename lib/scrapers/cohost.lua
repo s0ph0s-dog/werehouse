@@ -56,6 +56,7 @@ local function process_attachment_blocks(post)
             width = block.attachment.width,
             canonical_domain = CANONICAL_DOMAIN,
             rating = rating,
+            incoming_tags = post.tags,
         }
     end)
 end
