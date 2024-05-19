@@ -597,8 +597,14 @@ function Model:_get_paginated(query, page_num, per_page)
     return self.conn:fetchAll(query, per_page, (page_num - 1) * per_page)
 end
 
+local function rand_hex(n)
+    assert(n <= 256)
+    assert(n > 0)
+    return string.format("%x" * n, string.unpack("B" * n, GetRandomBytes(n)))
+end
+
 function Model:_delete_by_id(query, ids)
-    local SP = "delete_by_id_" .. EncodeHex(GetRandomBytes(8))
+    local SP = "delete_by_id_" .. rand_hex(8)
     self:create_savepoint(SP)
     for i = 1, #ids do
         local ok, errmsg = self.conn:execute(query, ids[i])
@@ -612,7 +618,7 @@ function Model:_delete_by_id(query, ids)
 end
 
 function Model:_delete_by_two_ids(query, container_id, item_ids)
-    local SP = "delete_by_two_ids_" .. EncodeHex(GetRandomBytes(8))
+    local SP = "delete_by_two_ids_" .. rand_hex(8)
     self:create_savepoint(SP)
     for i = 1, #item_ids do
         local ok, err = self.conn:execute(query, container_id, item_ids[i])
