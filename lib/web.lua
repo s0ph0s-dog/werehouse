@@ -171,6 +171,19 @@ local function accept_login(r)
     return Fm.serveRedirect(redirect_url, 302)
 end
 
+local function set_after_dialog_action(r)
+    local path = r.makePath(r.path, r.params)
+    -- Explicitly list every query parameter we might care about, because metatable __index indirection prevents this from getting all of them.
+    local url = r.makeUrl(
+        path,
+        { params = {
+            page = r.params.page,
+        } }
+    )
+    Log(kLogDebug, "Updating after-dialog redirect to: " .. url)
+    r.session.after_dialog_action = url
+end
+
 local render_home = login_required(function(r, user_record)
     local queue_records, errmsg2 = Model:getRecentQueueEntries()
     if not queue_records then
@@ -182,6 +195,7 @@ local render_home = login_required(function(r, user_record)
         Log(kLogDebug, errmsg3)
         return Fm.serve500()
     end
+    set_after_dialog_action(r)
     return Fm.serveContent("home", {
         user = user_record,
         queue_records = queue_records,
@@ -378,7 +392,10 @@ local function render_image_internal(r, user_record)
     })
 end
 
-local render_image = login_required(render_image_internal)
+local render_image = login_required(function(r, user_record)
+    set_after_dialog_action(r)
+    return render_image_internal(r, user_record)
+end)
 
 local function delete_from_primary_and_return(
     r,
@@ -612,6 +629,7 @@ local render_queue = login_required(function(r, user_record)
         pagination_data(cur_page, queue_count, per_page, #queue_records)
     local error = r.session.error
     r.session.error = nil
+    set_after_dialog_action(r)
     return Fm.serveContent("queue", {
         user = user_record,
         error = error,
@@ -643,16 +661,18 @@ local accept_queue = login_required(function(r)
     else
         return Fm.serve400()
     end
-    return Fm.serveRedirect("/queue", 302)
+    return Fm.serveRedirect(r.session.after_dialog_action, 302)
 end)
 
 local function render_about(r, user_record)
+    set_after_dialog_action(r)
     return Fm.serveContent("about", {
         user = user_record,
     })
 end
 
 local function render_tos(r, user_record)
+    set_after_dialog_action(r)
     return Fm.serveContent("tos", {
         user = user_record,
     })
@@ -676,7 +696,6 @@ local render_queue_help = login_required(function(r, user_record)
         )
         return Fm.serve500()
     end
-    r.session.after_help_submit = r.headers["Referer"]
     return Fm.serveContent("queue_help", {
         user = user_record,
         queue_entry = queue_entry,
@@ -707,7 +726,7 @@ local accept_queue_help = login_required(function(r)
         Log(kLogInfo, "Database error: %s" % { err })
         return Fm.serve500()
     end
-    local last_page = r.session.after_help_submit
+    local last_page = r.session.after_dialog_action
     if not last_page then
         last_page = "/home"
     end
@@ -735,6 +754,7 @@ local render_images = login_required(function(r, user_record)
         pagination_data(cur_page, image_count, per_page, #image_records)
     local error = r.session.error
     r.session.error = nil
+    set_after_dialog_action(r)
     return Fm.serveContent("images", {
         user = user_record,
         error = error,
@@ -764,7 +784,7 @@ local render_artists = login_required(function(r, user_record)
         pagination_data(cur_page, artist_count, per_page, #artist_records)
     local error = r.session.error
     r.session.error = nil
-    r.session.after_action = r.makePath(r.path, r.params)
+    set_after_dialog_action(r)
     return Fm.serveContent("artists", {
         user = user_record,
         error = error,
@@ -774,14 +794,14 @@ local render_artists = login_required(function(r, user_record)
 end)
 
 local accept_artists = login_required(function(r)
-    local redirect_path = r.session.after_action or r.makePath(r.path, r.params)
-    r.session.after_action = nil
+    local redirect_path = r.session.after_dialog_action
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteArtists(r.params.artist_ids)
         if not ok then
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
+        return Fm.serveRedirect(r.headers.Referer, 302)
     elseif r.params.merge == "Merge" then
         local artist_ids = r.params.artist_ids
         artist_ids = table.map(artist_ids, tonumber)
@@ -798,6 +818,7 @@ local accept_artists = login_required(function(r)
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
+        return Fm.serveRedirect(redirect_path, 302)
     end
     return Fm.serveRedirect(redirect_path, 302)
 end)
@@ -822,6 +843,7 @@ local render_artist = login_required(function(r, user_record)
         Log(kLogInfo, errmsg2)
         return Fm.serve500()
     end
+    set_after_dialog_action(r)
     return Fm.serveContent("artist", {
         user = user_record,
         artist = artist,
@@ -1003,7 +1025,7 @@ local accept_add_artist = login_required(function(r)
         handles[#handles + 1] = {
             profile_url = profile_url,
             domain = parts.host,
-            username = usernames[i],
+            handle = usernames[i],
         }
     end
     local artist_id, err =
@@ -1035,7 +1057,7 @@ local render_image_groups = login_required(function(r, user_record)
     local pages = pagination_data(cur_page, ig_count, per_page, #ig_records)
     local error = r.session.error
     r.session.error = nil
-    r.session.after_action = r.makePath(r.path, r.params)
+    set_after_dialog_action(r)
     return Fm.serveContent("image_groups", {
         user = user_record,
         error = error,
@@ -1045,15 +1067,14 @@ local render_image_groups = login_required(function(r, user_record)
 end)
 
 local accept_image_groups = login_required(function(r)
-    local redirect_path = r.session.after_action or r.makePath(r.path, r.params)
-    r.session.after_action = nil
-    print("will redirect to " .. redirect_path)
+    local redirect_path = r.session.after_dialog_action
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteImageGroups(r.params.ig_ids)
         if not ok then
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
+        return Fm.serveRedirect(r.headers.Referer, 302)
     elseif r.params.merge == "Merge" then
         local ig_ids = r.params.ig_ids
         ig_ids = table.map(ig_ids, tonumber)
@@ -1069,6 +1090,7 @@ local accept_image_groups = login_required(function(r)
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
+        return Fm.serveRedirect(redirect_path, 302)
     end
     return Fm.serveRedirect(redirect_path, 302)
 end)
@@ -1086,6 +1108,7 @@ local render_image_group = login_required(function(r, user_record)
     if not images then
         Log(kLogInfo, image_errmsg)
     end
+    set_after_dialog_action(r)
     return Fm.serveContent("image_group", {
         user = user_record,
         ig = ig,
@@ -1106,7 +1129,6 @@ local render_edit_image_group = login_required(function(r, user_record)
     if not images then
         Log(kLogInfo, image_errmsg)
     end
-    r.session.after_action = r.headers.Referer
     return Fm.serveContent("image_group_edit", {
         user = user_record,
         ig = ig,
@@ -1115,8 +1137,7 @@ local render_edit_image_group = login_required(function(r, user_record)
 end)
 
 local accept_edit_image_group = login_required(function(r)
-    local redirect_url = r.params.after_action or r.makePath(r.path, r.params)
-    r.params.after_action = nil
+    local redirect_url = r.session.after_dialog_action
     local ig_id = r.params.ig_id
     local image_ids = r.params.image_ids
     local new_orders = r.params.new_orders
@@ -1148,6 +1169,7 @@ local accept_edit_image_group = login_required(function(r)
         end
     end
     Model:release_savepoint(SP)
+    Log(kLogDebug, "Redirecting to " .. redirect_url)
     return Fm.serveRedirect(redirect_url, 302)
 end)
 
@@ -1232,7 +1254,7 @@ local render_tags = login_required(function(r, user_record)
     local pages = pagination_data(cur_page, tag_count, per_page, #tag_records)
     local error = r.session.error
     r.session.error = nil
-    r.session.after_action = r.makePath(r.path, r.params)
+    set_after_dialog_action(r)
     return Fm.serveContent("tags", {
         user = user_record,
         error = error,
@@ -1242,14 +1264,14 @@ local render_tags = login_required(function(r, user_record)
 end)
 
 local accept_tags = login_required(function(r)
-    local redirect_path = r.session.after_action or r.makePath(r.path, r.params)
-    r.session.after_action = nil
+    local redirect_path = r.session.after_dialog_action
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteTags(r.params.tag_ids)
         if not ok then
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
+        return Fm.serveRedirect(r.headers.Referer, 302)
     elseif r.params.merge == "Merge" then
         local tag_ids = r.params.tag_ids
         tag_ids = table.map(tag_ids, tonumber)
@@ -1266,6 +1288,7 @@ local accept_tags = login_required(function(r)
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
+        return Fm.serveRedirect(redirect_path, 302)
     end
     return Fm.serveRedirect(redirect_path, 302)
 end)
@@ -1285,6 +1308,7 @@ local render_tag = login_required(function(r, user_record)
         Log(kLogInfo, images_err)
         return Fm.serve500()
     end
+    set_after_dialog_action(r)
     return Fm.serveContent("tag", {
         user = user_record,
         tag = tag_record,
@@ -1301,7 +1325,6 @@ local render_edit_tag = login_required(function(r, user_record)
         Log(kLogInfo, tag_errmsg)
         return Fm.serve404()
     end
-    r.session.after_action = r.headers.Referer
     return Fm.serveContent("tag_edit", {
         user = user_record,
         tag = tag,
@@ -1309,8 +1332,7 @@ local render_edit_tag = login_required(function(r, user_record)
 end)
 
 local accept_edit_tag = login_required(function(r)
-    local redirect_url = r.params.after_action or r.makePath(r.path, r.params)
-    r.params.after_action = nil
+    local redirect_url = r.session.after_dialog_action
     local tag_id = r.params.tag_id
     local new_name = r.params.name
     local new_desc = r.params.description
@@ -1383,6 +1405,7 @@ local render_account = login_required(function(r, user_record)
         Log(kLogDebug, invites_err)
         return Fm.serve500()
     end
+    set_after_dialog_action(r)
     return Fm.serveContent("account", {
         user = user_record,
         image_stats = image_stats,
@@ -1416,7 +1439,7 @@ local render_tag_rules = login_required(function(r, user_record)
         pagination_data(cur_page, tag_rule_count, per_page, #tag_rule_records)
     local error = r.session.error
     r.session.error = nil
-    r.session.after_action = r.makePath(r.path, r.params)
+    set_after_dialog_action(r)
     return Fm.serveContent("tag_rules", {
         user = user_record,
         error = error,
@@ -1426,14 +1449,14 @@ local render_tag_rules = login_required(function(r, user_record)
 end)
 
 local accept_tag_rules = login_required(function(r)
-    local redirect_path = r.session.after_action or r.makePath(r.path, r.params)
-    r.session.after_action = nil
+    local redirect_path = r.session.after_dialog_action
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteTagRules(r.params.tag_rule_ids)
         if not ok then
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
+        return Fm.serveRedirect(r.headers.Referer, 302)
     end
     return Fm.serveRedirect(redirect_path, 302)
 end)
@@ -1448,6 +1471,7 @@ local render_tag_rule = login_required(function(r, user_record)
         Log(kLogInfo, trr_err)
         return Fm.serve404()
     end
+    set_after_dialog_action(r)
     return Fm.serveContent("tag_rule", {
         user = user_record,
         tag_rule = tag_rule_record,
@@ -1467,7 +1491,6 @@ local render_edit_tag_rule = login_required(function(r, user_record)
     if not alltags then
         Log(kLogInfo, alltags_err)
     end
-    r.session.after_action = r.headers.Referer
     return Fm.serveContent("tag_rule_edit", {
         user = user_record,
         tag_rule = tag_rule,
