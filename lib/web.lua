@@ -1500,8 +1500,7 @@ local render_edit_tag_rule = login_required(function(r, user_record)
 end)
 
 local accept_edit_tag_rule = login_required(function(r)
-    local redirect_url = r.params.after_action or r.makePath(r.path, r.params)
-    r.params.after_action = nil
+    local redirect_url = r.session.after_dialog_action
     local tag_rule_id = r.params.tag_rule_id
     local new_incoming_name = r.params.incoming_name
     local new_incoming_domain = r.params.incoming_domain

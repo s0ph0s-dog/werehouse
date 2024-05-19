@@ -467,7 +467,7 @@ local queries = {
         insert_tag = [[INSERT INTO "tags" ("name", "description")
             VALUES (?, ?)
             RETURNING tag_id;]],
-        insert_image_tag = [[INSERT INTO "image_tags" ("image_id", "tag_id")
+        insert_image_tag = [[INSERT OR IGNORE INTO "image_tags" ("image_id", "tag_id")
             VALUES (?, ?);]],
         insert_source_for_image = [[INSERT INTO "sources" ("image_id", "link")
             VALUES (?, ?);]],
@@ -1390,16 +1390,17 @@ function Model:updateTagRule(
     local SP = "update_tag_rule"
     self:create_savepoint(SP)
     self.conn:execute(queries.model.insert_or_ignore_tag_by_name, tag_name)
-    local tag_id, tag_err = self:findTagIdByName(tag_name)
-    if not tag_id then
+    local tag, tag_err = self:findTagIdByName(tag_name)
+    if not tag then
         self:rollback(SP)
         return nil, tag_err
     end
+    -- Should never be none, because we inserted right before.
     local update_ok, update_err = self.conn:execute(
         queries.model.update_tag_rule_by_id,
         incoming_name,
         incoming_domain,
-        tag_id,
+        tag.tag_id,
         tag_rule_id
     )
     if not update_ok then
