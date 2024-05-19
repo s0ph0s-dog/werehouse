@@ -18,6 +18,12 @@ local scrapers = {
     require_only("scrapers.test"),
 }
 
+local CANONICAL_DOMAINS_WITH_TAGS = {
+    "www.furaffinity.net",
+    "e621.net",
+    "cohost.org",
+}
+
 local function multipart_body(boundary, image_data, content_type)
     local result = '--%s\r\nContent-Disposition: form-data; name="image"; filename="C:\\fakepath\\purple%s"\r\nContent-Type: %s\r\n\r\n%s\r\n--%s--\r\n\r\n'
         % {
@@ -702,4 +708,5 @@ return {
     process_entry = process_entry,
     scrape_sources = scrape_sources,
     multipart_body = multipart_body,
+    CANONICAL_DOMAINS_WITH_TAGS = CANONICAL_DOMAINS_WITH_TAGS,
 }

@@ -1,0 +1,56 @@
+{% function block.content() %}
+<h1>Tag Rules</h1>
+<p><a href="/tag-rule/add">Add Tag Rule…</a></p>
+{% if pages.current > 1 and #tag_rule_records == 0 then %}
+<p>You've fallen off the end of the page counter!</p>
+{% elseif #tag_rule_records == 0 then %}
+<p>No tags yet.</p>
+{% else %}
+<form method="POST">
+  {% if error and type(error) == "string" then %}
+  <p style="color: red">{%& error %}</p>
+  {% end %}
+  <span class="buttons"
+    ><input type="reset" value="Deselect All" /><button
+      type="button"
+      onclick="document.getElementsByName('tag_rule_ids[]').forEach((e) => { e.checked=true; })"
+    >
+      Select All</button
+    ><input type="submit" name="delete" value="Delete"
+  /></span>
+  <div class="overflow-container">
+    <table>
+      <thead>
+        <tr>
+          <th class="num"></th>
+          <th class="txt">When a tag named…</th>
+          <th class="txt">…comes in from…</th>
+          <th class="txt">…then use…</th>
+          <th></th>
+        </tr>
+      </thead>
+      {% for i = 1, #tag_rule_records do local item = tag_rule_records[i] %}
+      <tr>
+        <td class="num">
+          <input
+            type="checkbox"
+            name="tag_rule_ids[]"
+            value="{%& item.tag_rule_id %}"
+          />
+        </td>
+        <td class="txt">{%& item.incoming_name %}</td>
+        <td class="txt">{%& item.incoming_domain %}</td>
+        <td class="txt">{%& item.tag_name %}</td>
+        <td class="txt">
+          <a href="/tag-rule/{%& item.tag_rule_id %}">View</a> or
+          <a href="/tag-rule/{%& item.tag_rule_id %}/edit">Edit…</a>
+        </td>
+      </tr>
+      {% end %}
+    </table>
+  </div>
+  {% render("components/pagination_controls", { pages = pages, kind_plural =
+  "rules" }) %}
+</form>
+{% end %}{% end %}{% render("layouts/main", { title = "Tag Rules", user = user
+}) %}

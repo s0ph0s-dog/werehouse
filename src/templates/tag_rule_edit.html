@@ -1,0 +1,49 @@
+{% function block.content() %}
+<p>
+  When the scraper sees a tag named <b>{%& tag_rule.incoming_name %}</b> coming
+  from <b>{%& tag_rule.incoming_domain %}</b>, it will add
+  <b>{%& tag_rule.tag_name %}</b> to the record in your archive.
+</p>
+<form class="vbox" method="POST">
+  <label
+    >Incoming Tag Name
+    <input
+      data-1p-ignore
+      type="text"
+      name="incoming_name"
+      value="{%& tag_rule.incoming_name %}"
+      autocapitalize="words"
+      required
+    />
+  </label>
+  <label
+    >Incoming Tag Domain
+    <select name="incoming_domain">
+      {% for i = 1, #alldomains do local domain = alldomains[i] %}
+      <option value="{%& domain %}"{% if tag_rule.incoming_domain == domain then %} selected{% end %}>{%& domain %}</option>
+      {% end %}
+    </select>
+  </label>
+  <datalist id="all-tags">
+    {% for i = 1, #alltags do %}
+    <option>{%& alltags[i].name %}</option>
+    {% end %}
+  </datalist>
+  <label
+    >Tag Name
+    <input
+      data-1p-ignore
+      list="all-tags"
+      type="text"
+      name="tag_name"
+      value="{%& tag_rule.tag_name %}"
+      autocapitalize="words"
+      required
+    />
+  </label>
+  <span class="buttons">
+    <input type="reset" value="Clear" />
+    <input type="submit" name="Update" value="Update" />
+  </span>
+</form>
+{% end %}{% render("layouts/dialog", { title = "Edit Tag Rule: %s on %s" % {tag_rule.incoming_name, tag_rule.incoming_domain} }) %}

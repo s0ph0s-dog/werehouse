@@ -1,0 +1,47 @@
+{% function block.content() %}
+<p>
+  When the scraper sees a tag named <b>Incoming Tag Name</b> coming from
+  <b>Incoming Tag Domain</b>, it will add <b>Tag Name</b> to the record in your
+  archive.
+</p>
+<form class="vbox" method="POST">
+  <label
+    >Incoming Tag Name
+    <input
+      data-1p-ignore
+      type="text"
+      name="incoming_name"
+      autocapitalize="words"
+      required
+    />
+  </label>
+  <label
+    >Incoming Tag Domain
+    <select name="incoming_domain">
+      <option>e621.net</option>
+      <option>www.furaffinity.net</option>
+      <option>cohost.org</option>
+    </select>
+  </label>
+  <datalist id="all-tags">
+    {% for i = 1, #alltags do %}
+    <option>{%& alltags[i].name %}</option>
+    {% end %}
+  </datalist>
+  <label
+    >Tag Name
+    <input
+      data-1p-ignore
+      list="all-tags"
+      type="text"
+      name="tag_name"
+      autocapitalize="words"
+      required
+    />
+  </label>
+  <span class="buttons">
+    <input type="reset" value="Clear" />
+    <input type="submit" name="add" value="Add" />
+  </span>
+</form>
+{% end %}{% render("layouts/dialog", { title = "Add Tag Rule" }) %}

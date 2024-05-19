@@ -101,6 +101,16 @@ local user_setup = [[
         FROM image_tags
         GROUP BY image_tags.tag_id;
 
+    CREATE TABLE IF NOT EXISTS "tag_rules" (
+        "tag_rule_id" INTEGER NOT NULL UNIQUE,
+        "incoming_name" TEXT NOT NULL,
+        "incoming_domain" TEXT NOT NULL,
+        "tag_id" INTEGER NOT NULL,
+        PRIMARY KEY("tag_rule_id"),
+        FOREIGN KEY("tag_id") REFERENCES "tags"("tag_id")
+        ON UPDATE CASCADE ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS "sources" (
         "source_id" INTEGER NOT NULL UNIQUE,
         "image_id" INTEGER NOT NULL,
@@ -234,17 +244,17 @@ local queries = {
             WHERE "username" = ?;]],
         insert_session = [[INSERT INTO "sessions" ("session_id", "user_id", "created", "last_seen", "user_agent", "ip", "csrf_token")
             VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), ?, ?, ?, ?);]],
-        get_session = [[SELECT "created", "user_id" from "sessions"
-            WHERE "session_id" = ?;]],
+        get_session_by_id_and_ip = [[SELECT "created", "user_id" from "sessions"
+            WHERE "session_id" = ? AND "ip" = ?;]],
         get_all_sessions_for_user = [[SELECT session_id, created, last_seen, user_agent, ip
             FROM sessions WHERE user_id = ?;]],
         get_all_invite_links_created_by_user = [[SELECT
                 invite_id, (invitee IS NOT NULL) AS used
             FROM invites WHERE inviter = ?;]],
         get_sessions_older_than_stamp = [[SELECT session_id FROM sessions WHERE last_seen < ?;]],
-        get_user_by_session_and_ip = [[SELECT u.user_id, u.username, u.invites_available FROM "users" AS u
+        get_user_by_session = [[SELECT u.user_id, u.username, u.invites_available FROM "users" AS u
             INNER JOIN "sessions" on u.user_id = sessions.user_id
-            WHERE sessions.session_id = ? AND sessions.ip = ?;]],
+            WHERE sessions.session_id = ?;]],
         get_user_by_tg_id = [[SELECT users.user_id, users.username
             FROM users
             JOIN telegram_accounts ON users.user_id = telegram_accounts.user_id
@@ -389,6 +399,29 @@ local queries = {
             ORDER BY image_group.ig_id
             LIMIT ?
             OFFSET ?;]],
+        get_tag_rules_paginated = [[SELECT
+                tag_rules.tag_rule_id,
+                tag_rules.incoming_name,
+                tag_rules.incoming_domain,
+                tag_rules.tag_id,
+                tags.name AS tag_name
+            FROM tag_rules
+            INNER JOIN tags ON tag_rules.tag_id = tags.tag_id
+            ORDER BY tag_rules.incoming_domain, tag_rules.incoming_name
+            LIMIT ?
+            OFFSET ?;]],
+        get_tag_rule_by_id = [[SELECT
+                tag_rules.tag_rule_id,
+                tag_rules.incoming_name,
+                tag_rules.incoming_domain,
+                tag_rules.tag_id,
+                tags.name AS tag_name
+            FROM tag_rules
+            INNER JOIN tags ON tag_rules.tag_id = tags.tag_id
+            WHERE tag_rules.tag_rule_id = ?;]],
+        insert_or_ignore_tag_by_name = [[INSERT OR IGNORE INTO
+            "tags"("name", "description")
+            VALUES (?, '');]],
         get_image_group_by_id = [[SELECT ig_id, name
             FROM image_group
             WHERE ig_id = ?;]],
@@ -413,6 +446,7 @@ local queries = {
                 AND (siblings."order" = (images_in_group."order" + 1)
                     OR siblings."order" = (images_in_group."order" - 1));]],
         get_tag_entry_count = [[SELECT COUNT(*) AS tag_count FROM tags;]],
+        get_tag_rule_count = [[SELECT COUNT(*) AS count FROM tag_rules;]],
         get_image_stats = [[SELECT kind, COUNT(kind) AS record_count FROM images
             GROUP BY kind
             ORDER BY kind;]],
@@ -446,6 +480,12 @@ local queries = {
             RETURNING ig_id;]],
         insert_image_in_group = [[INSERT INTO images_in_group (image_id, ig_id, "order")
             VALUES (?, ?, ?);]],
+        insert_tag_rule = [[INSERT INTO "tag_rules" (
+                "incoming_name",
+                "incoming_domain",
+                "tag_id"
+            ) VALUES (?, ?, ?)
+            RETURNING tag_rule_id;]],
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
         delete_artist_by_id = [[DELETE FROM "artists" WHERE artist_id = ?;]],
         delete_tag_by_id = [[DELETE FROM "tags" WHERE tag_id = ?;]],
@@ -455,6 +495,7 @@ local queries = {
         delete_image_tags_by_id = [[DELETE FROM "image_tags"
             WHERE image_id = ? AND tag_id = ?;]],
         delete_source_by_id = [[DELETE FROM "sources" WHERE source_id = ? AND image_id = ?;]],
+        delete_tag_rule_by_id = [[DELETE FROM "tag_rules" WHERE tag_rule_id = ?;]],
         delete_handle_for_artist_by_id = [[DELETE FROM "artist_handles"
             WHERE artist_id = ? AND handle_id = ?;]],
         update_queue_item_status = [[UPDATE "queue"
@@ -502,6 +543,9 @@ local queries = {
         update_artist_by_id = [[UPDATE "artists"
             SET name = ?, manually_confirmed = ?
             WHERE artist_id = ?;]],
+        update_tag_rule_by_id = [[UPDATE "tag_rules"
+            SET incoming_name = ?, incoming_domain = ?, tag_id = ?
+            WHERE tag_rule_id = ?;]],
     },
 }
 
@@ -538,6 +582,18 @@ function Model:getImageStats()
     return self.conn:fetchAll(queries.model.get_image_stats)
 end
 
+function Model:_get_count(query)
+    local result, errmsg = self.conn:fetchOne(query)
+    if not result then
+        return nil, errmsg
+    end
+    return result.count
+end
+
+function Model:_get_paginated(query, page_num, per_page)
+    return self.conn:fetchAll(query, per_page, (page_num - 1) * per_page)
+end
+
 ---@alias RecentQueueEntry {qid: string, link: string, tombstone: integer, added_on: string, status: string}
 ---@return RecentQueueEntry[]
 function Model:getRecentQueueEntries()
@@ -551,12 +607,7 @@ function Model:getAllActiveQueueEntries()
 end
 
 function Model:getQueueEntryCount()
-    local result, errmsg =
-        self.conn:fetchOne(queries.model.get_queue_entry_count)
-    if not result then
-        return nil, errmsg
-    end
-    return result.count
+    return self:_get_count(queries.model.get_queue_entry_count)
 end
 
 function Model:getPaginatedQueueEntries(page_num, per_page)
@@ -1047,13 +1098,16 @@ function Model:addArtistsForImageByName(image_id, artist_names)
     return true
 end
 
+function Model:findTagIdByName(tag_name)
+    return self.conn:fetchOne(queries.model.get_tag_id_by_name, tag_name)
+end
+
 function Model:addTagsForImageByName(image_id, tag_names)
     local SP = "add_tags_for_image_by_name"
     self:create_savepoint(SP)
     for i = 1, #tag_names do
         local tag_name = tag_names[i]
-        local tag, errmsg =
-            self.conn:fetchOne(queries.model.get_tag_id_by_name, tag_name)
+        local tag, errmsg = self:findTagIdByName(tag_name)
         if not tag then
             self:rollback(SP)
             Log(kLogDebug, errmsg)
@@ -1353,6 +1407,79 @@ function Model:deleteFromQueue(queue_ids)
     return true
 end
 
+function Model:getTagRuleCount()
+    return self:_get_count(queries.model.get_tag_rule_count)
+end
+
+function Model:getPaginatedTagRules(cur_page, per_page)
+    return self:_get_paginated(
+        queries.model.get_tag_rules_paginated,
+        cur_page,
+        per_page
+    )
+end
+
+function Model:deleteTagRules(tag_rule_ids)
+    return self:_delete_by_id(queries.model.delete_tag_rule_by_id, tag_rule_ids)
+end
+
+function Model:getTagRuleById(tag_rule_id)
+    return self.conn:fetchOne(queries.model.get_tag_rule_by_id, tag_rule_id)
+end
+
+function Model:updateTagRule(
+    tag_rule_id,
+    incoming_name,
+    incoming_domain,
+    tag_name
+)
+    local SP = "update_tag_rule"
+    self:create_savepoint(SP)
+    self.conn:execute(queries.model.insert_or_ignore_tag_by_name, tag_name)
+    local tag_id, tag_err = self:findTagIdByName(tag_name)
+    if not tag_id then
+        self:rollback(SP)
+        return nil, tag_err
+    end
+    local update_ok, update_err = self.conn:execute(
+        queries.model.update_tag_rule_by_id,
+        incoming_name,
+        incoming_domain,
+        tag_id,
+        tag_rule_id
+    )
+    if not update_ok then
+        self:rollback(SP)
+        return nil, update_err
+    end
+    self:release_savepoint(SP)
+    return true
+end
+
+function Model:createTagRule(incoming_name, incoming_domain, tag_name)
+    local SP = "create_tag_rule"
+    self:create_savepoint(SP)
+    self.conn:execute(queries.model.insert_or_ignore_tag_by_name, tag_name)
+    local tag_id, tag_err = self:findTagIdByName(tag_name)
+    if not tag_id then
+        self:rollback(SP)
+        return nil, tag_err
+    end
+    print(EncodeJson(tag_id))
+    local insert_ok, insert_err = self.conn:fetchOne(
+        queries.model.insert_tag_rule,
+        incoming_name,
+        incoming_domain,
+        tag_id.tag_id
+    )
+    if not insert_ok then
+        self:rollback(SP)
+        return nil, insert_err
+    end
+    self:release_savepoint(SP)
+    return insert_ok.tag_rule_id
+end
+
 function Model:create_savepoint(name)
     if not name or #name < 1 then
         error("Must provide a savepoint name")
@@ -1456,8 +1583,13 @@ function Accounts:createSessionForUser(user_id, user_agent, ip)
     return session_id
 end
 
-function Accounts:findSessionById(session_id)
-    return fetchOneExactly(self.conn, queries.accounts.get_session, session_id)
+function Accounts:findSessionByIdAndIP(session_id, ip)
+    return fetchOneExactly(
+        self.conn,
+        queries.accounts.get_session_by_id_and_ip,
+        session_id,
+        ip
+    )
 end
 
 function Accounts:updateSessionLastSeenToNow(session_id)
@@ -1530,12 +1662,11 @@ function Accounts:sessionMaintenance()
     return delete_count + updated_count
 end
 
-function Accounts:findUserBySessionId(session_id, ip)
+function Accounts:findUserBySessionId(session_id)
     return fetchOneExactly(
         self.conn,
-        queries.accounts.get_user_by_session_and_ip,
-        session_id,
-        ip
+        queries.accounts.get_user_by_session,
+        session_id
     )
 end
 

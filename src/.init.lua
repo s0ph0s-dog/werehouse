@@ -9,7 +9,7 @@ FsTools = require("fstools")
 local about = require("about")
 local web = require("web")
 local _ = require("functools")
-local scraper_pipeline = require("scraper_pipeline")
+ScraperPipeline = require("scraper_pipeline")
 local bot = require("tg_bot")
 
 local session_key = os.getenv("SESSION_KEY")
@@ -59,10 +59,10 @@ end
 -- 10MB, a reasonable limit for images.
 ProgramMaxPayloadSize(10 * 1024 * 1024)
 
-Fm.setSchedule("* * * * *", scraper_pipeline.process_all_queues)
+Fm.setSchedule("* * * * *", ScraperPipeline.process_all_queues)
 Fm.setSchedule("50 * * * *", sessionMaintenance)
 
-bot.setup(os.getenv("TG_BOT_TOKEN"), true, scraper_pipeline.can_process_uri)
+bot.setup(os.getenv("TG_BOT_TOKEN"), true, ScraperPipeline.can_process_uri)
 bot.run()
 
 web.setup()

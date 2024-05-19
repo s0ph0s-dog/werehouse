@@ -106,7 +106,9 @@ local function login_required(handler)
             r.session.after_login_url = r.url
             return Fm.serveRedirect("/login", 302)
         end
-        local session, errmsg = Accounts:findSessionById(r.session.token)
+        local ip = get_client_ip(r)
+        local session, errmsg =
+            Accounts:findSessionByIdAndIP(r.session.token, ip)
         if not session then
             Log(kLogDebug, errmsg)
             r.session.after_login_url = r.url
@@ -117,9 +119,8 @@ local function login_required(handler)
             Log(kLogInfo, u_err)
         end
         Model = DbUtil.Model:new(nil, session.user_id)
-        local ip = get_client_ip(r)
         local user_record, user_err =
-            Accounts:findUserBySessionId(r.session.token, ip)
+            Accounts:findUserBySessionId(r.session.token)
         if not user_record then
             Log(kLogDebug, user_err)
             return Fm.serve500()
@@ -1394,6 +1395,147 @@ local render_account = login_required(function(r, user_record)
     })
 end)
 
+local render_tag_rules = login_required(function(r, user_record)
+    local per_page = 100
+    local tag_rule_count, trc_errmsg = Model:getTagRuleCount()
+    if not tag_rule_count then
+        Log(kLogDebug, tostring(trc_errmsg))
+        return Fm.serve500()
+    end
+    local cur_page = tonumber(r.params.page or "1")
+    if cur_page < 1 then
+        return Fm.serve400()
+    end
+    local tag_rule_records, tag_rule_errmsg =
+        Model:getPaginatedTagRules(cur_page, per_page)
+    if not tag_rule_records then
+        Log(kLogInfo, tostring(tag_rule_errmsg))
+        return Fm.serve500()
+    end
+    local pages =
+        pagination_data(cur_page, tag_rule_count, per_page, #tag_rule_records)
+    local error = r.session.error
+    r.session.error = nil
+    r.session.after_action = r.makePath(r.path, r.params)
+    return Fm.serveContent("tag_rules", {
+        user = user_record,
+        error = error,
+        tag_rule_records = tag_rule_records,
+        pages = pages,
+    })
+end)
+
+local accept_tag_rules = login_required(function(r)
+    local redirect_path = r.session.after_action or r.makePath(r.path, r.params)
+    r.session.after_action = nil
+    if r.params.delete == "Delete" then
+        local ok, errmsg = Model:deleteTagRules(r.params.tag_rule_ids)
+        if not ok then
+            Log(kLogInfo, errmsg)
+            return Fm.serve500()
+        end
+    end
+    return Fm.serveRedirect(redirect_path, 302)
+end)
+
+local render_tag_rule = login_required(function(r, user_record)
+    local tag_rule_id = r.params.tag_rule_id
+    if not tag_rule_id then
+        return Fm.serve400()
+    end
+    local tag_rule_record, trr_err = Model:getTagRuleById(tag_rule_id)
+    if not tag_rule_record then
+        Log(kLogInfo, trr_err)
+        return Fm.serve404()
+    end
+    return Fm.serveContent("tag_rule", {
+        user = user_record,
+        tag_rule = tag_rule_record,
+    })
+end)
+
+local render_edit_tag_rule = login_required(function(r, user_record)
+    if not r.params.tag_rule_id then
+        return Fm.serve400()
+    end
+    local tag_rule, tag_rule_errmsg = Model:getTagRuleById(r.params.tag_rule_id)
+    if not tag_rule then
+        Log(kLogInfo, tag_rule_errmsg)
+        return Fm.serve404()
+    end
+    local alltags, alltags_err = Model:getAllTags()
+    if not alltags then
+        Log(kLogInfo, alltags_err)
+    end
+    r.session.after_action = r.headers.Referer
+    return Fm.serveContent("tag_rule_edit", {
+        user = user_record,
+        tag_rule = tag_rule,
+        alltags = alltags,
+        alldomains = ScraperPipeline.CANONICAL_DOMAINS_WITH_TAGS,
+    })
+end)
+
+local accept_edit_tag_rule = login_required(function(r)
+    local redirect_url = r.params.after_action or r.makePath(r.path, r.params)
+    r.params.after_action = nil
+    local tag_rule_id = r.params.tag_rule_id
+    local new_incoming_name = r.params.incoming_name
+    local new_incoming_domain = r.params.incoming_domain
+    local new_tag_name = r.params.tag_name
+    if
+        not tag_rule_id
+        or not new_incoming_name
+        or not new_incoming_domain
+        or not new_tag_name
+    then
+        return Fm.serve400()
+    end
+    local update_ok, update_err = Model:updateTagRule(
+        tag_rule_id,
+        new_incoming_name,
+        new_incoming_domain,
+        new_tag_name
+    )
+    if not update_ok then
+        Log(kLogInfo, update_err)
+        return Fm.serve500()
+    end
+    return Fm.serveRedirect(redirect_url, 302)
+end)
+
+local render_add_tag_rule = login_required(function(r)
+    local alltags, alltags_err = Model:getAllTags()
+    if not alltags then
+        Log(kLogInfo, alltags_err)
+    end
+    return Fm.serveContent("tag_rule_add", {
+        alltags = alltags,
+    })
+end)
+
+local accept_add_tag_rule = login_required(function(r)
+    if not r.params.incoming_name then
+        return Fm.serveError(400, "Incoming tag name is required")
+    end
+    if not r.params.incoming_domain then
+        return Fm.serveError(400, "Incoming tag description is required")
+    end
+    if not r.params.tag_name then
+        return Fm.serveError(400, "Tag name is required")
+    end
+    local tag_rule_id, err = Model:createTagRule(
+        r.params.incoming_name,
+        r.params.incoming_domain,
+        r.params.tag_name
+    )
+    if not tag_rule_id then
+        Log(kLogInfo, tostring(err))
+        return Fm.serve500(err)
+    end
+    return Fm.serveRedirect("/tag-rule/" .. tag_rule_id, 302)
+end)
+
 local function setup()
     Fm.setTemplate { "/templates/", html = "fmt" }
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
@@ -1447,6 +1589,19 @@ local function setup()
     Fm.setRoute(Fm.GET { "/tag/:tag_id[%d]" }, render_tag)
     Fm.setRoute(Fm.GET { "/tag/:tag_id[%d]/edit" }, render_edit_tag)
     Fm.setRoute(Fm.POST { "/tag/:tag_id[%d]/edit" }, accept_edit_tag)
+    Fm.setRoute(Fm.GET { "/tag-rule" }, render_tag_rules)
+    Fm.setRoute(Fm.POST { "/tag-rule" }, accept_tag_rules)
+    Fm.setRoute(Fm.GET { "/tag-rule/add" }, render_add_tag_rule)
+    Fm.setRoute(Fm.POST { "/tag-rule/add" }, accept_add_tag_rule)
+    Fm.setRoute(Fm.GET { "/tag-rule/:tag_rule_id[%d]" }, render_tag_rule)
+    Fm.setRoute(
+        Fm.GET { "/tag-rule/:tag_rule_id[%d]/edit" },
+        render_edit_tag_rule
+    )
+    Fm.setRoute(
+        Fm.POST { "/tag-rule/:tag_rule_id[%d]/edit" },
+        accept_edit_tag_rule
+    )
     Fm.setRoute("/account", render_account)
     -- API routes
     Fm.setRoute(Fm.GET { "/api/queue-image/:id" }, render_queue_image)
