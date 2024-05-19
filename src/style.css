@@ -41,6 +41,7 @@ input[type="password"] {
 .buttons {
   display: flex;
   justify-content: flex-end;
+  margin: 0.5em 0;
 }
 .buttons input,
 .buttons button {
@@ -83,21 +84,34 @@ footer {
   justify-content: center;
   gap: 1em;
 }
-.gallery a {
+.gallery figure {
   width: 12em;
+  margin: 0;
 }
-.gallery a img {
+.gallery figure img {
   max-width: 12em;
   max-height: 12em;
   display: block;
   margin: 0 auto;
   border: 3px solid LinkText;
 }
+.gallery label {
+  display: block;
+  width: 12em;
+}
 .gallery a:active img {
   border-color: ActiveText;
 }
 .gallery a:visited img {
   border-color: VisitedText;
+}
+
+.gallery figure:has(input:checked) {
+  background-color: rgba(0.5, 0.5, 0.5, 0.2);
+}
+
+.gallery input[type="checkbox"] {
+  float: right;
 }
 
 .edit {
@@ -242,10 +256,10 @@ footer {
   .gallery {
     gap: 0.5em;
   }
-  .gallery a {
+  .gallery figure {
     width: calc(50% - 0.25em);
   }
-  .gallery a img {
+  .gallery figure img {
     max-width: 11em;
     max-height: 11em;
   }

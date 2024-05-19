@@ -19,5 +19,5 @@
 </ul>
 {% end %}
 <h1>Images</h1>
-{% render("components/image_gallery", { image_records = images }) %}{% end %}{%
-render("layouts/main", { title = artist.name, user = user }) %}
+{% render("components/image_gallery", { image_records = images, fn = fn }) %}{%
+end %}{% render("layouts/main", { title = artist.name, user = user }) %}

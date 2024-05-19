@@ -1,14 +1,43 @@
-{% if pages and pages.current > 1 and #image_records == 0 then %}
-<p>You've fallen off the end of the page counter!</p>
-{% elseif #image_records == 0 then %}
-<p>Nothing archived yet</p>
-{% else %}
-<div class="gallery">
-  {% for _, image in ipairs(image_records) do %}
-  <a href="/image/{%& image.image_id %}">
-    <img src="/image-file/{%& image.file %}" />
-  </a>
-  {% end %}
-</div>
-{% render("components/pagination_controls", { pages = pages, kind_plural =
-"images" }) %}{% end %}
+{% if editable then %}
+<form method="POST">
+  <span class="buttons"
+    ><input type="reset" value="Deselect All" /><button
+      type="button"
+      onclick="document.getElementsByName('image_ids[]').forEach((e) => { e.checked=true; })"
+    >
+      Select All</button
+    ><input type="submit" name="delete" value="Delete" /><input
+      type="submit"
+      name="new_group"
+      value="New Group With Selection"
+  /></span>
+  {% end %}{% if pages and pages.current > 1 and #image_records == 0 then %}
+  <p>You've fallen off the end of the page counter!</p>
+  {% elseif #image_records == 0 then %}
+  <p>Nothing archived yet</p>
+  {% else %}
+  <div class="gallery">
+    {% for i = 1, #image_records do local image = image_records[i] %}
+    <figure>
+      <a href="/image/{%& image.image_id %}">
+        <img src="/image-file/{%& image.file %}" />
+      </a>
+      <figcaption>
+        <label>
+          {% if editable then %}
+          <input
+            type="checkbox"
+            name="image_ids[]"
+            value="{%& image.image_id %}"
+          />
+          {% end %}{%& fn.kind_str(image.kind) %}<br />by {% if image.artists
+          then %}{%& image.artists %}{% else %}(Missing artist info){% end %}
+        </label>
+      </figcaption>
+    </figure>
+    {% end %}
+  </div>
+  {% render("components/pagination_controls", { pages = pages, kind_plural =
+  "images" }) %}{% end %}{% if editable then %}
+</form>
+{% end %}

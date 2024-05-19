@@ -184,6 +184,32 @@ local function set_after_dialog_action(r)
     r.session.after_dialog_action = url
 end
 
+local image_functions = {
+    category_str = function(category)
+        if not category then
+            return "None"
+        end
+        local cs = DbUtil.k.CategoryLoopable
+        local result = {}
+        for i = 1, #cs do
+            local c = cs[i]
+            if (category & c[1]) == c[1] then
+                result[#result + 1] = c[2]
+            end
+        end
+        if #result < 1 then
+            return "None"
+        end
+        return table.concat(result, ", ")
+    end,
+    rating_str = function(rating)
+        return DbUtil.k.RatingLoopable[rating]
+    end,
+    kind_str = function(kind)
+        return DbUtil.k.ImageKindLoopable[kind]
+    end,
+}
+
 local render_home = login_required(function(r, user_record)
     local queue_records, errmsg2 = Model:getRecentQueueEntries()
     if not queue_records then
@@ -200,6 +226,7 @@ local render_home = login_required(function(r, user_record)
         user = user_record,
         queue_records = queue_records,
         image_records = image_records,
+        fn = image_functions,
     })
 end)
 
@@ -264,32 +291,6 @@ local render_image_file = login_required(function(r)
         }
     return Fm.serveAsset(path)
 end)
-
-local image_functions = {
-    category_str = function(category)
-        if not category then
-            return "None"
-        end
-        local cs = DbUtil.k.CategoryLoopable
-        local result = {}
-        for i = 1, #cs do
-            local c = cs[i]
-            if (category & c[1]) == c[1] then
-                result[#result + 1] = c[2]
-            end
-        end
-        if #result < 1 then
-            return "None"
-        end
-        return table.concat(result, ", ")
-    end,
-    rating_str = function(rating)
-        return DbUtil.k.RatingLoopable[rating]
-    end,
-    kind_str = function(kind)
-        return DbUtil.k.ImageKindLoopable[kind]
-    end,
-}
 
 local function not_emptystr(x)
     return x and #x > 0
@@ -760,7 +761,37 @@ local render_images = login_required(function(r, user_record)
         error = error,
         image_records = image_records,
         pages = pages,
+        fn = image_functions,
     })
+end)
+
+local accept_images = login_required(function(r, user_record)
+    local redirect_path = r.session.after_dialog_action
+    if r.params.delete then
+        local ok, errmsg = Model:deleteImages(r.params.image_ids)
+        if not ok then
+            Log(kLogInfo, errmsg)
+            return Fm.serve500()
+        end
+        return Fm.serveRedirect(r.headers.Referer, 302)
+    elseif r.params.new_group then
+        local image_ids = r.params.image_ids
+        image_ids = table.map(image_ids, tonumber)
+        table.sort(image_ids)
+        if #image_ids < 1 then
+            r.session.error =
+                "You must select at least one image to add to the group!"
+            return Fm.serveRedirect(redirect_path, 302)
+        end
+        local ig_id, g_err =
+            Model:createImageGroupWithImages("Untitled group", image_ids)
+        if not ig_id then
+            Log(kLogInfo, g_err)
+            return Fm.serve500()
+        end
+        return Fm.serveRedirect("/image-group/%d/edit" % { ig_id }, 302)
+    end
+    return Fm.serveRedirect(redirect_path, 302)
 end)
 
 local render_artists = login_required(function(r, user_record)
@@ -849,6 +880,7 @@ local render_artist = login_required(function(r, user_record)
         artist = artist,
         handles = handles,
         images = images,
+        fn = image_functions,
     })
 end)
 
@@ -1113,6 +1145,7 @@ local render_image_group = login_required(function(r, user_record)
         user = user_record,
         ig = ig,
         images = images,
+        fn = image_functions,
     })
 end)
 
@@ -1133,6 +1166,7 @@ local render_edit_image_group = login_required(function(r, user_record)
         user = user_record,
         ig = ig,
         images = images,
+        fn = image_functions,
     })
 end)
 
@@ -1313,6 +1347,7 @@ local render_tag = login_required(function(r, user_record)
         user = user_record,
         tag = tag_record,
         images = images,
+        fn = image_functions,
     })
 end)
 
@@ -1578,7 +1613,8 @@ local function setup()
     Fm.setRoute(Fm.POST { "/queue/:qid[%d]/help" }, accept_queue_help)
     Fm.setRoute("/home", render_home)
     Fm.setRoute("/image-file/:filename", render_image_file)
-    Fm.setRoute("/image", render_images)
+    Fm.setRoute(Fm.GET { "/image" }, render_images)
+    Fm.setRoute(Fm.POST { "/image" }, accept_images)
     Fm.setRoute("/image/:image_id", render_image)
     Fm.setRoute(Fm.GET { "/image/:image_id[%d]/edit" }, render_image)
     Fm.setRoute(Fm.POST { "/image/:image_id[%d]/edit" }, accept_edit_image)

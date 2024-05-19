@@ -6,5 +6,5 @@
   else %}(No description yet){% end %}
 </p>
 <h1>Recently Archived Images</h1>
-{% render("components/image_gallery", { image_records = images }) %}{% end %}{%
-render("layouts/main", { title = tag.name, user = user }) %}
+{% render("components/image_gallery", { image_records = images, fn = fn }) %}{%
+end %}{% render("layouts/main", { title = tag.name, user = user }) %}

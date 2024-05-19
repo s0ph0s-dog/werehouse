@@ -148,6 +148,27 @@ local user_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE
     );
 
+    CREATE VIEW IF NOT EXISTS "images_for_gallery" (
+        image_id,
+        file,
+        kind,
+        width,
+        height,
+        saved_at,
+        artists
+    ) AS SELECT
+        images.image_id,
+        images.file,
+        images.kind,
+        images.width,
+        images.height,
+        images.saved_at,
+        group_concat(artists.name, ", ") AS artists
+    FROM images
+        LEFT NATURAL JOIN image_artists
+        LEFT NATURAL JOIN artists
+        GROUP BY images.image_id;
+
     CREATE TABLE IF NOT EXISTS "share_ping_list" (
         "spl_id" INTEGER NOT NULL UNIQUE,
         "name" TEXT NOT NULL,
@@ -190,11 +211,12 @@ local user_setup = [[
     );
 
     CREATE TABLE IF NOT EXISTS "images_in_group" (
-        "image_id" INTEGER NOT NULL UNIQUE,
+        "image_id" INTEGER NOT NULL,
         "ig_id" INTEGER NOT NULL,
         "order" INTEGER,
         PRIMARY KEY("image_id", "ig_id"),
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
+        ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("ig_id") REFERENCES "image_group"("ig_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
@@ -303,12 +325,16 @@ local queries = {
         get_queue_image_by_id = [[SELECT image, image_mime_type FROM queue
             WHERE qid = ?;]],
         get_image_entry_count = [[SELECT COUNT(*) as count FROM images;]],
-        get_recent_image_entries = [[SELECT image_id, file
-            FROM images
+        get_recent_image_entries = [[SELECT image_id, file, kind, artists
+            FROM images_for_gallery
             ORDER BY saved_at DESC
             LIMIT 20;]],
-        get_image_entries_newest_first_paginated = [[SELECT image_id, file
-            FROM images
+        get_image_entries_newest_first_paginated = [[SELECT
+                image_id,
+                file,
+                kind,
+                artists
+            FROM images_for_gallery
             ORDER BY saved_at DESC
             LIMIT ?
             OFFSET ?;]],
@@ -375,17 +401,25 @@ local queries = {
         get_handles_for_artist = [[SELECT handle_id, handle, domain, profile_url
             FROM artist_handles
             WHERE artist_id = ?;]],
-        get_recent_images_for_artist = [[SELECT images.image_id, images.file
-            FROM images
-            JOIN image_artists ON images.image_id = image_artists.image_id
+        get_recent_images_for_artist = [[SELECT
+                images_for_gallery.image_id,
+                images_for_gallery.file,
+                images_for_gallery.kind,
+                images_for_gallery.artists
+            FROM images_for_gallery
+            LEFT NATURAL JOIN image_artists
             WHERE image_artists.artist_id = ?
-            ORDER BY images.saved_at DESC
+            ORDER BY images_for_gallery.saved_at DESC
             LIMIT ?;]],
-        get_recent_images_for_tag = [[SELECT images.image_id, images.file
-            FROM images
-            JOIN image_tags ON images.image_id = image_tags.image_id
+        get_recent_images_for_tag = [[SELECT
+                images_for_gallery.image_id,
+                images_for_gallery.file,
+                images_for_gallery.kind,
+                images_for_gallery.artists
+            FROM images_for_gallery
+            LEFT NATURAL JOIN image_tags
             WHERE image_tags.tag_id = ?
-            ORDER BY images.saved_at DESC
+            ORDER BY images_for_gallery.saved_at DESC
             LIMIT ?;]],
         get_all_images_for_size_check = [[SELECT image_id, file, file_size FROM images;]],
         get_image_group_count = [[SELECT COUNT(*) AS count FROM image_group;]],
@@ -394,7 +428,7 @@ local queries = {
                 image_group.name,
                 COUNT(images_in_group.image_id) AS image_count
             FROM image_group
-            inner JOIN images_in_group ON image_group.ig_id = images_in_group.ig_id
+            LEFT NATURAL JOIN images_in_group
             GROUP BY image_group.ig_id
             ORDER BY image_group.ig_id
             LIMIT ?
@@ -425,9 +459,16 @@ local queries = {
         get_image_group_by_id = [[SELECT ig_id, name
             FROM image_group
             WHERE ig_id = ?;]],
-        get_images_for_group = [[SELECT images_in_group.image_id, images_in_group."order", images.file, images.width, images.height
+        get_images_for_group = [[SELECT
+                images_in_group.image_id,
+                images_in_group."order",
+                images_for_gallery.file,
+                images_for_gallery.width,
+                images_for_gallery.height,
+                images_for_gallery.kind,
+                images_for_gallery.artists
             FROM images_in_group
-            inner JOIN images ON images_in_group.image_id = images.image_id
+            LEFT NATURAL JOIN images_for_gallery
             WHERE ig_id = ?
             ORDER BY images_in_group."order";]],
         get_image_groups_by_image_id = [[SELECT image_group.ig_id, image_group.name
@@ -490,6 +531,7 @@ local queries = {
             ) VALUES (?, ?, ?)
             RETURNING tag_rule_id;]],
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
+        delete_image_by_id = [[DELETE FROM "images" WHERE image_id = ?;]],
         delete_artist_by_id = [[DELETE FROM "artists" WHERE artist_id = ?;]],
         delete_tag_by_id = [[DELETE FROM "tags" WHERE tag_id = ?;]],
         delete_image_group_by_id = [[DELETE FROM "image_group" WHERE ig_id = ?;]],
@@ -629,6 +671,10 @@ function Model:_delete_by_two_ids(query, container_id, item_ids)
     end
     self:release_savepoint(SP)
     return true
+end
+
+function Model:deleteImages(image_ids)
+    return self:_delete_by_id(queries.model.delete_image_by_id, image_ids)
 end
 
 ---@alias RecentQueueEntry {qid: string, link: string, tombstone: integer, added_on: string, status: string}
@@ -1291,6 +1337,30 @@ function Model:addImageToGroupAtEnd(image_id, group_id)
         group_id,
         (last_order.max_order or 0) + 1
     )
+end
+
+function Model:createImageGroupWithImages(name, image_ids)
+    local SP = "create_image_group_with_images"
+    self:create_savepoint(SP)
+    local group, group_err = self:createImageGroup(name)
+    if not group then
+        self:rollback(SP)
+        return nil, group_err
+    end
+    for i = 1, #image_ids do
+        local add_ok, add_err = self.conn:execute(
+            queries.model.insert_image_in_group,
+            image_ids[i],
+            group.ig_id,
+            i
+        )
+        if not add_ok then
+            self:rollback(SP)
+            return nil, add_err
+        end
+    end
+    self:release_savepoint(SP)
+    return group.ig_id
 end
 
 function Model:getImageGroupById(ig_id)
