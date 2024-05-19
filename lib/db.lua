@@ -244,8 +244,8 @@ local queries = {
             WHERE "username" = ?;]],
         insert_session = [[INSERT INTO "sessions" ("session_id", "user_id", "created", "last_seen", "user_agent", "ip", "csrf_token")
             VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), ?, ?, ?, ?);]],
-        get_session_by_id_and_ip = [[SELECT "created", "user_id" from "sessions"
-            WHERE "session_id" = ? AND "ip" = ?;]],
+        get_session_by_id = [[SELECT "created", "user_id" from "sessions"
+            WHERE "session_id" = ?;]],
         get_all_sessions_for_user = [[SELECT session_id, created, last_seen, user_agent, ip
             FROM sessions WHERE user_id = ?;]],
         get_all_invite_links_created_by_user = [[SELECT
@@ -272,7 +272,7 @@ local queries = {
             ("user_id", "tg_userid")
             VALUES (?, ?);]],
         update_session_last_seen = [[UPDATE "sessions"
-            SET last_seen = ?
+            SET last_seen = ?, ip = ?
             WHERE session_id = ?;]],
         update_csrf_token_for_session = [[UPDATE "sessions" SET csrf_token = ? WHERE session_id = ?;]],
         delete_telegram_link_request = [[DELETE FROM telegram_link_requests WHERE request_id = ?;]],
@@ -1569,20 +1569,20 @@ function Accounts:createSessionForUser(user_id, user_agent, ip)
     return session_id
 end
 
-function Accounts:findSessionByIdAndIP(session_id, ip)
+function Accounts:findSessionById(session_id)
     return fetchOneExactly(
         self.conn,
-        queries.accounts.get_session_by_id_and_ip,
-        session_id,
-        ip
+        queries.accounts.get_session_by_id,
+        session_id
     )
 end
 
-function Accounts:updateSessionLastSeenToNow(session_id)
+function Accounts:updateSessionLastSeenToNow(session_id, ip)
     local now = unix.clock_gettime()
     return self.conn:execute(
         queries.accounts.update_session_last_seen,
         now,
+        ip,
         session_id
     )
 end

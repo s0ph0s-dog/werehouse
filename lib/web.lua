@@ -106,15 +106,15 @@ local function login_required(handler)
             r.session.after_login_url = r.url
             return Fm.serveRedirect("/login", 302)
         end
-        local ip = get_client_ip(r)
-        local session, errmsg =
-            Accounts:findSessionByIdAndIP(r.session.token, ip)
+        local session, errmsg = Accounts:findSessionById(r.session.token)
         if not session then
             Log(kLogDebug, errmsg)
             r.session.after_login_url = r.url
             return Fm.serveRedirect("/login", 302)
         end
-        local u_ok, u_err = Accounts:updateSessionLastSeenToNow(r.session.token)
+        local ip = get_client_ip(r)
+        local u_ok, u_err =
+            Accounts:updateSessionLastSeenToNow(r.session.token, ip)
         if not u_ok then
             Log(kLogInfo, u_err)
         end
