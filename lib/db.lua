@@ -494,7 +494,7 @@ local queries = {
             WHERE image_id = ? AND artist_id = ?;]],
         delete_image_tags_by_id = [[DELETE FROM "image_tags"
             WHERE image_id = ? AND tag_id = ?;]],
-        delete_source_by_id = [[DELETE FROM "sources" WHERE source_id = ? AND image_id = ?;]],
+        delete_source_by_id = [[DELETE FROM "sources" WHERE image_id = ? AND source_id = ?;]],
         delete_tag_rule_by_id = [[DELETE FROM "tag_rules" WHERE tag_rule_id = ?;]],
         delete_handle_for_artist_by_id = [[DELETE FROM "artist_handles"
             WHERE artist_id = ? AND handle_id = ?;]],
@@ -594,6 +594,34 @@ function Model:_get_paginated(query, page_num, per_page)
     return self.conn:fetchAll(query, per_page, (page_num - 1) * per_page)
 end
 
+function Model:_delete_by_id(query, ids)
+    local SP = "delete_by_id_" .. EncodeHex(GetRandomBytes(8))
+    self:create_savepoint(SP)
+    for i = 1, #ids do
+        local ok, errmsg = self.conn:execute(query, ids[i])
+        if not ok then
+            self:rollback(SP)
+            return nil, errmsg
+        end
+    end
+    self:release_savepoint(SP)
+    return true
+end
+
+function Model:_delete_by_two_ids(query, container_id, item_ids)
+    local SP = "delete_by_two_ids_" .. EncodeHex(GetRandomBytes(8))
+    self:create_savepoint(SP)
+    for i = 1, #item_ids do
+        local ok, err = self.conn:execute(query, container_id, item_ids[i])
+        if not ok then
+            self:rollback(SP)
+            return nil, err
+        end
+    end
+    self:release_savepoint(SP)
+    return true
+end
+
 ---@alias RecentQueueEntry {qid: string, link: string, tombstone: integer, added_on: string, status: string}
 ---@return RecentQueueEntry[]
 function Model:getRecentQueueEntries()
@@ -611,20 +639,15 @@ function Model:getQueueEntryCount()
 end
 
 function Model:getPaginatedQueueEntries(page_num, per_page)
-    return self.conn:fetchAll(
+    return self:_get_paginated(
         queries.model.get_queue_entries_paginated,
-        per_page,
-        (page_num - 1) * per_page
+        page_num,
+        per_page
     )
 end
 
 function Model:getImageEntryCount()
-    local result, errmsg =
-        self.conn:fetchOne(queries.model.get_image_entry_count)
-    if not result then
-        return nil, errmsg
-    end
-    return result.count
+    return self:_get_count(queries.model.get_image_entry_count)
 end
 
 function Model:getRecentImageEntries()
@@ -632,10 +655,10 @@ function Model:getRecentImageEntries()
 end
 
 function Model:getPaginatedImageEntries(page_num, per_page)
-    return self.conn:fetchAll(
+    return self:_get_paginated(
         queries.model.get_image_entries_newest_first_paginated,
-        per_page,
-        (page_num - 1) * per_page
+        page_num,
+        per_page
     )
 end
 
@@ -672,21 +695,11 @@ function Model:getTagsForImage(image_id)
 end
 
 function Model:deleteTagsForImageById(image_id, tag_ids)
-    local SP = "delete_image_tags"
-    self:create_savepoint(SP)
-    for i = 1, #tag_ids do
-        local ok, err = self.conn:execute(
-            queries.model.delete_image_tags_by_id,
-            image_id,
-            tag_ids[i]
-        )
-        if not ok then
-            self:rollback(SP)
-            return nil, err
-        end
-    end
-    self:release_savepoint(SP)
-    return true
+    return self:_delete_by_two_ids(
+        queries.model.delete_image_tags_by_id,
+        image_id,
+        tag_ids
+    )
 end
 
 function Model:createTag(tag_name, description)
@@ -837,7 +850,6 @@ end
 
 function Model:insertSourcesForImage(image_id, sources)
     local SP = "insert_sources"
-    -- TODO: figure out how to use prepared statements for this.
     self:create_savepoint(SP)
     for _, source in ipairs(sources) do
         local result, errmsg = self.conn:execute(
@@ -856,21 +868,11 @@ end
 
 -- Just the source ID should be enough to identify it, but I'm adding in the image_id as a hedge against my own stupidity.
 function Model:deleteSourcesForImageById(image_id, source_ids)
-    local SP = "delete_sources"
-    self:create_savepoint(SP)
-    for i = 1, #source_ids do
-        local ok, err = self.conn:execute(
-            queries.model.delete_source_by_id,
-            source_ids[i],
-            image_id
-        )
-        if not ok then
-            self:rollback(SP)
-            return nil, err
-        end
-    end
-    self:release_savepoint(SP)
-    return true
+    return self:_delete_by_two_ids(
+        queries.model.delete_source_by_id,
+        image_id,
+        source_ids
+    )
 end
 
 function Model:getDiskSpaceUsage()
@@ -891,12 +893,7 @@ function Model:getTagCount()
 end
 
 function Model:getArtistCount()
-    local result, errmsg =
-        self.conn:fetchOne(queries.model.get_artist_entry_count)
-    if not result then
-        return nil, errmsg
-    end
-    return result.count
+    return self:_get_count(queries.model.get_artist_entry_count)
 end
 
 function Model:getAllArtists()
@@ -904,18 +901,18 @@ function Model:getAllArtists()
 end
 
 function Model:getPaginatedArtists(page_num, per_page)
-    return self.conn:fetchAll(
+    return self:_get_paginated(
         queries.model.get_artist_entries_paginated,
-        per_page,
-        (page_num - 1) * per_page
+        page_num,
+        per_page
     )
 end
 
 function Model:getPaginatedTags(page_num, per_page)
-    return self.conn:fetchAll(
+    return self:_get_paginated(
         queries.model.get_tag_entries_paginated,
-        per_page,
-        (page_num - 1) * per_page
+        page_num,
+        per_page
     )
 end
 
@@ -985,7 +982,7 @@ function Model:createArtistWithHandles(name, manually_verified, handles)
     local artist_id, errmsg = self:createArtist(name, manually_verified)
     if not artist_id then
         self:rollback(SP)
-        Log(kLogInfo, errmsg)
+        Log(kLogInfo, tostring(errmsg))
         return nil, errmsg
     end
     for i = 1, #handles do
@@ -1134,16 +1131,6 @@ function Model:addTagsForImageByName(image_id, tag_names)
     return true
 end
 
-function Model:_delete_by_id(query, ids)
-    for i = 1, #ids do
-        local ok, errmsg = self.conn:execute(query, ids[i])
-        if not ok then
-            return nil, errmsg
-        end
-    end
-    return true
-end
-
 function Model:deleteArtists(artist_ids)
     return self:_delete_by_id(queries.model.delete_artist_by_id, artist_ids)
 end
@@ -1215,54 +1202,30 @@ function Model:mergeTags(merge_into_id, merge_from_ids)
 end
 
 function Model:deleteArtistsForImageById(image_id, artist_ids)
-    local SP = "delete_image_artists"
-    self:create_savepoint(SP)
-    for i = 1, #artist_ids do
-        local ok, err = self.conn:execute(
-            queries.model.delete_image_artist_by_id,
-            image_id,
-            artist_ids[i]
-        )
-        if not ok then
-            self:rollback(SP)
-            return nil, err
-        end
-    end
-    self:release_savepoint(SP)
-    return true
+    return self:_delete_by_two_ids(
+        queries.model.delete_image_artist_by_id,
+        image_id,
+        artist_ids
+    )
 end
 
 function Model:deleteHandlesForArtistById(artist_id, handle_ids)
-    local SP = "delete_artist_handles"
-    self:create_savepoint(SP)
-    for i = 1, #handle_ids do
-        local ok, err = self.conn:execute(
-            queries.model.delete_artist_handle_by_id,
-            artist_id,
-            handle_ids[i]
-        )
-        if not ok then
-            self:rollback(SP)
-            return nil, err
-        end
-    end
-    self:release_savepoint(SP)
-    return true
+    return self:_delete_by_two_ids(
+        queries.model.delete_artist_handle_by_id,
+        artist_id,
+        handle_ids
+    )
 end
+
 function Model:getImageGroupCount()
-    local result, errmsg =
-        self.conn:fetchOne(queries.model.get_image_group_count)
-    if not result then
-        return nil, errmsg
-    end
-    return result.count
+    return self:_get_count(queries.model.get_image_group_count)
 end
 
 function Model:getPaginatedImageGroups(page_num, per_page)
-    return self.conn:fetchAll(
+    return self:_get_paginated(
         queries.model.get_image_groups_paginated,
-        per_page,
-        (page_num - 1) * per_page
+        page_num,
+        per_page
     )
 end
 
@@ -1346,14 +1309,7 @@ function Model:setOrderForImageInGroup(ig_id, image_id, new_order)
 end
 
 function Model:deleteImageGroups(ig_ids)
-    for i = 1, #ig_ids do
-        local ok, errmsg =
-            self.conn:execute(queries.model.delete_image_group_by_id, ig_ids[i])
-        if not ok then
-            return nil, errmsg
-        end
-    end
-    return true
+    return self:_delete_by_id(queries.model.delete_image_group_by_id, ig_ids)
 end
 
 function Model:moveAllImagesToOtherGroup(to_ig_id, from_ig_id)
@@ -1385,7 +1341,7 @@ function Model:mergeImageGroups(merge_into_id, merge_from_ids)
     local delete_ok, delete_err = self:deleteImageGroups(merge_from_ids)
     if not delete_ok then
         self:rollback(SP_MERGE)
-        Log(kLogInfo, delete_err)
+        Log(kLogInfo, tostring(delete_err))
         return nil, delete_err
     end
     self:release_savepoint(SP_MERGE)
@@ -1393,18 +1349,7 @@ function Model:mergeImageGroups(merge_into_id, merge_from_ids)
 end
 
 function Model:deleteFromQueue(queue_ids)
-    local SP_QDEL = "delete_from_queue"
-    self:create_savepoint(SP_QDEL)
-    for _, qid in ipairs(queue_ids) do
-        local ok, errmsg =
-            self.conn:execute(queries.model.delete_item_from_queue, qid)
-        if not ok or errmsg then
-            self:rollback(SP_QDEL)
-            return nil, errmsg
-        end
-    end
-    self:release_savepoint(SP_QDEL)
-    return true
+    return self:_delete_by_id(queries.model.delete_item_from_queue, queue_ids)
 end
 
 function Model:getTagRuleCount()
