@@ -4,7 +4,7 @@
 {% if pages.current > 1 and #tag_rule_records == 0 then %}
 <p>You've fallen off the end of the page counter!</p>
 {% elseif #tag_rule_records == 0 then %}
-<p>No tags yet.</p>
+<p>No tag rules yet.</p>
 {% else %}
 <form method="POST">
   {% if error and type(error) == "string" then %}
