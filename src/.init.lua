@@ -67,3 +67,5 @@ bot.run()
 
 web.setup()
 web.run()
+
+print("wtf")

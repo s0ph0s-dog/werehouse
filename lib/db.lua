@@ -187,7 +187,7 @@ local user_setup = [[
     );
 
     CREATE TABLE IF NOT EXISTS "pl_entry_positive_tags" (
-        "spl_entry_id" INTEGER NOT NULL UNIQUE,
+        "spl_entry_id" INTEGER NOT NULL,
         "tag_id" INTEGER NOT NULL,
         PRIMARY KEY("spl_entry_id", "tag_id"),
         FOREIGN KEY ("spl_entry_id") REFERENCES "share_ping_list_entry"("spl_entry_id")
@@ -196,7 +196,7 @@ local user_setup = [[
     );
 
     CREATE TABLE IF NOT EXISTS "pl_entry_negative_tags" (
-        "spl_entry_id" INTEGER NOT NULL UNIQUE,
+        "spl_entry_id" INTEGER NOT NULL,
         "tag_id" INTEGER NOT NULL,
         PRIMARY KEY("spl_entry_id", "tag_id"),
         FOREIGN KEY ("spl_entry_id") REFERENCES "share_ping_list_entry"("spl_entry_id")
@@ -495,6 +495,26 @@ local queries = {
             FROM tag_rules
             WHERE incoming_domain = ? AND incoming_name = ?;]],
         get_disk_space_usage = [[SELECT SUM(file_size) AS size_sum FROM images;]],
+        get_pings_for_image = [[select
+                "share_ping_list_entry".handle,
+                group_concat(tags.name, ", ") AS tag_names,
+                count(tags.name) AS tag_count
+            from image_tags
+                inner join pl_entry_positive_tags on image_tags.tag_id = pl_entry_positive_tags.tag_id
+                left join tags on tags.tag_id = pl_entry_positive_tags.tag_id
+                left join share_ping_list_entry on "share_ping_list_entry".spl_entry_id = "pl_entry_positive_tags".spl_entry_id
+            where
+                image_tags.image_id = ?
+                and share_ping_list_entry.spl_id = ?
+                and pl_entry_positive_tags.spl_entry_id not in (
+                    select pl_entry_negative_tags.spl_entry_id
+                    from image_tags
+                    inner natural join pl_entry_negative_tags
+                    inner natural join share_ping_list_entry
+                    where image_tags.image_id = ? and share_ping_list_entry.spl_id = ?
+                )
+            group by "share_ping_list_entry".handle
+            order by tag_count desc, "share_ping_list_entry".handle;]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
@@ -675,6 +695,16 @@ end
 
 function Model:deleteImages(image_ids)
     return self:_delete_by_id(queries.model.delete_image_by_id, image_ids)
+end
+
+function Model:getPingsForImage(image_id, spl_id)
+    return self.conn:fetchAll(
+        queries.model.get_pings_for_image,
+        image_id,
+        spl_id,
+        image_id,
+        spl_id
+    )
 end
 
 ---@alias RecentQueueEntry {qid: string, link: string, tombstone: integer, added_on: string, status: string}
