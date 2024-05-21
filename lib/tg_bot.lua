@@ -10,11 +10,7 @@ local function handle_start(message)
         return
     end
     if user_record and user_record.username then
-        api.send_message(
-            message,
-            "You've connected this Telegram account to the user "
-                .. user_record.username
-        )
+        bot.notify_account_linked(message, user_record.username)
         return
     end
     local request_id =
@@ -179,6 +175,13 @@ local function handle_enqueue(message)
     api.reply_to_message(
         message,
         "I encountered an error while trying to add this to the queue."
+    )
+end
+
+function bot.notify_account_linked(tg_userid, username)
+    api.send_message(
+        tg_userid,
+        "You've connected this Telegram account to the user " .. username
     )
 end
 

@@ -10,7 +10,7 @@ local about = require("about")
 local web = require("web")
 local _ = require("functools")
 ScraperPipeline = require("scraper_pipeline")
-local bot = require("tg_bot")
+Bot = require("tg_bot")
 
 local session_key = os.getenv("SESSION_KEY")
 if session_key then
@@ -62,8 +62,8 @@ ProgramMaxPayloadSize(10 * 1024 * 1024)
 Fm.setSchedule("* * * * *", ScraperPipeline.process_all_queues)
 Fm.setSchedule("50 * * * *", sessionMaintenance)
 
-bot.setup(os.getenv("TG_BOT_TOKEN"), true, ScraperPipeline.can_process_uri)
-bot.run()
+Bot.setup(os.getenv("TG_BOT_TOKEN"), true, ScraperPipeline.can_process_uri)
+Bot.run()
 
 web.setup()
 web.run()

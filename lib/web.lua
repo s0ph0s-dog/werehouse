@@ -1258,6 +1258,7 @@ local accept_telegram_link = login_required(function(r, user_record)
             Log(kLogInfo, link_err)
             return Fm.serve500()
         end
+        Bot.notify_account_linked(tg.tg_userid, user_record.username)
     else
         local delete_ok, delete_err =
             Accounts:deleteTelegramLinkRequest(r.params.request_id)
