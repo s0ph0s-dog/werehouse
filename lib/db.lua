@@ -1052,9 +1052,21 @@ function Model:updateArtist(artist_id, name, manually_verified)
     )
 end
 
-function Model:createArtist(name, manually_verified)
-    local artist, errmsg =
-        self.conn:fetchOne(queries.model.insert_artist, name, manually_verified)
+function Model:findArtistIdByName(name)
+    return self.conn:fetchOne(queries.model.get_artist_id_by_name, name)
+end
+
+function Model:getOrCreateArtist(name, manually_verified)
+    local ok, artist, errmsg = pcall(
+        self.conn.fetchOne,
+        self,
+        queries.model.insert_artist,
+        name,
+        manually_verified
+    )
+    if not ok then
+        artist, errmsg = self:findArtistIdByName(name)
+    end
     if not artist or artist == self.conn.NONE then
         return nil, errmsg
     end
@@ -1064,7 +1076,7 @@ end
 function Model:createArtistWithHandles(name, manually_verified, handles)
     local SP = "create_artist_with_several_handles"
     self:create_savepoint(SP)
-    local artist_id, errmsg = self:createArtist(name, manually_verified)
+    local artist_id, errmsg = self:getOrCreateArtist(name, manually_verified)
     if not artist_id then
         self:rollback(SP)
         Log(kLogInfo, tostring(errmsg))

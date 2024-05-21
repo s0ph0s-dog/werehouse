@@ -155,7 +155,7 @@ end
 local function guess_with_head(link)
     local status, headers, _ = Fetch(link, { method = "HEAD" })
     if not status then
-        return false, "%s while fetching %s" % { link }
+        return false, "%s while fetching %s" % { headers, link }
     elseif status == 405 then
         -- If status is 405, assume it's not a raw image URL. Most image CDNs don't disallow HEAD (for caching/performance reasons)
         return false
@@ -178,7 +178,12 @@ local function get_sources_for_entry(queue_entry)
             local errmsg = nil
             check_fuzzysearch, errmsg = guess_with_head(queue_entry.link)
             if errmsg then
-                return nil, errmsg
+                Log(
+                    kLogInfo,
+                    "Failed to guess whether %s is a file using HEAD: %s"
+                        % { queue_entry.link, errmsg }
+                )
+                return { queue_entry.link }
             end
         end
         if check_fuzzysearch then
