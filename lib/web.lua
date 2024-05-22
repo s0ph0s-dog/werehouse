@@ -230,7 +230,7 @@ local render_home = login_required(function(r, user_record)
     })
 end)
 
-local render_queue_image = login_required(function(r, user_record)
+local render_queue_image = login_required(function(r, _)
     local result, errmsg = Model:getQueueImageById(r.params.id)
     if not result then
         Log(kLogDebug, errmsg)
@@ -247,7 +247,7 @@ local allowed_image_types = {
     ["image/gif"] = true,
 }
 
-local render_enqueue = login_required(function(r, user_record)
+local render_enqueue = login_required(function(_, user_record)
     return Fm.serveContent("enqueue", {
         user = user_record,
     })
@@ -680,7 +680,7 @@ local function render_tos(r, user_record)
 end
 
 local render_queue_help = login_required(function(r, user_record)
-    local queue_entry, queue_errmsg = Model:getQueueEntryById(r.params.qid)
+    local queue_entry, _ = Model:getQueueEntryById(r.params.qid)
     if not queue_entry then
         return Fm.serve404()
     end
@@ -765,7 +765,7 @@ local render_images = login_required(function(r, user_record)
     })
 end)
 
-local accept_images = login_required(function(r, user_record)
+local accept_images = login_required(function(r, _)
     local redirect_path = r.session.after_dialog_action
     if r.params.delete then
         local ok, errmsg = Model:deleteImages(r.params.image_ids)
@@ -871,7 +871,7 @@ local render_artist = login_required(function(r, user_record)
     end
     local images, images_err = Model:getRecentImagesForArtist(artist_id, 20)
     if not images then
-        Log(kLogInfo, errmsg2)
+        Log(kLogInfo, images_err)
         return Fm.serve500()
     end
     set_after_dialog_action(r)
@@ -884,7 +884,7 @@ local render_artist = login_required(function(r, user_record)
     })
 end)
 
-local render_add_artist = login_required(function(r)
+local render_add_artist = login_required(function(_)
     return Fm.serveContent("artist_add")
 end)
 
@@ -974,8 +974,6 @@ local accept_edit_artist = login_required(function(r)
         return render_edit_artist_internal(r)
     end
     if r.params.delete_pending_handle then
-        local pending_usernames = r.params.pending_usernames
-        local pending_profile_urls = r.params.pending_profile_urls
         local index = tonumber(r.params.delete_pending_handle)
         if not index then
             return Fm.serve400()
@@ -1028,7 +1026,7 @@ local accept_edit_artist = login_required(function(r)
             end
             Model:release_savepoint(SP)
         end
-        return Fm.serveRedirect("/artist/" .. artist_id, 302)
+        return Fm.serveRedirect(redirect_url, 302)
     end
 end)
 

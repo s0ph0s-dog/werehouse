@@ -1175,7 +1175,7 @@ function Model:addArtistsForImageByName(image_id, artist_names)
         end
         local artist_id = artist.artist_id
         if artist == self.conn.NONE then
-            artist_id, errmsg = self:createArtist(artist_names[i], 1)
+            artist_id, errmsg = self:getOrCreateArtist(artist_names[i], 1)
             if not artist_id then
                 self:rollback(SP)
                 return nil, errmsg
