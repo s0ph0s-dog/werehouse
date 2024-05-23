@@ -11,11 +11,11 @@ function api.configure(token, debug)
     api.debug = debug and true or false
     api.token =
         assert(token, "Must specify Telegram bot API token (from BotFather)")
-    repeat
+    --[[repeat
         api.info = api.get_me()
     until api.info.result
     api.info = api.info.result
-    api.info.name = api.info.first_name
+    api.info.name = api.info.first_name]]
     return api
 end
 
@@ -27,6 +27,22 @@ function api.request(endpoint, parameters, file)
     end
     if api.debug then
         Log(kLogDebug, EncodeJson(parameters))
+    end
+    if file and next(file) ~= nil then
+        local file_key, file_name = next(file)
+        local file_data, err = Slurp(file_name)
+        if file_data then
+            parameters[file_key] = {
+                filename = file_name,
+                data = file_data,
+            }
+        else
+            Log(
+                kLogDebug,
+                "Error reading from file %s: %s" % { file_name, err }
+            )
+            parameters[file_key] = file_name
+        end
     end
     parameters = next(parameters) == nil and { "" } or parameters
     local body, boundary = multipart.encode(parameters)
@@ -40,8 +56,11 @@ function api.request(endpoint, parameters, file)
             ),
         },
     })
-    if status ~= 200 then
+    if not status then
         return nil, headers
+    end
+    if status ~= 200 then
+        return nil, resp_body
     end
     if api.debug then
         Log(kLogDebug, resp_body)
@@ -130,6 +149,48 @@ function api.reply_to_message(message, text)
     return api.send_message(message, text, nil, nil, nil, nil, nil, nil, {
         message_id = message.message_id,
     })
+end
+
+function api.send_photo(
+    chat_id,
+    photo,
+    message_thread_id,
+    caption,
+    parse_mode,
+    caption_entities,
+    has_spoiler,
+    disable_notification,
+    protect_content,
+    reply_parameters,
+    reply_markup
+) -- https://core.telegram.org/bots/api#sendphoto
+    caption_entities = type(caption_entities) == "table"
+            and json.encode(caption_entities)
+        or caption_entities
+    reply_parameters = type(reply_parameters) == "table"
+            and json.encode(reply_parameters)
+        or reply_parameters
+    reply_markup = type(reply_markup) == "table" and json.encode(reply_markup)
+        or reply_markup
+    local success, res = api.request(
+        config.endpoint .. api.token .. "/sendPhoto",
+        {
+            ["chat_id"] = chat_id,
+            ["message_thread_id"] = message_thread_id,
+            ["caption"] = caption,
+            ["parse_mode"] = parse_mode,
+            ["caption_entities"] = caption_entities,
+            ["has_spoiler"] = has_spoiler,
+            ["disable_notification"] = disable_notification,
+            ["protect_content"] = protect_content,
+            ["reply_parameters"] = reply_to_message_id,
+            ["reply_markup"] = reply_markup,
+        },
+        {
+            ["photo"] = photo,
+        }
+    )
+    return success, res
 end
 
 function api.get_file(file_id) -- https://core.telegram.org/bots/api#getfile

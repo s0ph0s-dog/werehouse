@@ -119,7 +119,7 @@ local function get_data_src(v)
             -- return ltn12.source.file(v.data)
             return nil
         elseif _t == "function" then
-            return v.data
+            return v.data()
         end
     end
     error("invalid input")

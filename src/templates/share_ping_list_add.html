@@ -1,0 +1,167 @@
+{% function pending_tag_list(handle_idx, tag_type, placeholder, pending_tags) %}
+{% if pending_tags[handle_idx] then %}
+{% for tag_idx = 1, #pending_tags[handle_idx] do %}
+<li>
+  <div class="input-cell">
+    <input
+      data-1p-ignore
+      type="text"
+      name="pending_{%& tag_type %}_tags_handle_{%& handle_idx %}[]"
+      value="{%& pending_tags[handle_idx][tag_idx] %}"
+      list="all-tags"
+      placeholder="{%& placeholder %}"
+      autocomplete="off"
+    />
+    <button
+      type="submit"
+      name="delete_pending_{%& tag_type %}_tag"
+      value="{%& handle_idx %},{%& tag_idx %}"
+    >
+      Delete
+    </button>
+  </div>
+</li>
+{% end end end %} {% function block.content() %}
+<form class="vbox" method="POST">
+  <input type="submit" name="dummy_submit" value="dummy_submit" style="display:none" />
+  <label
+    >Name:
+    <input
+      type="text"
+      name="name"
+      data-1p-ignore
+      autocomplete="off"
+      required
+      value="{%& name %}"
+    />
+  </label>
+  <label
+    >Service<noscript>
+      (Click here if you change the service:
+      <input type="submit" name="service_reload" value="Refresh" />)</noscript
+    >:
+    <select required name="selected_service">
+      {% for i = 1, #share_services do local service = share_services[i] %}
+      <option value="{%& service %}"{% if selected_service == service then %} selected{% end %}>{%& service %}</option>
+      {% end %}
+    </select>
+  </label>
+  {% if not incoming_service or incoming_service == "Telegram" then %}
+  <label
+    ><span style="display: inline"
+      >Chat ID (ask @werehouse_archive_bot with <tt>/chatid</tt>):</span
+    >
+    <input required type="number" name="chat_id" value="{%& chat_id %}" />
+  </label>
+  {% elseif incoming_service == "Discord" then %}
+  <label
+    >Webhook URL:
+    <input required type="number" name="chat_id" />
+  </label>
+  {% end %}
+  <label class="inline">
+    <input type="checkbox" name="attribution" value="true" {% if attribution ==
+    "true" or attribution == 1 then %}checked {% end %} /> Include “Shared by
+    {%& user.username %}” in the shared post?
+  </label>
+  <!-- TODO: add 'open' attr when there are pending handles/tags -->
+  <details {% if pending_handles and #pending_handles>
+    0 then %}open{% end %}>
+    <summary>Include a ping list…</summary>
+    <datalist id="all-tags">
+      {% for i = 1, #alltags do %}
+      <option>{%& alltags[i].name %}</option>
+      {% end %}
+    </datalist>
+    <ul>
+      {% if pending_handles and #pending_handles > 0 then %}{% for h_idx = 1,
+      #pending_handles do %}
+      <li>
+        <div class="input-cell">
+          <input
+            data-1p-ignore
+            type="text"
+            name="pending_handles[]"
+            value="{%& pending_handles[h_idx] %}"
+            placeholder="@Username"
+            autocomplete="off"
+          />
+          <button
+            type="submit"
+            name="delete_pending_handle"
+            value="{%& h_idx %}"
+          >
+            Delete
+          </button>
+        </div>
+        <ul>
+          <li>
+            Ping this person if the shared post has any of these tags:
+            <ul>
+              {% pending_tag_list(h_idx, "positive", "Paws",
+              pending_positive_tags) %}
+              <li>
+                <input
+                  type="text"
+                  autocomplete="off"
+                  list="all-tags"
+                  name="pending_positive_tags_handle_{%& h_idx %}[]"
+                  placeholder="Paws"
+                />
+              </li>
+            </ul>
+            <button
+              type="submit"
+              name="add_pending_positive_tag"
+              value="add_handle"
+            >
+              Add Another ‘Ping’ Tag…
+            </button>
+          </li>
+          <li>
+            But not if the shared post has any of these tags:
+            <ul>
+              {% pending_tag_list(h_idx, "negative", "Maws",
+              pending_negative_tags) %}
+              <li>
+                <input
+                  type="text"
+                  autocomplete="off"
+                  list="all-tags"
+                  name="pending_negative_tags_handle_{%& h_idx %}[]"
+                  placeholder="Maws"
+                />
+              </li>
+            </ul>
+            <button
+              type="submit"
+              name="add_pending_negative_tag"
+              value="add_handle"
+            >
+              Add Another ‘Don’t Ping’ Tag…
+            </button>
+          </li>
+        </ul>
+      </li>
+      {% end %} {% end %}
+      <li>
+        <input
+          data-1p-ignore
+          type="text"
+          name="pending_handles[]"
+          autocomplete="off"
+          placeholder="Add a @Username to ping"
+        />
+      </li>
+    </ul>
+    <button type="submit" name="add_handle" value="add_handle">
+      Add Tags…
+    </button>
+  </details>
+  <span class="buttons">
+    <input type="reset" />
+    <input type="submit" name="add" value="Add" />
+  </span>
+</form>
+{% end %}{% render("layouts/dialog", { title = "Add Share Option", dialog_width
+= "30em" }) %}

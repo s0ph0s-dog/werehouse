@@ -1,0 +1,17 @@
+{% function block.content() %}
+<form class="vbox" method="POST">
+  <img
+    src="/image-file/{%& image.file %}"
+    width="{%& image.width %}"
+    height="{%& image.height %}"
+  />
+  <textarea name="sources_text">{%& sources_text %}</textarea>
+  {% if ping_text then %}
+  <textarea name="ping_text">{%& ping_text %}</textarea>
+  {% end %}
+  <span class="buttons">
+    <input type="submit" name="cancel" value="Cancel" />
+    <input type="submit" name="share" value="Share" />
+  </span>
+</form>
+{% end %}{% render("layouts/dialog", { title = "Share " .. image.image_id }) %}

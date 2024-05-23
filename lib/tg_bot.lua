@@ -41,6 +41,11 @@ If you don’t have an account already, this bot only works with an invite-only 
     api.send_message(message, response)
 end
 
+local function handle_chatid(message)
+    local chat_id = message.chat.id
+    api.reply_to_message(message, "The ID of this chat is %d" % { chat_id })
+end
+
 function bot.get_all_links_from_message(message)
     if
         not message.text
@@ -203,6 +208,21 @@ function bot.notify_account_linked(tg_userid, username)
     )
 end
 
+function bot.post_image(to_chat, image_file, caption, follow_up)
+    local photo_result, err = api.send_photo(to_chat, image_file, nil, caption)
+    if not photo_result or not photo_result.ok then
+        Log(kLogWarn, EncodeJson(err))
+        return
+    end
+    if follow_up then
+        local ping_result
+        ping_result, err = api.reply_to_message(photo_result.result, follow_up)
+        if not ping_result then
+            Log(kLogWarn, EncodeJson(err))
+        end
+    end
+end
+
 function bot.setup(token, debug, link_checker)
     if token then
         bot.api = api.configure(token, debug)
@@ -243,6 +263,8 @@ function api.on_message(message)
     if message.text then
         if message.chat.type == "private" and message.text == "/start" then
             return handle_start(message)
+        elseif message.text == "/chatid" then
+            return handle_chatid(message)
         end
     end
     if message.chat.type == "private" then

@@ -359,6 +359,10 @@ local function render_image_internal(r, user_record)
         end
         ig.siblings = siblings
     end
+    local share_ping_lists, spl_err = Model:getAllSharePingLists()
+    if not share_ping_lists then
+        Log(kLogInfo, spl_err)
+    end
     local pending_artists = r.params.pending_artists
     if pending_artists then
         pending_artists = table.filter(pending_artists, not_emptystr)
@@ -392,6 +396,7 @@ local function render_image_internal(r, user_record)
         groups = groups,
         category = r.params.category or image.category,
         rating = r.params.rating or image.rating,
+        share_ping_lists = share_ping_lists,
         fn = image_functions,
         DbUtilK = DbUtil.k,
     })
@@ -399,6 +404,21 @@ end
 
 local render_image = login_required(function(r, user_record)
     set_after_dialog_action(r)
+    if r.params.share then
+        if not r.params.share_option then
+            return Fm.serveError(400, "Must provide share_option")
+        end
+        for share_option_str in r.params.share_option:gmatch("(%d+):") do
+            local share_option = tonumber(share_option_str)
+            if not share_option then
+                return Fm.serveError(400, "Invalid share option")
+            end
+            return Fm.serveRedirect(
+                "/image/%d/share?to=%d" % { r.params.image_id, share_option },
+                302
+            )
+        end
+    end
     return render_image_internal(r, user_record)
 end)
 
@@ -583,6 +603,64 @@ local accept_edit_image = login_required(function(r, user_record)
         return Fm.serveRedirect("/image/" .. r.params.image_id, 302)
     end
     return render_image_internal(r, user_record)
+end)
+
+local render_image_share = login_required(function(r, user_record)
+    local image_id = tonumber(r.params.image_id)
+    local spl_id = tonumber(r.params.to)
+    local image, image_err = Model:getImageById(r.params.image_id)
+    if not image then
+        Log(kLogInfo, image_err)
+        return Fm.serve500()
+    end
+    local spl, spl_err = Model:getSharePingListById(spl_id)
+    if not spl then
+        Log(kLogInfo, spl_err)
+        return Fm.serve500()
+    end
+    local sources, sources_err = Model:getSourcesForImage(image_id)
+    if not sources then
+        return Fm.serve500()
+    end
+    if r.params.share then
+        local _, file_path = FsTools.make_image_path_from_filename(image.file)
+        local chat_id = spl.share_data.chat_id
+        Bot.post_image(
+            chat_id,
+            file_path,
+            r.params.sources_text,
+            r.params.ping_text
+        )
+        return Fm.serveRedirect("/image/" .. image_id, 302)
+    end
+    local ping_data, pd_err = Model:getPingsForImage(image_id, spl_id)
+    if not ping_data then
+        Log(kLogInfo, pd_err)
+        return Fm.serve500()
+    end
+    local sources_text = table.concat(
+        table.map(sources, function(s)
+            return string.format("• %s", s.link)
+        end),
+        "\n"
+    )
+    local ping_text = table.concat(
+        table.map(ping_data, function(d)
+            return string.format("%s: %s", d.handle, d.tag_names)
+        end),
+        "\n"
+    )
+    local attribution = "Shared by %s" % { user_record.username }
+    if attribution then
+        ping_text = ping_text .. "\n\n" .. attribution
+    end
+    return Fm.serveContent("image_share", {
+        user = user_record,
+        image = image,
+        share_ping_list = spl,
+        sources_text = r.params.sources_text or sources_text,
+        ping_text = r.params.ping_text or ping_text,
+    })
 end)
 
 local function pagination_data(
@@ -1385,7 +1463,7 @@ local accept_edit_tag = login_required(function(r)
     return Fm.serveRedirect(redirect_url, 302)
 end)
 
-local render_add_tag = login_required(function(r)
+local render_add_tag = login_required(function(_)
     return Fm.serveContent("tag_add")
 end)
 
@@ -1443,6 +1521,11 @@ local render_account = login_required(function(r, user_record)
         Log(kLogDebug, invites_err)
         return Fm.serve500()
     end
+    local share_ping_lists, spl_err = Model:getAllSharePingLists()
+    if not share_ping_lists then
+        Log(kLogDebug, spl_err)
+        return Fm.serve500()
+    end
     set_after_dialog_action(r)
     return Fm.serveContent("account", {
         user = user_record,
@@ -1451,6 +1534,7 @@ local render_account = login_required(function(r, user_record)
         tag_count = tag_count,
         data_size = data_size,
         telegram_accounts = telegram_accounts,
+        share_ping_lists = share_ping_lists,
         sessions = sessions,
         invites = invites,
     })
@@ -1564,7 +1648,7 @@ local accept_edit_tag_rule = login_required(function(r)
     return Fm.serveRedirect(redirect_url, 302)
 end)
 
-local render_add_tag_rule = login_required(function(r)
+local render_add_tag_rule = login_required(function(_)
     local alltags, alltags_err = Model:getAllTags()
     if not alltags then
         Log(kLogInfo, alltags_err)
@@ -1594,6 +1678,223 @@ local accept_add_tag_rule = login_required(function(r)
         return Fm.serve500(err)
     end
     return Fm.serveRedirect("/tag-rule/" .. tag_rule_id, 302)
+end)
+
+local function reorganize_pending_tags(r)
+    local pending_positive_tags = {}
+    local pending_negative_tags = {}
+    if r.params.pending_handles then
+        for i = 1, #r.params.pending_handles do
+            pending_positive_tags[i] = table.filter(
+                r.params["pending_positive_tags_handle_" .. i],
+                not_emptystr
+            )
+            pending_negative_tags[i] = table.filter(
+                r.params["pending_negative_tags_handle_" .. i],
+                not_emptystr
+            )
+        end
+    end
+    return pending_positive_tags, pending_negative_tags
+end
+
+local function parse_delete_coords(coords)
+    for h_idx_str, t_idx_str in coords:gmatch("(%d+),(%d+)") do
+        return tonumber(h_idx_str), tonumber(t_idx_str)
+    end
+    return nil
+end
+
+local function accept_add_share_ping_list(
+    r,
+    user_record,
+    pending_handles,
+    pending_pos,
+    pending_neg
+)
+    if not not_emptystr(r.params.name) then
+        return Fm.serveError(400, "Invalid share option name")
+    end
+    if r.params.selected_service ~= "Telegram" then
+        return Fm.serveError(400, "Invalid service (must be 'Telegram')")
+    end
+    if not not_emptystr(r.params.chat_id) or not tonumber(r.params.chat_id) then
+        return Fm.serveError(400, "Invalid chat ID")
+    end
+    local share_data = EncodeJson {
+        type = r.params.selected_service,
+        chat_id = tonumber(r.params.chat_id),
+    }
+    local SP = "add_share_ping_list"
+    Model:create_savepoint(SP)
+    local spl_id, spl_err = Model:createSharePingList(r.params.name, share_data)
+    if not spl_id then
+        Log(kLogInfo, spl_err)
+        Model:rollback(SP)
+        return Fm.serve500()
+    end
+    for i = 1, #pending_handles do
+        local h_ok, h_err = Model:createSPLEntryWithTags(
+            spl_id,
+            pending_handles[i],
+            pending_pos[i],
+            pending_neg[i]
+        )
+        if not h_ok then
+            Log(kLogInfo, tostring(h_err))
+            Model:rollback(SP)
+            return Fm.serve500()
+        end
+    end
+    Model:release_savepoint(SP)
+    return Fm.serveRedirect("/share-ping-list/" .. spl_id)
+end
+
+local render_add_share_ping_list = login_required(function(r, user_record)
+    local alltags, alltags_err = Model:getAllTags()
+    if not alltags then
+        Log(kLogInfo, alltags_err)
+        alltags = {}
+    end
+    local pending_pos, pending_neg = reorganize_pending_tags(r)
+    local pending_handles = table.filter(r.params.pending_handles, not_emptystr)
+    if
+        r.params.dummy_submit
+        or r.params.service_reload
+        or r.params.add_pending_handle
+        or r.params.add_pending_positive_tag
+        or r.params.add_pending_negative_tag
+    then
+        -- Do nothing, handling this happens automatically as part of answering the request.
+    elseif r.params.delete_pending_positive_tag then
+        local h_idx, t_idx =
+            parse_delete_coords(r.params.delete_pending_positive_tag)
+        table.remove(pending_pos[h_idx], t_idx)
+    elseif r.params.delete_pending_negative_tag then
+        local h_idx, t_idx =
+            parse_delete_coords(r.params.delete_pending_negative_tag)
+        table.remove(pending_neg[h_idx], t_idx)
+    elseif r.params.delete_pending_handle then
+        local h_idx = tonumber(r.params.delete_pending_handle)
+        if not h_idx then
+            return Fm.serveError(
+                400,
+                "Invalid number for delete_pending_handle"
+            )
+        end
+        table.remove(pending_handles, h_idx)
+        table.remove(pending_pos, h_idx)
+        table.remove(pending_neg, h_idx)
+    elseif r.params.add then
+        return accept_add_share_ping_list(
+            r,
+            user_record,
+            pending_handles,
+            pending_pos,
+            pending_neg
+        )
+    end
+    return Fm.serveContent("share_ping_list_add", {
+        user = user_record,
+        alltags = alltags,
+        share_services = { "Telegram" },
+        name = r.params.name,
+        chat_id = r.params.chat_id,
+        selected_service = r.params.selected_service,
+        pending_handles = pending_handles,
+        pending_positive_tags = pending_pos,
+        pending_negative_tags = pending_neg,
+    })
+end)
+
+local render_edit_share_ping_list = login_required(function(r, user_record)
+    local spl, spl_err = Model:getSharePingListById(r.params.spl_id)
+    if not spl then
+        Log(kLogInfo, spl_err)
+        return Fm.serveError(400, "Invalid share option ID")
+    end
+    local entries, positive_tags, negative_tags =
+        Model:getEntriesForSPLById(r.params.spl_id)
+    if not entries then
+        return Fm.serve500()
+    end
+    local alltags, alltags_err = Model:getAllTags()
+    if not alltags then
+        Log(kLogInfo, alltags_err)
+        alltags = {}
+    end
+    local pending_pos, pending_neg = reorganize_pending_tags(r)
+    local pending_handles = table.filter(r.params.pending_handles, not_emptystr)
+    if
+        r.params.dummy_submit
+        or r.params.service_reload
+        or r.params.add_pending_handle
+        or r.params.add_pending_positive_tag
+        or r.params.add_pending_negative_tag
+    then
+        -- Do nothing, handling this happens automatically as part of answering the request.
+    elseif r.params.delete_pending_positive_tag then
+        local h_idx, t_idx =
+            parse_delete_coords(r.params.delete_pending_positive_tag)
+        table.remove(pending_pos[h_idx], t_idx)
+    elseif r.params.delete_pending_negative_tag then
+        local h_idx, t_idx =
+            parse_delete_coords(r.params.delete_pending_negative_tag)
+        table.remove(pending_neg[h_idx], t_idx)
+    elseif r.params.delete_pending_handle then
+        local h_idx = tonumber(r.params.delete_pending_handle)
+        if not h_idx then
+            return Fm.serveError(
+                400,
+                "Invalid number for delete_pending_handle"
+            )
+        end
+        table.remove(pending_handles, h_idx)
+        table.remove(pending_pos, h_idx)
+        table.remove(pending_neg, h_idx)
+    elseif r.params.add then
+        return accept_add_share_ping_list(
+            r,
+            user_record,
+            pending_handles,
+            pending_pos,
+            pending_neg
+        )
+    end
+    return Fm.serveContent("share_ping_list_edit", {
+        user = user_record,
+        alltags = alltags,
+        spl = spl,
+        entries = entries,
+        positive_tags = positive_tags,
+        negative_tags = negative_tags,
+        share_services = { "Telegram" },
+        name = r.params.name or spl.name,
+        chat_id = r.params.chat_id or spl.share_data.chat_id,
+        selected_service = r.params.selected_service or spl.share_data.type,
+        pending_handles = pending_handles,
+        pending_positive_tags = pending_pos,
+        pending_negative_tags = pending_neg,
+    })
+end)
+
+local render_share_ping_list = login_required(function(r, user_record)
+    local share_ping_list, spl_err = Model:getSharePingListById(r.params.spl_id)
+    if not share_ping_list then
+        return Fm.serve500()
+    end
+    local entries, positive_tags, negative_tags =
+        Model:getEntriesForSPLById(r.params.spl_id)
+    if not entries then
+        return Fm.serve500()
+    end
+    return Fm.serveContent("share_ping_list", {
+        user = user_record,
+        share_ping_list = share_ping_list,
+        entries = entries,
+        positive_tags = positive_tags,
+        negative_tags = negative_tags,
+    })
 end)
 
 local function setup()
@@ -1630,6 +1931,7 @@ local function setup()
     Fm.setRoute("/image/:image_id", render_image)
     Fm.setRoute(Fm.GET { "/image/:image_id[%d]/edit" }, render_image)
     Fm.setRoute(Fm.POST { "/image/:image_id[%d]/edit" }, accept_edit_image)
+    Fm.setRoute("/image/:image_id[%d]/share", render_image_share)
     Fm.setRoute(Fm.GET { "/enqueue" }, render_enqueue)
     Fm.setRoute(Fm.POST { "/enqueue" }, accept_enqueue)
     Fm.setRoute(Fm.GET { "/artist" }, render_artists)
@@ -1671,6 +1973,12 @@ local function setup()
     Fm.setRoute(
         Fm.POST { "/tag-rule/:tag_rule_id[%d]/edit" },
         accept_edit_tag_rule
+    )
+    Fm.setRoute("/share-ping-list/add", render_add_share_ping_list)
+    Fm.setRoute("/share-ping-list/:spl_id[%d]", render_share_ping_list)
+    Fm.setRoute(
+        "/share-ping-list/:spl_id[%d]/edit",
+        render_edit_share_ping_list
     )
     Fm.setRoute("/account", render_account)
     -- API routes

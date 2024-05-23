@@ -1269,6 +1269,30 @@ function TestMultipart:testEncode()
     luaunit.assertEquals(json.form, { foo = "bar" })
 end
 
+function TestMultipart:testEncodeForTelegram()
+    local body, boundary = multipart.encode {
+        photo = {
+            -- filename = "C:\\fakepath\\purple.jpg",
+            data = "hello worldJFIF",
+        },
+    }
+    local status, headers, resp_body = Fetch("http://httpbin.org/post", {
+        method = "POST",
+        body = body,
+        headers = {
+            ["Content-Type"] = string.format(
+                'multipart/form-data; boundary="%s"',
+                boundary
+            ),
+        },
+    })
+    luaunit.assertEquals(status, 200)
+    local json, err = DecodeJson(resp_body)
+    luaunit.assertIsNil(err)
+    luaunit.assertNotIsNil(json)
+    luaunit.assertEquals(json.form, { photo = "hello worldJFIF" })
+end
+
 TestTgBot = {}
 function TestTgBot:testfindAllLinksOnFoxbotMessage()
     local input = DecodeJson(Slurp("test/foxbot_tg_message.json"))

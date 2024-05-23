@@ -1,0 +1,35 @@
+{% function tags_for_handle(handle_id, tag_list) %} {% for tag_idx = 1,
+#tag_list[handle_id] do local tag = tag_list[handle_id][tag_idx] %}
+<li><a href="/tag/{%& tag.tag_id %}">{%& tag.name %}</a></li>
+{% end end %} {% function block.content() %}
+<h1>{%& share_ping_list.name %} ({%& share_ping_list.share_data.type %})</h1>
+<a href="/share-ping-list/{%& share_ping_list.spl_id %}/edit">Edit…</a>
+{% if share_ping_list.share_data.type == "Telegram" then %}
+<p>Chat ID: {%& share_ping_list.share_data.chat_id %}</p>
+{% else %}
+<p>Unknown service: {%& share_ping_list.share_data.type %}</p>
+{% end %}
+<h1>Ping List</h1>
+<ul>
+  {% for i = 1, #entries do local entry = entries[i] %}
+  <li>
+    {%& entry.handle %}
+    <ul>
+      <li>
+        Ping this person if a shared image has any of these tags:
+        <ul>
+          {% tags_for_handle(entry.spl_entry_id, positive_tags) %}
+        </ul>
+      </li>
+      <li>
+        But not if the shared image has any of these tags:
+        <ul>
+          {% tags_for_handle(entry.spl_entry_id, negative_tags) %}
+        </ul>
+      </li>
+    </ul>
+  </li>
+  {% end %}
+</ul>
+{% end %}{% render("layouts/main", { title = "Share Option: %s (%s)" %
+{share_ping_list.name, share_ping_list.share_data.type}, user = user }) %}

@@ -516,6 +516,27 @@ local queries = {
                 )
             group by "share_ping_list_entry".handle
             order by tag_count desc, "share_ping_list_entry".handle;]],
+        get_all_share_ping_lists = [[SELECT spl_id, name, share_data FROM share_ping_list;]],
+        get_share_ping_list_by_id = [[SELECT spl_id, name, share_data
+            FROM share_ping_list WHERE spl_id = ?;]],
+        get_entries_for_ping_list_by_id = [[SELECT spl_entry_id, handle, spl_id
+            FROM share_ping_list_entry WHERE spl_id = ?;]],
+        get_all_positive_tags_for_all_entries_in_ping_list_by_id = [[SELECT
+                pl_entry_positive_tags.spl_entry_id,
+                pl_entry_positive_tags.tag_id,
+                tags.name
+            FROM "pl_entry_positive_tags"
+            INNER JOIN share_ping_list_entry ON share_ping_list_entry.spl_entry_id = pl_entry_positive_tags.spl_entry_id
+            INNER JOIN tags ON pl_entry_positive_tags.tag_id = tags.tag_id
+            WHERE share_ping_list_entry.spl_id = ?]],
+        get_all_negative_tags_for_all_entries_in_ping_list_by_id = [[SELECT
+                pl_entry_negative_tags.spl_entry_id,
+                pl_entry_negative_tags.tag_id,
+                tags.name
+            FROM "pl_entry_negative_tags"
+            INNER JOIN share_ping_list_entry ON share_ping_list_entry.spl_entry_id = pl_entry_negative_tags.spl_entry_id
+            INNER JOIN tags ON pl_entry_negative_tags.tag_id = tags.tag_id
+            WHERE share_ping_list_entry.spl_id = ?]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
@@ -526,7 +547,7 @@ local queries = {
             "images" ("file", "mime_type", "width", "height", "kind", "rating", "file_size", "saved_at")
             VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
             RETURNING image_id;]],
-        insert_tag = [[INSERT INTO "tags" ("name", "description")
+        insert_tag = [[INSERT OR IGNORE INTO "tags" ("name", "description")
             VALUES (?, ?)
             RETURNING tag_id;]],
         insert_image_tag = [[INSERT OR IGNORE INTO "image_tags" ("image_id", "tag_id")
@@ -551,6 +572,20 @@ local queries = {
                 "tag_id"
             ) VALUES (?, ?, ?)
             RETURNING tag_rule_id;]],
+        insert_share_ping_list = [[INSERT INTO share_ping_list (
+                name,
+                share_data
+            ) VALUES (?, ?)
+            RETURNING spl_id;]],
+        insert_spl_entry = [[INSERT INTO share_ping_list_entry (
+            handle,
+            spl_id
+        ) VALUES (?, ?)
+        RETURNING spl_entry_id;]],
+        insert_positive_tag = [[INSERT OR IGNORE INTO pl_entry_positive_tags
+            (spl_entry_id, tag_id) VALUES (?, ?);]],
+        insert_negative_tag = [[INSERT OR IGNORE INTO pl_entry_negative_tags
+            (spl_entry_id, tag_id) VALUES (?, ?);]],
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
         delete_image_by_id = [[DELETE FROM "images" WHERE image_id = ?;]],
         delete_artist_by_id = [[DELETE FROM "artists" WHERE artist_id = ?;]],
@@ -1197,25 +1232,29 @@ function Model:findTagIdByName(tag_name)
     return self.conn:fetchOne(queries.model.get_tag_id_by_name, tag_name)
 end
 
+function Model:getOrCreateTagIdByName(tag_name)
+    local tag, t_err =
+        self.conn:fetchOne(queries.model.insert_tag, tag_name, "")
+    if not tag or tag == self.conn.NONE then
+        tag, t_err =
+            self.conn:fetchOne(queries.model.get_tag_id_by_name, tag_name)
+    end
+    if not tag or tag == self.conn.NONE then
+        return nil, t_err
+    end
+    return tag.tag_id
+end
+
 function Model:addTagsForImageByName(image_id, tag_names)
     local SP = "add_tags_for_image_by_name"
     self:create_savepoint(SP)
     for i = 1, #tag_names do
         local tag_name = tag_names[i]
-        local tag, errmsg = self:findTagIdByName(tag_name)
-        if not tag then
+        local tag_id, errmsg = self:getOrCreateTagIdByName(tag_name)
+        if not tag_id then
             self:rollback(SP)
             Log(kLogDebug, errmsg)
             return nil, errmsg
-        end
-        local tag_id = tag.tag_id
-        if tag == self.conn.NONE then
-            tag_id, errmsg = self:createTag(tag_name, "")
-            if not tag_id then
-                self:rollback(SP)
-                Log(kLogDebug, tostring(errmsg))
-                return nil, errmsg
-            end
         end
         print("ids: ", image_id, tag_id)
         local link_ok, link_err = self:associateTagWithImage(image_id, tag_id)
@@ -1577,6 +1616,150 @@ function Model:addIncomingTagsForImage(
     end
     self:release_savepoint(SP)
     return true
+end
+
+function Model:createSharePingList(name, share_data)
+    if type(share_data) ~= "string" then
+        share_data = EncodeJson(share_data)
+    end
+    local id, err = self.conn:fetchOne(
+        queries.model.insert_share_ping_list,
+        name,
+        share_data
+    )
+    if not id then
+        return nil, err
+    end
+    return id.spl_id
+end
+
+function Model:getAllSharePingLists()
+    local result, err =
+        self.conn:fetchAll(queries.model.get_all_share_ping_lists)
+    if not result then
+        return nil, err
+    end
+    for i = 1, #result do
+        local json, json_err = DecodeJson(result[i].share_data)
+        if not json then
+            return nil, json_err
+        end
+        result[i].share_data = json
+    end
+    return result
+end
+
+function Model:linkTagsToSPLEntry(query, entry_id, tags)
+    local SP = "link_tags_to_spl_entry"
+    self:create_savepoint(SP)
+    for i = 1, #tags do
+        local tag_name = tags[i]
+        Log(kLogDebug, "Trying to link %s to %d" % { tag_name, entry_id })
+        local tag_id, t_err = self:getOrCreateTagIdByName(tag_name)
+        if not tag_id then
+            self:rollback(SP)
+            return nil, t_err
+        end
+        Log(kLogDebug, "Using tag_id " .. tostring(tag_id))
+        local link_ok, link_err = self.conn:execute(query, entry_id, tag_id)
+        if not link_ok then
+            self:rollback(SP)
+            return nil, link_err
+        end
+    end
+    self:release_savepoint(SP)
+    return true
+end
+
+function Model:createSPLEntryWithTags(spl_id, handle, pos_tags, neg_tags)
+    local SP = "create_spl_entry_with_tags"
+    self:create_savepoint(SP)
+    local entry, entry_err =
+        self.conn:fetchOne(queries.model.insert_spl_entry, handle, spl_id)
+    if not entry then
+        self:rollback(SP)
+        return nil, entry_err
+    end
+    local ok, err = self:linkTagsToSPLEntry(
+        queries.model.insert_positive_tag,
+        entry.spl_entry_id,
+        pos_tags
+    )
+    if not ok then
+        self:rollback(SP)
+        return nil, err
+    end
+    ok, err = self:linkTagsToSPLEntry(
+        queries.model.insert_negative_tag,
+        entry.spl_entry_id,
+        neg_tags
+    )
+    if not ok then
+        self:rollback(SP)
+        return nil, err
+    end
+    self:release_savepoint(SP)
+    return true
+end
+
+function Model:getSharePingListById(spl_id)
+    local result, err = fetchOneExactly(
+        self.conn,
+        queries.model.get_share_ping_list_by_id,
+        spl_id
+    )
+    if not result then
+        return nil, err
+    end
+    local json, json_err = DecodeJson(result.share_data)
+    if not json then
+        return nil, json_err
+    end
+    result.share_data = json
+    return result
+end
+
+function Model:getEntriesForSPLById(spl_id)
+    local entries, e_err = self.conn:fetchAll(
+        queries.model.get_entries_for_ping_list_by_id,
+        spl_id
+    )
+    if not entries then
+        return nil, e_err
+    end
+    local positive_tags, p_err = self.conn:fetchAll(
+        queries.model.get_all_positive_tags_for_all_entries_in_ping_list_by_id,
+        spl_id
+    )
+    if not positive_tags then
+        return nil, p_err
+    end
+    local negative_tags, n_err = self.conn:fetchAll(
+        queries.model.get_all_negative_tags_for_all_entries_in_ping_list_by_id,
+        spl_id
+    )
+    if not negative_tags then
+        return nil, n_err
+    end
+    local positive_tags_regrouped = {}
+    local negative_tags_regrouped = {}
+    for i = 1, #entries do
+        local entry = entries[i]
+        print(EncodeJson(entry))
+        positive_tags_regrouped[entry.spl_entry_id] = {}
+        negative_tags_regrouped[entry.spl_entry_id] = {}
+    end
+    for i = 1, #positive_tags do
+        local tag = positive_tags[i]
+        local list = positive_tags_regrouped[tag.spl_entry_id]
+        list[#list + 1] = tag
+    end
+    for i = 1, #negative_tags do
+        local tag = negative_tags[i]
+        local list = negative_tags_regrouped[tag.spl_entry_id]
+        list[#list + 1] = tag
+    end
+    return entries, positive_tags_regrouped, negative_tags_regrouped
 end
 
 function Model:create_savepoint(name)

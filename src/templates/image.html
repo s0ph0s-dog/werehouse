@@ -50,6 +50,17 @@ groups }) %}
       {% end %}
     </ul>
     {% end %}
+    <h1>Sharing</h1>
+    <form method="POST">
+      <span class="buttons">
+        <select name="share_option">
+          {% for i = 1, #share_ping_lists do local spl = share_ping_lists[i] %}
+          <option>{%& spl.spl_id %}: {%& spl.name %}</option>
+          {% end %}
+        </select>
+        <input type="submit" name="share" value="Share…" />
+      </span>
+    </form>
   </div>
 </div>
 {% end %}{% render("layouts/main", { title = "Image " ..
