@@ -43,7 +43,7 @@ local function multipart_body(boundary, image_data, content_type)
 end
 
 local function transform_fuzzysearch_response(json)
-    Log(kLogDebug, "FuzzySearch JSON response: %s" % {EncodeJson(json)})
+    Log(kLogDebug, "FuzzySearch JSON response: %s" % { EncodeJson(json) })
     return table.filtermap(json, function(result)
         return result.distance < 1 and SITE_TO_POST_URL_MAP[result.site]
     end, function(result)

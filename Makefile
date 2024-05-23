@@ -26,6 +26,12 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/web.lua
 SRCS := src/.init.lua \
     src/manage.lua \
+    src/favicon.ico \
+    src/icon-180.png \
+    src/icon-192.png \
+    src/icon-512.png \
+    src/icon.svg \
+    src/manifest.webmanifest \
     src/templates/layouts/main.html \
     src/templates/layouts/dialog.html \
     src/templates/components/artist_verified.html \
@@ -127,6 +133,18 @@ $(SRV_DIR)/manage.lua: src/manage.lua | $$(@D)/.
 	cp $< $@
 
 $(SRV_DIR)/%.css: src/%.css | $$(@D)/.
+	cp $< $@
+
+$(SRV_DIR)/%.png: src/%.png | $$(@D)/.
+	cp $< $@
+
+$(SRV_DIR)/%.ico: src/%.ico | $$(@D)/.
+	cp $< $@
+
+$(SRV_DIR)/%.svg: src/%.svg | $$(@D)/.
+	cp $< $@
+
+$(SRV_DIR)/%.webmanifest: src/%.webmanifest | $$(@D)/.
 	cp $< $@
 
 # Remove SRV_DIR from the start of each path, and also don't try to zip Redbean
