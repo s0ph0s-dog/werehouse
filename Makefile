@@ -51,6 +51,7 @@ SRCS := src/.init.lua \
     src/templates/artists.html \
     src/templates/image.html \
     src/templates/image_edit.html \
+    src/templates/image_share.html \
     src/templates/images.html \
     src/templates/image_groups.html \
     src/templates/image_group.html \
@@ -60,6 +61,9 @@ SRCS := src/.init.lua \
     src/templates/queue_help.html \
     src/templates/about.html \
     src/templates/account.html \
+    src/templates/share_ping_list.html \
+    src/templates/share_ping_list_add.html \
+    src/templates/share_ping_list_edit.html \
     src/templates/tags.html \
     src/templates/tag.html \
     src/templates/tag_edit.html \
