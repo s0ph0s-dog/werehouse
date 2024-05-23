@@ -2,7 +2,7 @@
 <li>
   <div class="input-cell">
     <input data-1p-ignore type="{%& type %}" name="pending_{%& name %}s[]" value="{%& value %}"{% if list then %} list="{%& list %}"{% end %} autocomplete="off" />
-    <button type="submit" name="delete_pending_{%& name %}" data-kind="{%& name %}" value="{%& button_value %}">{%& button_verb %}</button>
+    <button type="submit" name="delete_pending_{%& name %}" data-kind="{%& name %}" value="{%& button_value %}" formnovalidate=>{%& button_verb %}</button>
   </div>
 </li>
 {% end %}
@@ -15,7 +15,7 @@
   </div>
   <div class="sidebar">
     <form method="POST" id="edit-form">
-      <input type="submit" id="dummy" name="dummy" value="Dummy Submit" style="display:none;" />
+      <input type="submit" id="dummy" name="dummy" value="Dummy Submit" style="display:none;" formnovalidate />
       <h1>Metadata</h1>
       <ul>
         <li>Saved at: <time>{%& image.saved_at %}</time></li>
@@ -60,9 +60,9 @@
         {% if pending_artists then for i = 1, #pending_artists do local artist = pending_artists[i] %}
           {% input_cell("text", "artist", artist, "all-artists", "Unlink", i) %}
         {% end end %}
-        <li id="artist_insert_mark"><input data-1p-ignore type="text" id="add_artist_field" name="pending_artists[]" list="all-artists" data-kind="artist" placeholder="Add Artist" /></li>
+        <li id="artist_insert_mark"><input data-1p-ignore type="text" id="add_artist_field" name="pending_artists[]" list="all-artists" data-kind="artist" autocomplete="off" placeholder="Add Artist" /></li>
       </ul>
-      <button type="submit" name="add_artist" value="add_artist" data-kind="artist">Add Another Artist…</button>
+      <button type="submit" name="add_artist" value="add_artist" data-kind="artist" formnovalidate>Add Another Artist…</button>
       <h1>Tags</h1>
       <datalist id="all-tags">
         {% for i = 1, #alltags do %}
@@ -81,8 +81,8 @@
         {% if pending_tags then for i = 1, #pending_tags do local tag = pending_tags[i] %}
           {% input_cell("text", "tag", tag, "all-tags", "Unlink", i) %}
         {% end end %}
-        <li id="tag_insert_mark"><input data-1p-ignore type="text" name="pending_tags[]" id="add_tag_field" data-kind="tag" placeholder="Add Tag" list="all-tags" /></li> </ul>
-      <button type="submit" name="add_tag" value="add_tag" data-kind="tag">Add Another Tag…</button>
+        <li id="tag_insert_mark"><input data-1p-ignore type="text" name="pending_tags[]" id="add_tag_field" data-kind="tag" placeholder="Add Tag" autocomplete="off" list="all-tags" autocapitalize="words"/></li> </ul>
+      <button type="submit" name="add_tag" value="add_tag" data-kind="tag" formnovalidate>Add Another Tag…</button>
       <h1>Sources</h1>
       <div id="deleted_source_container">
       {% if delete_sources then for i = 1, #delete_sources do %}
@@ -95,7 +95,7 @@
   <div class="input-cell">
     <input type="hidden" name="source_ids[]" value="{%& source.source_id %}" />
     <input data-1p-ignore type="url" name="sources[]" value="{%& source.link %}" autocomplete="off" disabled />
-    <button type="submit" name="delete_source" data-kind="source" value="{%& source.source_id %}">Delete</button>
+    <button type="submit" name="delete_source" data-kind="source" value="{%& source.source_id %}" formnovalidate>Delete</button>
   </div>
 </li>
         {% end %}
@@ -108,13 +108,14 @@
             id="add_source_field"
             name="pending_sources[]"
             value=""
+            autocomplete="off"
             data-kind="source"
             placeholder="Add Source"/>
         </li>
       </ul>
-      <button type="submit" name="add_source" value="add_source" data-kind="source">Add Another Source…</button>
+      <button type="submit" name="add_source" value="add_source" data-kind="source" formnovalidate>Add Another Source…</button>
       <span class="buttons">
-        <input type="submit" name="cancel" value="Cancel" /><input
+        <input type="submit" name="cancel" value="Cancel" formnovalidate /><input
           type="submit"
           name="save"
           value="Save"

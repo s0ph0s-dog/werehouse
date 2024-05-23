@@ -24,6 +24,12 @@ local CANONICAL_DOMAINS_WITH_TAGS = {
     "cohost.org",
 }
 
+local SITE_TO_POST_URL_MAP = {
+    FurAffinity = "https://www.furaffinity.net/full/%s",
+    e621 = "https://e621.net/posts/%s",
+    Twitter = "https://twitter.com/status/%s",
+}
+
 local function multipart_body(boundary, image_data, content_type)
     local result = '--%s\r\nContent-Disposition: form-data; name="image"; filename="C:\\fakepath\\purple%s"\r\nContent-Type: %s\r\n\r\n%s\r\n--%s--\r\n\r\n'
         % {
@@ -37,10 +43,12 @@ local function multipart_body(boundary, image_data, content_type)
 end
 
 local function transform_fuzzysearch_response(json)
+    Log(kLogDebug, "FuzzySearch JSON response: %s" % {EncodeJson(json)})
     return table.filtermap(json, function(result)
-        return result.distance < 10
+        return result.distance < 1 and SITE_TO_POST_URL_MAP[result.site]
     end, function(result)
-        return result.url
+        local post_url_template = SITE_TO_POST_URL_MAP[result.site]
+        return post_url_template:format(result.site_id_str)
     end)
 end
 
@@ -197,13 +205,12 @@ local function get_sources_for_entry(queue_entry)
         end
         return nil, "should be unreachable"
     elseif queue_entry.image then
-        return nil, "this is currently broken"
-        --[[local maybe_source_links, errmsg2 =
+        local maybe_source_links, errmsg2 =
             fuzzysearch_image(queue_entry.image, queue_entry.image_mime_type)
         if not maybe_source_links then
             return nil, errmsg2
         end
-        return maybe_source_links]]
+        return maybe_source_links
     else
         return nil,
             "No link or image data for queue entry %s" % { queue_entry.qid }
