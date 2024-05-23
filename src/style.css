@@ -56,6 +56,13 @@ input[type="password"] {
   max-width: 64em;
   margin: 0 auto;
 }
+nav h1 {
+  display: inline-block;
+}
+nav img {
+  position: relative;
+  top: 0.5em;
+}
 nav {
   border-bottom: 1px solid CanvasText;
   display: flex;
