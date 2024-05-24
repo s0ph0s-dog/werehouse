@@ -30,7 +30,11 @@ SRCS := src/.init.lua \
     src/icon-180.png \
     src/icon-192.png \
     src/icon-512.png \
+    src/icon-192-maskable.png \
+    src/icon-512-maskable.png \
     src/icon.svg \
+    src/sw.js \
+    src/index.js \
     src/manifest.webmanifest \
     src/templates/layouts/main.html \
     src/templates/layouts/dialog.html \
@@ -145,6 +149,9 @@ $(SRV_DIR)/%.svg: src/%.svg | $$(@D)/.
 	cp $< $@
 
 $(SRV_DIR)/%.webmanifest: src/%.webmanifest | $$(@D)/.
+	cp $< $@
+
+$(SRV_DIR)/%.js: src/%.js | $$(@D)/.
 	cp $< $@
 
 # Remove SRV_DIR from the start of each path, and also don't try to zip Redbean

@@ -1,12 +1,25 @@
 {
   "name": "Werehouse",
   "short_name": "Werehouse",
-  "start_url": ".",
+  "start_url": "/home",
   "display": "standalone",
-  "background_color": "#fff",
+  "background_color": "#000",
+  "theme_color": "#fff",
   "description": "An art archiving and sharing tool.",
   "icons": [
     { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
-    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" }
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" },
+    {
+      "src": "/icon-192-maskable.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
   ]
 }

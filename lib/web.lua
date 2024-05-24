@@ -239,6 +239,7 @@ local render_queue_image = login_required(function(r, _)
     r.headers.ContentType = result.image_mime_type
     return Fm.serveResponse(200, {
         ContentType = result.image_mime_type,
+        ["Cache-Control"] = "private; max-age=31536000",
     }, result.image)
 end)
 
@@ -291,6 +292,7 @@ local render_image_file = login_required(function(r)
             r.params.filename:sub(2, 2),
             r.params.filename,
         }
+    SetHeader("Cache-Control", "public; max-age=31536000")
     return Fm.serveAsset(path)
 end)
 
@@ -1599,8 +1601,14 @@ local function setup()
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
     Fm.setRoute("/icon.svg", Fm.serveAsset)
     Fm.setRoute("/icon-180.png", Fm.serveAsset)
+    Fm.setRoute("/icon-192.png", Fm.serveAsset)
+    Fm.setRoute("/icon-512.png", Fm.serveAsset)
+    Fm.setRoute("/icon-192-maskable.png", Fm.serveAsset)
+    Fm.setRoute("/icon-512-maskable.png", Fm.serveAsset)
     Fm.setRoute("/manifest.webmanifest", Fm.serveAsset)
     Fm.setRoute("/style.css", Fm.serveAsset)
+    Fm.setRoute("/index.js", Fm.serveAsset)
+    Fm.setRoute("/sw.js", Fm.serveAsset)
     Fm.setRoute("/", render_about)
     Fm.setRoute("/tos", render_tos)
     -- User-facing routes

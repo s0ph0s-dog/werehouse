@@ -49,6 +49,7 @@ queue_item.disambiguation_request then %}
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon-180.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#FFF" />
   </head>
   <body>
     <div class="content">
@@ -57,5 +58,6 @@ queue_item.disambiguation_request then %}
       was provided.{% end %}{% block.content() %}{% if not hide_footer then %}{%
       block.footer() %}{% end %}
     </div>
+    <script src="/index.js"></script>
   </body>
 </html>
