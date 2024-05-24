@@ -32,6 +32,8 @@ IdPrefixes = {
     telegram_link_request = "tglr_",
 }
 
+ProgramContentType("webmanifest", "application/manifest+json")
+
 Accounts = DbUtil.Accounts:new()
 Accounts:bootstrapInvites()
 

@@ -237,7 +237,9 @@ local render_queue_image = login_required(function(r, _)
         return Fm.serve404()
     end
     r.headers.ContentType = result.image_mime_type
-    return result.image
+    return Fm.serveResponse(200, {
+        ContentType = result.image_mime_type,
+    }, result.image)
 end)
 
 local allowed_image_types = {
