@@ -308,7 +308,8 @@ local queries = {
             LIMIT 20;]],
         get_all_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status, disambiguation_request, disambiguation_data
             FROM queue
-            ORDER BY added_on DESC;]],
+            ORDER BY added_on ASC
+            LIMIT 10;]],
         get_all_active_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status, disambiguation_request, disambiguation_data
             FROM queue
             WHERE tombstone = 0

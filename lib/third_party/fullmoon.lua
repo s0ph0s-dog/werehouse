@@ -1047,7 +1047,7 @@ local function checkSchedule(time)
     local cront, func, sameproc = v[1], v[2], v[3]
     if cront[1][m] and cront[2][h] and cront[3][dom] and cront[4][mon] and cront[5][dow] then
       if sameproc or assert(unix.fork()) == 0 then
-        local ok, err = pcall(func)
+        local ok, err = xpcall(func, debug.traceback)
         if not ok then LogWarn("scheduled task failed: "..err) end
         if not sameproc then unix.exit(0) end
       end

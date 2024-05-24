@@ -43,13 +43,18 @@ local function multipart_body(boundary, image_data, content_type)
 end
 
 local function transform_fuzzysearch_response(json)
-    Log(kLogDebug, "FuzzySearch JSON response: %s" % { EncodeJson(json) })
-    return table.filtermap(json, function(result)
-        return result.distance < 1 and SITE_TO_POST_URL_MAP[result.site]
+    -- Log(kLogDebug, "FuzzySearch JSON response: %s" % { EncodeJson(json) })
+    local result = table.filtermap(json, function(result)
+        -- Log(kLogDebug, "Filter debug: %d, %s, %s" % {result.distance, result.site, SITE_TO_POST_URL_MAP[result.site]})
+        return result.distance < 3 and SITE_TO_POST_URL_MAP[result.site] ~= nil
     end, function(result)
         local post_url_template = SITE_TO_POST_URL_MAP[result.site]
-        return post_url_template:format(result.site_id_str)
+        local result = post_url_template:format(result.site_id_str)
+        -- Log(kLogDebug, "Map debug: %s" % {EncodeJson(result)})
+        return result
     end)
+    -- Log(kLogDebug, "Processed FuzzySearch results: %s" % {EncodeJson(result)})
+    return result
 end
 
 local function fuzzysearch_uri(image_uri)
@@ -161,6 +166,9 @@ end
 ---@return boolean # true if this URL should be checked with FuzzySearch, false if it can be handled internally.
 ---@return string? errmsg An error message, if one occurred.
 local function guess_with_head(link)
+    if not link then
+        return false, "link was null, probably an error"
+    end
     local status, headers, _ = Fetch(link, { method = "HEAD" })
     if not status then
         return false, "%s while fetching %s" % { headers, link }
@@ -571,7 +579,7 @@ local function task_for_scraping(queue_entry)
         return nil,
             TempScraperError(
                 "I couldn't find sources for %s: %s"
-                    % { queue_entry.qid, find_src_err }
+                    % { queue_entry.qid, find_src_err or "0 rows in table" }
             )
     end
     local task, scrape_err = scrape_sources(sources)
