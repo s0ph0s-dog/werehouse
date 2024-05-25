@@ -24,7 +24,7 @@
     <div class="content">
       <div
         class="dialog"
-        style="margin: 2em 0; width: {% if dialog_width then %}{%& dialog_width %}{% else %}24em{% end %}"
+        style="max-width:95vw;margin: 2em 0; width: {% if dialog_width then %}{%& dialog_width %}{% else %}24em{% end %}"
       >
         <h1>{%& title %}</h1>
         {% if type(error) == "string" then %}

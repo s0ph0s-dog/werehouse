@@ -33,6 +33,11 @@ input[type="password"] {
   width: 100%;
   padding: 0.5em;
 }
+
+textarea {
+  max-width: 100%;
+}
+
 .inline,
 .inline a,
 .inline input {
@@ -82,7 +87,7 @@ nav .links a:last-child {
 footer {
   border-top: 1px solid CanvasText;
   margin-top: 1em;
-  padding: 1em 0;
+  padding: 1em 0 1.5em 0;
 }
 
 .gallery {
@@ -103,8 +108,9 @@ footer {
   border: 3px solid LinkText;
 }
 .gallery label {
-  display: block;
-  width: 12em;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
 }
 .gallery a:active img {
   border-color: ActiveText;
@@ -118,7 +124,7 @@ footer {
 }
 
 .gallery input[type="checkbox"] {
-  float: right;
+  margin: 0;
 }
 
 .edit {
@@ -310,6 +316,7 @@ table img {
 
 .pages {
   display: flex;
+  gap: 0.5em;
   justify-content: space-between;
 }
 

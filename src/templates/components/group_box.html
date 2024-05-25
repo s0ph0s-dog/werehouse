@@ -2,10 +2,9 @@
 <div class="pages group">
   {% if ig.siblings and ig.siblings.prev then %}
   <a href="/image/{%& ig.siblings.prev %}">←&nbsp;Previous</a>{% else
-  %}<span>←&nbsp;Previous</span>{% end %}&nbsp;<a
-    href="/image-group/{%& ig.ig_id %}"
+  %}<span>←&nbsp;Previous</span>{% end %}<a href="/image-group/{%& ig.ig_id %}"
     >Group: {%& ig.name %}</a
-  >&nbsp;{% if ig.siblings and ig.siblings.next then %}<a
+  >{% if ig.siblings and ig.siblings.next then %}<a
     href="/image/{%& ig.siblings.next %}"
     >Next&nbsp;→</a
   >{% else %}<span>Next&nbsp;→</span>{% end %}

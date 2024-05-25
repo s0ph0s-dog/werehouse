@@ -1,13 +1,7 @@
 const cacheKey = "WerehouseCache";
-const cacheVersion = "1";
+const cacheVersion = "2";
 const cacheName = cacheKey + ".v" + cacheVersion;
-const precachedResources = [
-  "/home",
-  "/index.js",
-  "/style.css",
-  "/index.js",
-  "/icon.svg",
-];
+const precachedResources = ["/home", "/index.js", "/style.css", "/icon.svg"];
 
 async function precache() {
   const cache = await caches.open(cacheName);
@@ -22,6 +16,7 @@ async function clear_and_reset_cache() {
 }
 
 async function cacheFirst(request) {
+  // console.log("Cache first:", request);
   const cachedResponse = await caches.match(request);
   if (cachedResponse) {
     return cachedResponse;
@@ -39,6 +34,7 @@ async function cacheFirst(request) {
 }
 
 async function cacheFirstWithRefresh(request) {
+  // console.log("Cache first with refresh:", request);
   const fetchResponsePromise = fetch(request).then(async (networkResponse) => {
     if (networkResponse.ok) {
       const cache = await caches.open(cacheName);
@@ -51,6 +47,7 @@ async function cacheFirstWithRefresh(request) {
 }
 
 async function networkFirst(request) {
+  // console.log("Network first:", request);
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
@@ -68,11 +65,8 @@ self.addEventListener("install", (event) => {
   event.waitUntil(precache());
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(clear_and_reset_cache());
-});
-
 self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
   if (precachedResources.includes(url.pathname)) {
     event.respondWith(cacheFirst(event.request));
   } else if (

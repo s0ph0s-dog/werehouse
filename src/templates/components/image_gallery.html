@@ -24,14 +24,17 @@
       </a>
       <figcaption>
         <label>
+          <span
+            >{%& fn.kind_str(image.kind) %}<br />by {% if image.artists then
+            %}{%& image.artists %}{% else %}(Missing artist info){% end %}</span
+          >
           {% if editable then %}
           <input
             type="checkbox"
             name="image_ids[]"
             value="{%& image.image_id %}"
           />
-          {% end %}{%& fn.kind_str(image.kind) %}<br />by {% if image.artists
-          then %}{%& image.artists %}{% else %}(Missing artist info){% end %}
+          {% end %}
         </label>
       </figcaption>
     </figure>
