@@ -60,6 +60,18 @@ function bot.get_all_links_from_message(message)
             return nil
         end
     end)
+    if message.reply_markup and message.reply_markup.inline_keyboard then
+        local button_links = table.filtermap(
+            table.flatten(message.reply_markup.inline_keyboard),
+            function(i)
+                return i.url and i.url:startswith("http")
+            end,
+            function(i) return i.url end
+        )
+        for i = 1, #button_links do
+            links[#links + 1] = button_links[i]
+        end
+    end
     return links
 end
 
