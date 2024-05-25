@@ -599,6 +599,12 @@ local queries = {
         delete_tag_rule_by_id = [[DELETE FROM "tag_rules" WHERE tag_rule_id = ?;]],
         delete_handle_for_artist_by_id = [[DELETE FROM "artist_handles"
             WHERE artist_id = ? AND handle_id = ?;]],
+        delete_spl_entry_by_id = [[DELETE FROM "share_ping_list_entry"
+            WHERE spl_entry_id = ?;]],
+        delete_pl_positive_tag = [[DELETE FROM "pl_entry_positive_tags"
+            WHERE spl_entry_id = ? AND tag_id = ?;]],
+        delete_pl_negative_tag = [[DELETE FROM "pl_entry_negative_tags"
+            WHERE spl_entry_id = ? AND tag_id = ?;]],
         update_queue_item_status = [[UPDATE "queue"
             SET "status" = ?, "tombstone" = ?
             WHERE qid = ?;]],
@@ -720,6 +726,20 @@ function Model:_delete_by_two_ids(query, container_id, item_ids)
     self:create_savepoint(SP)
     for i = 1, #item_ids do
         local ok, err = self.conn:execute(query, container_id, item_ids[i])
+        if not ok then
+            self:rollback(SP)
+            return nil, err
+        end
+    end
+    self:release_savepoint(SP)
+    return true
+end
+
+function Model:_delete_by_two_ids_arbitrary(query, pairs)
+    local SP = "delete_by_two_ids_arbitrary_" .. rand_hex(8)
+    self:create_savepoint(SP)
+    for i = 1, #pairs do
+        local ok, err = self.conn:execute(query, pairs[i][1], pairs[i][2])
         if not ok then
             self:rollback(SP)
             return nil, err
@@ -1649,7 +1669,7 @@ function Model:getAllSharePingLists()
     return result
 end
 
-function Model:linkTagsToSPLEntry(query, entry_id, tags)
+function Model:_linkTagsToSPLEntry(query, entry_id, tags)
     local SP = "link_tags_to_spl_entry"
     self:create_savepoint(SP)
     for i = 1, #tags do
@@ -1671,6 +1691,22 @@ function Model:linkTagsToSPLEntry(query, entry_id, tags)
     return true
 end
 
+function Model:linkPositiveTagsToSPLEntryByName(entry_id, tag_names)
+    return self:_linkTagsToSPLEntry(
+        queries.model.insert_positive_tag,
+        entry_id,
+        tag_names
+    )
+end
+
+function Model:linkNegativeTagsToSPLEntryByName(entry_id, tag_names)
+    return self:_linkTagsToSPLEntry(
+        queries.model.insert_negative_tag,
+        entry_id,
+        tag_names
+    )
+end
+
 function Model:createSPLEntryWithTags(spl_id, handle, pos_tags, neg_tags)
     local SP = "create_spl_entry_with_tags"
     self:create_savepoint(SP)
@@ -1680,20 +1716,14 @@ function Model:createSPLEntryWithTags(spl_id, handle, pos_tags, neg_tags)
         self:rollback(SP)
         return nil, entry_err
     end
-    local ok, err = self:linkTagsToSPLEntry(
-        queries.model.insert_positive_tag,
-        entry.spl_entry_id,
-        pos_tags
-    )
+    local ok, err =
+        self:linkPositiveTagsToSPLEntryByName(entry.spl_entry_id, pos_tags)
     if not ok then
         self:rollback(SP)
         return nil, err
     end
-    ok, err = self:linkTagsToSPLEntry(
-        queries.model.insert_negative_tag,
-        entry.spl_entry_id,
-        neg_tags
-    )
+    ok, err =
+        self:linkNegativeTagsToSPLEntryByName(entry.spl_entry_id, neg_tags)
     if not ok then
         self:rollback(SP)
         return nil, err
@@ -1760,6 +1790,27 @@ function Model:getEntriesForSPLById(spl_id)
         list[#list + 1] = tag
     end
     return entries, positive_tags_regrouped, negative_tags_regrouped
+end
+
+function Model:deleteSPLEntriesById(delete_entry_ids)
+    return self:_delete_by_id(
+        queries.model.delete_spl_entry_by_id,
+        delete_entry_ids
+    )
+end
+
+function Model:deletePLPositiveTagsByPair(pairs)
+    return self:_delete_by_two_ids_arbitrary(
+        queries.model.delete_pl_positive_tag,
+        pairs
+    )
+end
+
+function Model:deletePLNegativeTagsByPair(pairs)
+    return self:_delete_by_two_ids_arbitrary(
+        queries.model.delete_pl_negative_tag,
+        pairs
+    )
 end
 
 function Model:create_savepoint(name)

@@ -1680,22 +1680,21 @@ local accept_add_tag_rule = login_required(function(r)
     return Fm.serveRedirect("/tag-rule/" .. tag_rule_id, 302)
 end)
 
-local function reorganize_pending_tags(r)
-    local pending_positive_tags = {}
-    local pending_negative_tags = {}
-    if r.params.pending_handles then
-        for i = 1, #r.params.pending_handles do
-            pending_positive_tags[i] = table.filter(
-                r.params["pending_positive_tags_handle_" .. i],
-                not_emptystr
-            )
-            pending_negative_tags[i] = table.filter(
-                r.params["pending_negative_tags_handle_" .. i],
-                not_emptystr
-            )
+local function reorganize_tags(kind, r)
+    local positive_tags = {}
+    local negative_tags = {}
+    local params_ids_key = kind .. "_ids"
+    local fmtstr = "%s_%s_tags_handle_%d"
+    if r.params[params_ids_key] then
+        for i = 1, #r.params[params_ids_key] do
+            local id = tonumber(r.params[params_ids_key][i]) or 0
+            local ptag_key = fmtstr:format(kind, "positive", id)
+            local ntag_key = fmtstr:format(kind, "negative", id)
+            positive_tags[id] = table.filter(r.params[ptag_key], not_emptystr)
+            negative_tags[id] = table.filter(r.params[ntag_key], not_emptystr)
         end
     end
-    return pending_positive_tags, pending_negative_tags
+    return positive_tags, negative_tags
 end
 
 local function parse_delete_coords(coords)
@@ -1756,7 +1755,7 @@ local render_add_share_ping_list = login_required(function(r, user_record)
         Log(kLogInfo, alltags_err)
         alltags = {}
     end
-    local pending_pos, pending_neg = reorganize_pending_tags(r)
+    local pending_pos, pending_neg = reorganize_tags("pending", r)
     local pending_handles = table.filter(r.params.pending_handles, not_emptystr)
     if
         r.params.dummy_submit
@@ -1807,6 +1806,118 @@ local render_add_share_ping_list = login_required(function(r, user_record)
     })
 end)
 
+local function filter_deleted_tags(delete_coords_list, tags_by_entryid_map)
+    local result = {}
+    local delete_set = {}
+    for i = 1, #delete_coords_list do
+        local entry_id, tag_id = parse_delete_coords(delete_coords_list[i])
+        if not delete_set[entry_id] then
+            delete_set[entry_id] = {}
+        end
+        delete_set[entry_id][tag_id] = true
+    end
+    Log(kLogDebug, "delete_set: %s" % { EncodeLua(delete_set) })
+    for entry_id, tags in pairs(tags_by_entryid_map) do
+        result[entry_id] = table.filter(tags, function(t)
+            Log(kLogDebug, "t: %s" % { EncodeJson(t) })
+            return not (delete_set[entry_id] and delete_set[entry_id][t.tag_id])
+        end)
+    end
+    return result
+end
+
+local function accept_edit_share_ping_list(
+    r,
+    delete_entry_ids,
+    delete_entry_negative_tags,
+    delete_entry_positive_tags,
+    pending_pos,
+    pending_neg,
+    entry_pos,
+    entry_neg,
+    pending_handles
+)
+    local spl_id = r.params.spl_id
+    if not not_emptystr(spl_id) then
+        return Fm.serveError(400, "Invalid share option ID")
+    end
+    if not not_emptystr(r.params.name) then
+        return Fm.serveError(400, "Invalid share option name")
+    end
+    if r.params.selected_service ~= "Telegram" then
+        return Fm.serveError(400, "Invalid service (must be 'Telegram')")
+    end
+    if not not_emptystr(r.params.chat_id) or not tonumber(r.params.chat_id) then
+        return Fm.serveError(400, "Invalid chat ID")
+    end
+    local share_data = EncodeJson {
+        type = r.params.selected_service,
+        chat_id = tonumber(r.params.chat_id),
+    }
+    local SP = "add_share_ping_list"
+    Model:create_savepoint(SP)
+    -- Delete entries first (to cascade-delete their pl_entry_x_tag rows)
+    local de_ok, de_err = Model:deleteSPLEntriesById(delete_entry_ids)
+    if not de_ok then
+        Model:rollback(SP)
+        Log(kLogInfo, de_err)
+        return Fm.serve500()
+    end
+    -- Delete tags next.  If a user deletes a tag and then re-adds it, this order will avoid constraint errors.
+    local function delete_map(pair_str)
+        return table.pack(parse_delete_coords(pair_str))
+    end
+    local dptp = table.map(delete_entry_positive_tags, delete_map)
+    local dntp = table.map(delete_entry_negative_tags, delete_map)
+    local dpt_ok, dpt_err = Model:deletePLPositiveTagsByPair(dptp)
+    if not dpt_ok then
+        Model:rollback(SP)
+        Log(kLogInfo, dpt_err)
+        return Fm.serve500()
+    end
+    local dnt_ok, dnt_err = Model:deletePLNegativeTagsByPair(dntp)
+    if not dnt_ok then
+        Model:rollback(SP)
+        Log(kLogInfo, dnt_err)
+        return Fm.serve500()
+    end
+    -- Add pending tags for existing entries.
+    local function do_link(model_method, tag_map)
+        for spl_entry_id, tag_names in pairs(tag_map) do
+            local link_ok, link_err =
+                model_method(Model, spl_entry_id, tag_names)
+            if not link_ok then
+                Model:rollback(SP)
+                Log(kLogInfo, lpt_err)
+                return false
+            end
+        end
+        return true
+    end
+    if not do_link(Model.linkPositiveTagsToSPLEntryByName, entry_pos) then
+        return Fm.serve500()
+    end
+    if not do_link(Model.linkNegativeTagsToSPLEntryByName, entry_neg) then
+        return Fm.serve500()
+    end
+    -- Add new entries.
+    for i = 1, #pending_handles do
+        local h_ok, h_err = Model:createSPLEntryWithTags(
+            spl_id,
+            pending_handles[i],
+            pending_pos[i],
+            pending_neg[i]
+        )
+        if not h_ok then
+            Log(kLogInfo, tostring(h_err))
+            Model:rollback(SP)
+            return Fm.serve500()
+        end
+    end
+    Model:release_savepoint(SP)
+    return Fm.serveRedirect("/share-ping-list/" .. spl_id)
+end
+
 local render_edit_share_ping_list = login_required(function(r, user_record)
     local spl, spl_err = Model:getSharePingListById(r.params.spl_id)
     if not spl then
@@ -1826,7 +1937,13 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
     local delete_entry_ids = r.params.delete_entry_ids or {}
     local delete_entry_negative_tags = r.params.delete_entry_negative_tags or {}
     local delete_entry_positive_tags = r.params.delete_entry_positive_tags or {}
-    local pending_pos, pending_neg = reorganize_pending_tags(r)
+    local pending_pos, pending_neg = reorganize_tags("pending", r)
+    Log(
+        kLogDebug,
+        "pending_pos; pending_neg: %s; %s"
+            % { EncodeLua(pending_pos), EncodeLua(pending_neg) }
+    )
+    local entry_pos, entry_neg = reorganize_tags("entry", r)
     local pending_handles = table.filter(r.params.pending_handles, not_emptystr)
     if
         r.params.dummy_submit
@@ -1834,6 +1951,8 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         or r.params.add_pending_handle
         or r.params.add_pending_positive_tag
         or r.params.add_pending_negative_tag
+        or r.params.add_entry_positive_tag
+        or r.params.add_entry_negative_tag
     then
         -- Do nothing, handling this happens automatically as part of answering the request.
     elseif r.params.delete_pending_positive_tag then
@@ -1844,6 +1963,14 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         local h_idx, t_idx =
             parse_delete_coords(r.params.delete_pending_negative_tag)
         table.remove(pending_neg[h_idx], t_idx)
+    elseif r.params.delete_entry_positive_tag then
+        local h_idx, t_idx =
+            parse_delete_coords(r.params.delete_entry_positive_tag)
+        table.remove(entry_pos[h_idx], t_idx)
+    elseif r.params.delete_entry_negative_tag then
+        local h_idx, t_idx =
+            parse_delete_coords(r.params.delete_entry_negative_tag)
+        table.remove(entry_neg[h_idx], t_idx)
     elseif r.params.delete_pending_handle then
         local h_idx = tonumber(r.params.delete_pending_handle)
         if not h_idx then
@@ -1869,8 +1996,19 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         delete_entry_ids[#delete_entry_ids + 1] = entry_id
         -- Deleting from the output lists is handled below.
     elseif r.params.add then
-        return Fm.serveError(500, "Not implemented yet")
+        return accept_edit_share_ping_list(
+            r,
+            delete_entry_ids,
+            delete_entry_negative_tags,
+            delete_entry_positive_tags,
+            pending_pos,
+            pending_neg,
+            entry_pos,
+            entry_neg,
+            pending_handles
+        )
     end
+    -- "Delete" (hide) database records for handles from next rendered page.
     local delete_entry_ids_set = {}
     for idx = 1, #delete_entry_ids do
         local entry_id = delete_entry_ids[idx]
@@ -1882,6 +2020,12 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         return not delete_entry_ids_set[i.spl_entry_id]
     end)
     Log(kLogDebug, "entries after filter: %s" % { EncodeJson(entries) })
+    -- "Delete" (hide) database records for tags from next rendered page.
+    positive_tags =
+        filter_deleted_tags(delete_entry_positive_tags, positive_tags)
+    negative_tags =
+        filter_deleted_tags(delete_entry_negative_tags, negative_tags)
+    -- Render page.
     return Fm.serveContent("share_ping_list_edit", {
         user = user_record,
         alltags = alltags,
@@ -1896,7 +2040,11 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         pending_handles = pending_handles,
         pending_positive_tags = pending_pos,
         pending_negative_tags = pending_neg,
+        entry_positive_tags = entry_pos,
+        entry_negative_tags = entry_neg,
         delete_entry_ids = delete_entry_ids,
+        delete_entry_positive_tags = delete_entry_positive_tags,
+        delete_entry_negative_tags = delete_entry_negative_tags,
     })
 end)
 

@@ -1,20 +1,20 @@
-{% function pending_tag_list(handle_idx, tag_type, placeholder, pending_tags) %}
-{% if pending_tags[handle_idx] then %}
-{% for tag_idx = 1, #pending_tags[handle_idx] do %}
+{% function editable_tag_list(handle_idx, kind, tag_type, placeholder, tag_values) %}
+{% if tag_values[handle_idx] then %}
+{% for tag_idx = 1, #tag_values[handle_idx] do %}
 <li>
   <div class="input-cell">
     <input
       data-1p-ignore
       type="text"
-      name="pending_{%& tag_type %}_tags_handle_{%& handle_idx %}[]"
-      value="{%& pending_tags[handle_idx][tag_idx] %}"
+      name="{%& kind %}_{%& tag_type %}_tags_handle_{%& handle_idx %}[]"
+      value="{%& tag_values[handle_idx][tag_idx] %}"
       list="all-tags"
       placeholder="{%& placeholder %}"
       autocomplete="off"
     />
     <button
       type="submit"
-      name="delete_pending_{%& tag_type %}_tag"
+      name="delete_{%& kind %}_{%& tag_type %}_tag"
       value="{%& handle_idx %},{%& tag_idx %}"
     >
       Delete
@@ -34,7 +34,7 @@
     >Delete</button>
 </li>
 {% end end end %}
-{% function emit_row(kind, id, value) %}
+{% function emit_row(kind, id, value, uncommitted_ptag_list, uncommitted_ntag_list) %}
 <li>
   <div class="input-cell">
     <input type="hidden" name="{%& kind %}_ids[]" value="{%& id %}" />
@@ -55,15 +55,10 @@
   <ul>
     <li>
       Ping this person if the shared post has any of these tags:
-      <div id="delete-{%& kind %}-positive-tags-{%& id %}">
-        {% if delete_positive_tags then for i = 1, #delete_positive_tags[id] do %}
-        <input type="hidden" name="delete_{%& kind %}_positive_tags[]" value="{%& id %},{%& delete_positive_tags[id][i] %}" />
-        {% end end %}
-      </div>
       <ul>
         {% tag_list(id, "positive", positive_tags) %}
-        {% pending_tag_list(id, "positive", "Paws",
-        pending_positive_tags) %}
+        {% editable_tag_list(id, kind, "positive", "Paws",
+        uncommitted_ptag_list) %}
         <li>
           <input
             type="text"
@@ -84,15 +79,10 @@
     </li>
     <li>
       But not if the shared post has any of these tags:
-      <div id="delete-{%& kind %}-negative-tags-{%& id %}">
-        {% if delete_negative_tags then for i = 1, #delete_negative_tags[id] do %}
-        <input type="hidden" name="delete_{%& kind %}_negative_tags[]" value="{%& id %},{%& delete_negative_tags[id][i] %}" />
-        {% end end %}
-      </div>
       <ul>
         {% tag_list(id, "negative", negative_tags) %}
-        {% pending_tag_list(id, "negative", "Maws",
-        pending_negative_tags) %}
+        {% editable_tag_list(id, kind, "negative", "Maws",
+        uncommitted_ntag_list) %}
         <li>
           <input
             type="text"
@@ -169,13 +159,23 @@
       <input type="hidden" name="delete_entry_ids[]" value="{%& delete_entry_ids[i] %}" />
       {% end end %}
     </div>
+    <div id="delete-entry-positive-tags">
+      {% if delete_entry_positive_tags then for i = 1, #delete_entry_positive_tags do %}
+      <input type="hidden" name="delete_entry_positive_tags[]" value="{%& delete_entry_positive_tags[i] %}" />
+      {% end end %}
+    </div>
+    <div id="delete-entry-negative-tags">
+      {% if delete_entry_negative_tags then for i = 1, #delete_entry_negative_tags do %}
+      <input type="hidden" name="delete_entry_negative_tags[]" value="{%& delete_entry_negative_tags[i] %}" />
+      {% end end %}
+    </div>
     <ul>
       {% if entries and #entries > 0 then for e_idx = 1, #entries do local entry = entries[e_idx] %}
-      {% emit_row("entry", entry.spl_entry_id, entry.handle) %}
+      {% emit_row("entry", entry.spl_entry_id, entry.handle, entry_positive_tags, entry_negative_tags) %}
       {% end end %}
       {% if pending_handles and #pending_handles > 0 then for h_idx = 1,
       #pending_handles do %}
-      {% emit_row("pending", h_idx, pending_handles[h_idx]) %}
+      {% emit_row("pending", h_idx, pending_handles[h_idx], pending_positive_tags, pending_negative_tags) %}
       {% end end %}
       <li>
         <input
