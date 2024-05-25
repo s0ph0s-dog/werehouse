@@ -1823,6 +1823,9 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         Log(kLogInfo, alltags_err)
         alltags = {}
     end
+    local delete_entry_ids = r.params.delete_entry_ids or {}
+    local delete_entry_negative_tags = r.params.delete_entry_negative_tags or {}
+    local delete_entry_positive_tags = r.params.delete_entry_positive_tags or {}
     local pending_pos, pending_neg = reorganize_pending_tags(r)
     local pending_handles = table.filter(r.params.pending_handles, not_emptystr)
     if
@@ -1852,15 +1855,33 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         table.remove(pending_handles, h_idx)
         table.remove(pending_pos, h_idx)
         table.remove(pending_neg, h_idx)
+    elseif r.params.delete_positive_tag then
+        delete_entry_positive_tags[#delete_entry_positive_tags + 1] =
+            r.params.delete_positive_tag
+    elseif r.params.delete_negative_tag then
+        delete_entry_negative_tags[#delete_entry_negative_tags + 1] =
+            r.params.delete_negative_tag
+    elseif r.params.delete_entry_handle then
+        local entry_id = tonumber(r.params.delete_entry_handle)
+        if not entry_id then
+            return Fm.serveError(400, "Invalid number for delete_entry_handle")
+        end
+        delete_entry_ids[#delete_entry_ids + 1] = entry_id
+        -- Deleting from the output lists is handled below.
     elseif r.params.add then
-        return accept_add_share_ping_list(
-            r,
-            user_record,
-            pending_handles,
-            pending_pos,
-            pending_neg
-        )
+        return Fm.serveError(500, "Not implemented yet")
     end
+    local delete_entry_ids_set = {}
+    for idx = 1, #delete_entry_ids do
+        local entry_id = delete_entry_ids[idx]
+        positive_tags[entry_id] = nil
+        negative_tags[entry_id] = nil
+        delete_entry_ids_set[entry_id] = true
+    end
+    entries = table.filter(entries, function(i)
+        return not delete_entry_ids_set[i.spl_entry_id]
+    end)
+    Log(kLogDebug, "entries after filter: %s" % { EncodeJson(entries) })
     return Fm.serveContent("share_ping_list_edit", {
         user = user_record,
         alltags = alltags,
@@ -1875,6 +1896,7 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         pending_handles = pending_handles,
         pending_positive_tags = pending_pos,
         pending_negative_tags = pending_neg,
+        delete_entry_ids = delete_entry_ids,
     })
 end)
 

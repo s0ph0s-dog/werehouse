@@ -33,7 +33,87 @@
       value="{%& entry_id %},{%& tag.tag_id %}"
     >Delete</button>
 </li>
-{% end end end %}{% function block.content() %}
+{% end end end %}
+{% function emit_row(kind, id, value) %}
+<li>
+  <div class="input-cell">
+    <input type="hidden" name="{%& kind %}_ids[]" value="{%& id %}" />
+    <input
+      data-1p-ignore
+      type="text"
+      name="{%& kind %}_handles[]"
+      value="{%& value %}"
+      placeholder="@Username"
+      autocomplete="off"
+    />
+    <button
+      type="submit"
+      name="delete_{%& kind %}_handle"
+      value="{%& id %}"
+    >Delete</button>
+  </div>
+  <ul>
+    <li>
+      Ping this person if the shared post has any of these tags:
+      <div id="delete-{%& kind %}-positive-tags-{%& id %}">
+        {% if delete_positive_tags then for i = 1, #delete_positive_tags[id] do %}
+        <input type="hidden" name="delete_{%& kind %}_positive_tags[]" value="{%& id %},{%& delete_positive_tags[id][i] %}" />
+        {% end end %}
+      </div>
+      <ul>
+        {% tag_list(id, "positive", positive_tags) %}
+        {% pending_tag_list(id, "positive", "Paws",
+        pending_positive_tags) %}
+        <li>
+          <input
+            type="text"
+            autocomplete="off"
+            list="all-tags"
+            name="{%& kind %}_positive_tags_handle_{%& id %}[]"
+            placeholder="Paws"
+          />
+        </li>
+      </ul>
+      <button
+        type="submit"
+        name="add_{%& kind %}_positive_tag"
+        value="add_{%& kind %}_positive_tag"
+      >
+        Add Another ‘Ping’ Tag…
+      </button>
+    </li>
+    <li>
+      But not if the shared post has any of these tags:
+      <div id="delete-{%& kind %}-negative-tags-{%& id %}">
+        {% if delete_negative_tags then for i = 1, #delete_negative_tags[id] do %}
+        <input type="hidden" name="delete_{%& kind %}_negative_tags[]" value="{%& id %},{%& delete_negative_tags[id][i] %}" />
+        {% end end %}
+      </div>
+      <ul>
+        {% tag_list(id, "negative", negative_tags) %}
+        {% pending_tag_list(id, "negative", "Maws",
+        pending_negative_tags) %}
+        <li>
+          <input
+            type="text"
+            autocomplete="off"
+            list="all-tags"
+            name="{%& kind %}_negative_tags_handle_{%& id %}[]"
+            placeholder="Maws"
+          />
+        </li>
+      </ul>
+      <button
+        type="submit"
+        name="add_{%& kind %}_negative_tag"
+        value="add_{%& kind %}_negative_tag"
+      >
+        Add Another ‘Don’t Ping’ Tag…
+      </button>
+    </li>
+  </ul>
+</li>
+{% end %}{% function block.content() %}
 <form class="vbox" method="POST">
   <input type="submit" name="dummy_submit" value="dummy_submit" style="display:none" />
   <label
@@ -84,147 +164,19 @@
       <option>{%& alltags[i].name %}</option>
       {% end %}
     </datalist>
+    <div id="deleted-entry-ids">
+      {% if delete_entry_ids then for i = 1, #delete_entry_ids do %}
+      <input type="hidden" name="delete_entry_ids[]" value="{%& delete_entry_ids[i] %}" />
+      {% end end %}
+    </div>
     <ul>
       {% if entries and #entries > 0 then for e_idx = 1, #entries do local entry = entries[e_idx] %}
-      <li>
-        <div class="input-cell">
-          <input type="hidden" name="entry_ids[]" value="{%& entry.spl_entry_id %}" />
-          <input
-            data-1p-ignore
-            type="text"
-            name="entry_handle_{%& entry.spl_entry_id %}"
-            value="{%& entry.handle %}"
-            placeholder="@Username"
-            autocomplete="off"
-          />
-          <button
-            type="submit"
-            name="delete_entry"
-            value="{%& entry.spl_entry_id %}"
-          >Delete</button>
-        </div>
-        <ul>
-          <li>
-            Ping this person if the shared post has any of these tags:
-            <ul>
-              {% tag_list(entry.spl_entry_id, "positive", positive_tags) %}
-              {% pending_tag_list(e_idx, "positive", "Paws",
-              pending_positive_tags) %}
-              <li>
-                <input
-                  type="text"
-                  autocomplete="off"
-                  list="all-tags"
-                  name="pending_positive_tags_handle_{%& h_idx %}[]"
-                  placeholder="Paws"
-                />
-              </li>
-            </ul>
-            <button
-              type="submit"
-              name="add_pending_positive_tag"
-              value="add_handle"
-            >
-              Add Another ‘Ping’ Tag…
-            </button>
-          </li>
-          <li>
-            But not if the shared post has any of these tags:
-            <ul>
-              {% tag_list(entry.spl_entry_id, "negative", negative_tags) %}
-              {% pending_tag_list(e_idx, "negative", "Maws",
-              pending_negative_tags) %}
-              <li>
-                <input
-                  type="text"
-                  autocomplete="off"
-                  list="all-tags"
-                  name="pending_negative_tags_handle_{%& h_idx %}[]"
-                  placeholder="Maws"
-                />
-              </li>
-            </ul>
-            <button
-              type="submit"
-              name="add_pending_negative_tag"
-              value="add_handle"
-            >
-              Add Another ‘Don’t Ping’ Tag…
-            </button>
-          </li>
-        </ul>
-      </li>
+      {% emit_row("entry", entry.spl_entry_id, entry.handle) %}
       {% end end %}
-      {% if pending_handles and #pending_handles > 0 then %}{% for h_idx = 1,
+      {% if pending_handles and #pending_handles > 0 then for h_idx = 1,
       #pending_handles do %}
-      <li>
-        <div class="input-cell">
-          <input
-            data-1p-ignore
-            type="text"
-            name="pending_handles[]"
-            value="{%& pending_handles[h_idx] %}"
-            placeholder="@Username"
-            autocomplete="off"
-          />
-          <button
-            type="submit"
-            name="delete_pending_handle"
-            value="{%& h_idx %}"
-          >
-            Delete
-          </button>
-        </div>
-        <ul>
-          <li>
-            Ping this person if the shared post has any of these tags:
-            <ul>
-              {% pending_tag_list(h_idx, "positive", "Paws",
-              pending_positive_tags) %}
-              <li>
-                <input
-                  type="text"
-                  autocomplete="off"
-                  list="all-tags"
-                  name="pending_positive_tags_handle_{%& h_idx %}[]"
-                  placeholder="Paws"
-                />
-              </li>
-            </ul>
-            <button
-              type="submit"
-              name="add_pending_positive_tag"
-              value="add_handle"
-            >
-              Add Another ‘Ping’ Tag…
-            </button>
-          </li>
-          <li>
-            But not if the shared post has any of these tags:
-            <ul>
-              {% pending_tag_list(h_idx, "negative", "Maws",
-              pending_negative_tags) %}
-              <li>
-                <input
-                  type="text"
-                  autocomplete="off"
-                  list="all-tags"
-                  name="pending_negative_tags_handle_{%& h_idx %}[]"
-                  placeholder="Maws"
-                />
-              </li>
-            </ul>
-            <button
-              type="submit"
-              name="add_pending_negative_tag"
-              value="add_handle"
-            >
-              Add Another ‘Don’t Ping’ Tag…
-            </button>
-          </li>
-        </ul>
-      </li>
-      {% end %} {% end %}
+      {% emit_row("pending", h_idx, pending_handles[h_idx]) %}
+      {% end end %}
       <li>
         <input
           data-1p-ignore
