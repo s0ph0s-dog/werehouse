@@ -1,0 +1,81 @@
+{
+  "message_id": 562,
+  "from": {
+    "id": 170274001,
+    "is_bot": false,
+    "first_name": "s0ph0s",
+    "last_name": "\u270a\ud83c\udfff\ud83c\udded\ud83c\uddf0\ud83c\udf3b\ud83c\udff3\ufe0f\u200d\ud83c\udf08",
+    "username": "s0ph0s",
+    "language_code": "eo"
+  },
+  "chat": {
+    "id": 170274001,
+    "first_name": "s0ph0s",
+    "last_name": "\u270a\ud83c\udfff\ud83c\udded\ud83c\uddf0\ud83c\udf3b\ud83c\udff3\ufe0f\u200d\ud83c\udf08",
+    "username": "s0ph0s",
+    "type": "private"
+  },
+  "date": 1716656397,
+  "forward_origin": {
+    "type": "channel",
+    "chat": {
+      "id": -1001382531850,
+      "title": "The Smut Cache",
+      "username": "thesmutcache",
+      "type": "channel"
+    },
+    "message_id": 19255,
+    "author_signature": "Rynr / Vygol",
+    "date": 1677343782
+  },
+  "forward_from_chat": {
+    "id": -1001382531850,
+    "title": "The Smut Cache",
+    "username": "thesmutcache",
+    "type": "channel"
+  },
+  "forward_from_message_id": 19255,
+  "forward_signature": "Rynr / Vygol",
+  "forward_date": 1677343782,
+  "photo": [
+    {
+      "file_id": "AgACAgEAAxkBAAICMmZSGQ23bxYBQQWw7Ua8qfjuM5pCAAK8qjEb7UHZRwFicY43sFNwAQADAgADcwADNQQ",
+      "file_unique_id": "AQADvKoxG-1B2Ud4",
+      "file_size": 2136,
+      "width": 81,
+      "height": 90
+    },
+    {
+      "file_id": "AgACAgEAAxkBAAICMmZSGQ23bxYBQQWw7Ua8qfjuM5pCAAK8qjEb7UHZRwFicY43sFNwAQADAgADbQADNQQ",
+      "file_unique_id": "AQADvKoxG-1B2Udy",
+      "file_size": 25244,
+      "width": 288,
+      "height": 320
+    },
+    {
+      "file_id": "AgACAgEAAxkBAAICMmZSGQ23bxYBQQWw7Ua8qfjuM5pCAAK8qjEb7UHZRwFicY43sFNwAQADAgADeAADNQQ",
+      "file_unique_id": "AQADvKoxG-1B2Ud9",
+      "file_size": 100300,
+      "width": 720,
+      "height": 800
+    },
+    {
+      "file_id": "AgACAgEAAxkBAAICMmZSGQ23bxYBQQWw7Ua8qfjuM5pCAAK8qjEb7UHZRwFicY43sFNwAQADAgADeQADNQQ",
+      "file_unique_id": "AQADvKoxG-1B2Ud-",
+      "file_size": 156348,
+      "width": 1080,
+      "height": 1200
+    }
+  ],
+  "reply_markup": {
+    "inline_keyboard": [
+      [
+        {
+          "text": "FurAffinity",
+          "url": "https://www.furaffinity.net/view/50644834/"
+        },
+        { "text": "e621", "url": "https://e621.net/posts/3817467" }
+      ]
+    ]
+  }
+}

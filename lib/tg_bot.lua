@@ -42,7 +42,11 @@ If you don’t have an account already, this bot only works with an invite-only 
 end
 
 function bot.get_all_links_from_message(message)
-    if not message.text and not message.caption then
+    if
+        not message.text
+        and not message.caption
+        and not message.reply_markup
+    then
         return {}
     end
     local entities = message.entities or message.caption_entities
@@ -66,7 +70,9 @@ function bot.get_all_links_from_message(message)
             function(i)
                 return i.url and i.url:startswith("http")
             end,
-            function(i) return i.url end
+            function(i)
+                return i.url
+            end
         )
         for i = 1, #button_links do
             links[#links + 1] = button_links[i]

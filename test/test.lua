@@ -1280,4 +1280,14 @@ function TestTgBot:testfindAllLinksOnFoxbotMessage()
     luaunit.assertEquals(actual, expected)
 end
 
+function TestTgBot:testfindAllLinksOnBotButtonMessage()
+    local input = DecodeJson(Slurp("test/bot_button_tg_message.json"))
+    local expected = {
+        "https://www.furaffinity.net/view/50644834/",
+        "https://e621.net/posts/3817467",
+    }
+    local actual = bot.get_all_links_from_message(input)
+    luaunit.assertEquals(actual, expected)
+end
+
 os.exit(luaunit.run())
