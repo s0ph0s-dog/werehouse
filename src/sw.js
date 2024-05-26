@@ -1,5 +1,5 @@
 const cacheKey = "WerehouseCache";
-const cacheVersion = "2";
+const cacheVersion = "3";
 const cacheName = cacheKey + ".v" + cacheVersion;
 const precachedResources = ["/home", "/index.js", "/style.css", "/icon.svg"];
 
@@ -23,7 +23,7 @@ async function cacheFirst(request) {
   }
   try {
     const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
+    if (networkResponse.ok && !networkResponse.redirected) {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
     }
@@ -36,7 +36,7 @@ async function cacheFirst(request) {
 async function cacheFirstWithRefresh(request) {
   // console.log("Cache first with refresh:", request);
   const fetchResponsePromise = fetch(request).then(async (networkResponse) => {
-    if (networkResponse.ok) {
+    if (networkResponse.ok && !networkResponse.redirected) {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
     }
@@ -50,7 +50,7 @@ async function networkFirst(request) {
   // console.log("Network first:", request);
   try {
     const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
+    if (networkResponse.ok && !networkResponse.redirected) {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
     }
