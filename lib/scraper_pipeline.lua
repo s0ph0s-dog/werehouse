@@ -526,6 +526,13 @@ local function handle_queue_error(model, queue_entry, error)
             errmsg2,
         })
     end
+    if queue_entry.tg_message_id then
+        Bot.update_queue_message_with_status(
+            queue_entry.tg_chat_id,
+            queue_entry.tg_message_id,
+            "Error: " .. error.description
+        )
+    end
 end
 
 local function queue_entry_tostr(queue_entry)
@@ -555,12 +562,27 @@ local function execute_task(model, queue_entry, task)
             ---@cast error2 ScraperError
             return nil, error2
         end
+        if queue_entry.tg_message_id then
+            Bot.update_queue_message_with_status(
+                queue_entry.tg_chat_id,
+                queue_entry.tg_message_id,
+                "Archived!"
+            )
+        end
     elseif task.help then
         local json_task = EncodeJson(task.help)
         local ok, errmsg3 =
             model:setQueueItemDisambiguationRequest(queue_entry.qid, json_task)
         if not ok then
             Log(kLogWarn, "%s" % { errmsg3 })
+        end
+        if queue_entry.tg_message_id then
+            Bot.update_queue_message_with_status(
+                queue_entry.tg_chat_id,
+                queue_entry.tg_message_id,
+                "I need help to figure this one out: https://werehouse.s0ph0s.dog/queue/%d/help"
+                    % { queue_entry.qid }
+            )
         end
     elseif task.noop then
         -- intentionally do nothing

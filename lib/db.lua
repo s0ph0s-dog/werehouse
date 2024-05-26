@@ -243,6 +243,8 @@ local user_setup = [[
         "status" TEXT NOT NULL,
         "disambiguation_request" TEXT,
         "disambiguation_data" TEXT,
+        "tg_chat_id" INTEGER,
+        "tg_message_id" INTEGER,
         PRIMARY KEY("qid")
     );
 
@@ -310,7 +312,18 @@ local queries = {
             FROM queue
             ORDER BY added_on ASC
             LIMIT 10;]],
-        get_all_active_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status, disambiguation_request, disambiguation_data
+        get_all_active_queue_entries = [[SELECT
+                qid,
+                link,
+                image,
+                image_mime_type,
+                tombstone,
+                added_on,
+                status,
+                disambiguation_request,
+                disambiguation_data,
+                tg_chat_id,
+                tg_message_id
             FROM queue
             WHERE tombstone = 0
             ORDER BY added_on DESC;]],
@@ -539,10 +552,12 @@ local queries = {
             WHERE share_ping_list_entry.spl_id = ?]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
-            VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
+            VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '')
+            RETURNING qid;]],
         insert_image_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
-            VALUES (NULL, ?, ?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '');]],
+            VALUES (NULL, ?, ?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '')
+            RETURNING qid;]],
         insert_image_into_images = [[INSERT INTO
             "images" ("file", "mime_type", "width", "height", "kind", "rating", "file_size", "saved_at")
             VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
@@ -617,6 +632,8 @@ local queries = {
         update_queue_item_disambiguation_data = [[UPDATE "queue"
             SET "disambiguation_data" = ?
             WHERE qid = ?;]],
+        update_queue_item_telegram_ids = [[UPDATE "queue"
+            SET "tg_chat_id" = ?, "tg_message_id" = ? WHERE qid = ?;]],
         update_handles_to_other_artist = [[UPDATE "artist_handles"
             SET "artist_id" = ?
             WHERE "artist_id" = ?]],
@@ -871,7 +888,7 @@ end
 
 function Model:enqueueLink(link)
     local ok, result, errmsg = pcall(
-        self.conn.execute,
+        self.conn.fetchOne,
         self.conn,
         queries.model.insert_link_into_queue,
         link
@@ -883,10 +900,19 @@ function Model:enqueueLink(link)
 end
 
 function Model:enqueueImage(mime_type, image_data)
-    return self.conn:execute(
+    return self.conn:fetchOne(
         queries.model.insert_image_into_queue,
         image_data,
         mime_type
+    )
+end
+
+function Model:updateQueueItemTelegramIds(qid, chat_id, message_id)
+    return self.conn:execute(
+        queries.model.update_queue_item_telegram_ids,
+        chat_id,
+        message_id,
+        qid
     )
 end
 

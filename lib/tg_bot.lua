@@ -104,6 +104,30 @@ local function select_best_link(links)
     return best_link, max_score
 end
 
+local function update_queue_with_tg_ids(result, tg_err, model, queue_entry)
+    Log(kLogDebug, "Telegram result: %s" % { EncodeJson(result) })
+    if result and result.ok and result.result then
+        local q_ok, q_err = model:updateQueueItemTelegramIds(
+            queue_entry.qid,
+            result.result.chat.id,
+            result.result.message_id
+        )
+        if not q_ok then
+            Log(
+                kLogInfo,
+                "Error while updating queue entry with TG message IDs: %s"
+                    % { q_err }
+            )
+        end
+    else
+        Log(
+            kLogInfo,
+            "Error from Telegram while replying to the user's message: %s"
+                % { tostring(tg_err) }
+        )
+    end
+end
+
 local function handle_enqueue(message)
     local user_record, user_err =
         Accounts:findUserByTelegramUserID(message.from.id)
@@ -139,8 +163,12 @@ local function handle_enqueue(message)
         -- work, but unsupported URLs won't.  If there's an image, that has a
         -- better shot at finding something, so prefer that.
         if score > 0 or not message.photo then
-            local ok, err = model:enqueueLink(best_link)
-            if not ok then
+            local queue_entry, err = model:enqueueLink(
+                best_link,
+                message.chat.id,
+                message.message_id
+            )
+            if not queue_entry then
                 Log(kLogInfo, "Error while enqueuing from bot: %s" % { err })
                 api.reply_to_message(
                     message,
@@ -149,14 +177,17 @@ local function handle_enqueue(message)
                 )
                 return
             end
+            local result, tg_err
             if #links == 1 then
-                api.reply_to_message(message, "Added this to the queue!")
+                result, tg_err =
+                    api.reply_to_message(message, "Added this to the queue!")
             else
-                api.reply_to_message(
+                result, tg_err = api.reply_to_message(
                     message,
                     "Added %s to the queue!" % { best_link }
                 )
             end
+            update_queue_with_tg_ids(result, tg_err, model, queue_entry)
             return
         end
     end
@@ -182,9 +213,13 @@ local function handle_enqueue(message)
             Log(kLogInfo, photo_err)
             return
         end
-        local ok, err =
-            model:enqueueImage(photo_data.mime_type, photo_data.data)
-        if not ok then
+        local queue_entry, err = model:enqueueImage(
+            photo_data.mime_type,
+            photo_data.data,
+            message.chat.id,
+            message.message_id
+        )
+        if not queue_entry then
             Log(kLogInfo, err)
             api.reply_to_message(
                 message,
@@ -192,7 +227,9 @@ local function handle_enqueue(message)
             )
             return
         end
-        api.reply_to_message(message, "Added this to the queue!")
+        local result, tg_err =
+            api.reply_to_message(message, "Added this to the queue!")
+        update_queue_with_tg_ids(result, tg_err, model, queue_entry)
         return
     end
     api.reply_to_message(
@@ -221,6 +258,10 @@ function bot.post_image(to_chat, image_file, caption, follow_up)
             Log(kLogWarn, EncodeJson(err))
         end
     end
+end
+
+function bot.update_queue_message_with_status(chat_id, message_id, new_text)
+    api.edit_message_text(chat_id, message_id, new_text)
 end
 
 function bot.setup(token, debug, link_checker)

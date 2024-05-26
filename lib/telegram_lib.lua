@@ -60,6 +60,7 @@ function api.request(endpoint, parameters, file)
         return nil, headers
     end
     if status ~= 200 then
+        Log(kLogDebug, "Error from telegram: %s" % { resp_body })
         return nil, resp_body
     end
     if api.debug then
@@ -190,6 +191,38 @@ function api.send_photo(
             ["photo"] = photo,
         }
     )
+    return success, res
+end
+
+function api.edit_message_text(
+    chat_id,
+    message_id,
+    text,
+    parse_mode,
+    entities,
+    link_preview_options,
+    reply_markup,
+    inline_message_id
+) -- https://core.telegram.org/bots/api#editmessagetext
+    entities = type(entities) == "table" and EncodeJson(entities) or entities
+    link_preview_options = type(link_preview_options) == "table"
+            and EncodeJson(link_preview_options)
+        or link_preview_options
+    reply_markup = type(reply_markup) == "table" and EncodeJson(reply_markup)
+        or reply_markup
+    parse_mode = (type(parse_mode) == "boolean" and parse_mode == true)
+            and "MarkdownV2"
+        or parse_mode
+    local success, res =
+        api.request(config.endpoint .. api.token .. "/editMessageText", {
+            ["chat_id"] = chat_id,
+            ["message_id"] = message_id,
+            ["text"] = text,
+            ["parse_mode"] = parse_mode,
+            ["entities"] = entities,
+            ["link_preview_options"] = link_preview_options,
+            ["reply_markup"] = reply_markup,
+        })
     return success, res
 end
 
