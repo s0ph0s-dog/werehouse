@@ -49,7 +49,7 @@ local function process_attachment_blocks(post)
         end
         return {
             authors = { author },
-            this_source = post.singlePost,
+            this_source = post.singlePostPageUrl,
             raw_image_uri = block.attachment.fileURL,
             mime_type = mime_type,
             height = block.attachment.height,

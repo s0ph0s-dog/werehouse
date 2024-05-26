@@ -1131,6 +1131,7 @@ function TestScraperPipeline:testValidCohostLinks()
                             height = 800,
                             mime_type = "image/png",
                             raw_image_uri = "https://staging.cohostcdn.org/attachment/bc0436cc-262d-47a1-b444-f954a3f81c6c/eyes.png",
+                            this_source = "https://cohost.org/TuxedoDragon/post/5682670-something-something",
                             width = 1630,
                             rating = DbUtil.k.Rating.General,
                         },
@@ -1156,6 +1157,7 @@ function TestScraperPipeline:testValidCohostLinks()
                             height = 1280,
                             mime_type = "image/png",
                             raw_image_uri = "https://staging.cohostcdn.org/attachment/40e2ebfc-a548-458d-abde-6551929a6ae3/tumblr_nbrmyhYBa41t46mxyo2_1280.png",
+                            this_source = "https://cohost.org/Puptini/post/5584885-did-you-wonder-where",
                             width = 1280,
                             rating = DbUtil.k.Rating.Explicit,
                             incoming_tags = {
@@ -1191,6 +1193,7 @@ function TestScraperPipeline:testValidCohostLinks()
                             height = 1200,
                             mime_type = "image/png",
                             raw_image_uri = "https://staging.cohostcdn.org/attachment/0164799d-c699-48fd-bdaf-558f6f947aa3/bayli%20aftersex%20resize.png",
+                            this_source = "https://cohost.org/Puptini/post/5584885-did-you-wonder-where",
                             width = 857,
                             rating = DbUtil.k.Rating.Explicit,
                             incoming_tags = {
