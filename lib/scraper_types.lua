@@ -76,3 +76,12 @@ function PermScraperError(description)
     setmetatable(result, { __index = ScraperError })
     return result
 end
+---@class RetryExceededScraperError : PermScraperError
+function RetryExceededScraperError()
+    local result = {
+        description = "Retry count exceeded, something is broken.",
+        type = 2,
+    }
+    setmetatable(result, { __index = ScraperError })
+    return result
+end

@@ -496,7 +496,8 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
             end
         end
     end
-    local ok, errmsg3 = model:setQueueItemStatus(queue_entry.qid, 2, "")
+    local ok, errmsg3 =
+        model:setQueueItemStatusAndDescription(queue_entry.qid, 2, "")
     if not ok then
         model:rollback(SP_QUEUE)
         return nil,
@@ -513,12 +514,12 @@ end
 ---@param queue_entry table
 ---@param error ScraperError
 local function handle_queue_error(model, queue_entry, error)
-    local permanent = false
-    if error.type == 1 then
-        permanent = true
+    local model_function = model.setQueueItemStatusAndDescription
+    if error.type == 3 then
+        model_function = model.setQueueItemStatusOnly
     end
     local status_result, errmsg2 =
-        model:setQueueItemStatus(queue_entry.qid, permanent, error.description)
+        model_function(model, queue_entry.qid, error.type, error.description)
     if not status_result then
         Log(kLogWarn, "While processing queue for user %d, item %d: %s" % {
             model.user_id,
@@ -687,6 +688,10 @@ local function task_for_entry(queue_entry)
         -- Do nothing here because we're waiting for the user to disambiguate.
         return NoopEntryTask
     end
+    -- Queued -> Dead
+    if queue_entry.retry_count > 4 then
+        return RetryExceededScraperError()
+    end
     -- Queued -> (NeedsHelp, Dead, Archived)
     return task_for_scraping(queue_entry)
 end
@@ -701,6 +706,14 @@ local function process_entry(model, queue_entry)
     if not task then
         handle_queue_error(model, queue_entry, task_err)
         return nil
+    end
+    -- Only increment the retry count when we're trying to archive the entry.
+    if task.archive then
+        local rt_ok, rt_err =
+            model:incrementQueueItemRetryCount(queue_entry.qid)
+        if not rt_ok then
+            Log(kLogInfo, "Unable to update queue retry count: %s" % { rt_err })
+        end
     end
     -- 3. Validate task
     local validated_task, validation_err = check_for_duplicates(model, task)

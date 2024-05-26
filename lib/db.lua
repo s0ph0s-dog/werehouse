@@ -241,6 +241,7 @@ local user_setup = [[
         "tombstone" INTEGER NOT NULL,
         "added_on" TEXT NOT NULL,
         "status" TEXT NOT NULL,
+        "retry_count" INTEGER NOT NULL DEFAULT 0,
         "disambiguation_request" TEXT,
         "disambiguation_data" TEXT,
         "tg_chat_id" INTEGER,
@@ -323,7 +324,8 @@ local queries = {
                 disambiguation_request,
                 disambiguation_data,
                 tg_chat_id,
-                tg_message_id
+                tg_message_id,
+                retry_count
             FROM queue
             WHERE tombstone = 0
             ORDER BY added_on DESC;]],
@@ -623,8 +625,11 @@ local queries = {
         update_queue_item_status = [[UPDATE "queue"
             SET "status" = ?, "tombstone" = ?
             WHERE qid = ?;]],
+        update_queue_item_status_only = [[UPDATE "queue"
+            SET "tombstone" = ?
+            WHERE qid = ?;]],
         update_queue_item_status_to_zero = [[UPDATE "queue"
-            SET "tombstone" = 0
+            SET "tombstone" = 0, "retry_count" = 0
             WHERE qid = ?;]],
         update_queue_item_disambiguation_req = [[UPDATE "queue"
             SET "disambiguation_request" = ?
@@ -670,6 +675,9 @@ local queries = {
         update_tag_rule_by_id = [[UPDATE "tag_rules"
             SET incoming_name = ?, incoming_domain = ?, tag_id = ?
             WHERE tag_rule_id = ?;]],
+        update_queue_item_retry_count_increment_by_one = [[UPDATE "queue"
+            SET retry_count = retry_count + 1
+            WHERE qid = ?;]],
     },
 }
 
@@ -786,7 +794,7 @@ function Model:getRecentQueueEntries()
     return self.conn:fetchAll(queries.model.get_recent_queue_entries)
 end
 
----@alias ActiveQueueEntry {qid: string, link: string, image: string, image_mime_type: string, tombstone: integer, added_on: string, status: string, disambiguation_request: string, disambiguation_data: string}
+---@alias ActiveQueueEntry {qid: string, link: string, image: string, image_mime_type: string, tombstone: integer, added_on: string, status: string, disambiguation_request: string, disambiguation_data: string, retry_count: integer}
 ---@return ActiveQueueEntry[]
 function Model:getAllActiveQueueEntries()
     return self.conn:fetchAll(queries.model.get_all_active_queue_entries)
@@ -933,11 +941,27 @@ function Model:resetQueueItemStatus(queue_ids)
     return #queue_ids
 end
 
-function Model:setQueueItemStatus(queue_id, tombstone, new_status)
-    return self:setQueueItemsStatus({ queue_id }, tombstone, new_status)
+function Model:setQueueItemStatusOnly(queue_id, tombstone)
+    return self.conn:execute(
+        queries.model.update_queue_item_status_only,
+        tombstone,
+        queue_id
+    )
 end
 
-function Model:setQueueItemsStatus(queue_ids, tombstone, new_status)
+function Model:setQueueItemStatusAndDescription(queue_id, tombstone, new_status)
+    return self:setQueueItemsStatusAndDescription(
+        { queue_id },
+        tombstone,
+        new_status
+    )
+end
+
+function Model:setQueueItemsStatusAndDescription(
+    queue_ids,
+    tombstone,
+    new_status
+)
     local SP_QSTATUS = "set_queue_status"
     self:create_savepoint(SP_QSTATUS)
     for _, qid in ipairs(queue_ids) do
@@ -954,6 +978,13 @@ function Model:setQueueItemsStatus(queue_ids, tombstone, new_status)
     end
     self:release_savepoint(SP_QSTATUS)
     return #queue_ids
+end
+
+function Model:incrementQueueItemRetryCount(qid)
+    return self.conn:execute(
+        queries.model.update_queue_item_retry_count_increment_by_one,
+        qid
+    )
 end
 
 function Model:setQueueItemDisambiguationRequest(queue_id, disambiguation_data)
