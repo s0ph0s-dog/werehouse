@@ -80,7 +80,7 @@ end
 function RetryExceededScraperError()
     local result = {
         description = "Retry count exceeded, something is broken.",
-        type = 2,
+        type = 3,
     }
     setmetatable(result, { __index = ScraperError })
     return result

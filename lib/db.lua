@@ -86,6 +86,16 @@ local user_setup = [[
         PRIMARY KEY("tag_id")
     );
 
+    CREATE TABLE IF NOT EXISTS "incoming_tags" (
+        "itid" INTEGER NOT NULL UNIQUE,
+        "image_id" INTEGER NOT NULL,
+        "name" TEXT NOT NULL,
+        "domain" TEXT NOT NULL,
+        PRIMARY KEY("itid"),
+        FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
+        ON UPDATE CASCADE ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS "image_tags" (
         "image_id" INTEGER NOT NULL,
         "tag_id" INTEGER NOT NULL,
@@ -589,6 +599,9 @@ local queries = {
                 "tag_id"
             ) VALUES (?, ?, ?)
             RETURNING tag_rule_id;]],
+        insert_incoming_tag = [[INSERT INTO
+                "incoming_tags" ("name", "domain", "image_id")
+            VALUES (?, ?, ?);]],
         insert_share_ping_list = [[INSERT INTO share_ping_list (
                 name,
                 share_data
@@ -1682,7 +1695,18 @@ function Model:addIncomingTagsForImage(
             self:rollback(SP)
             return nil, tag_rule_err
         end
-        if tag_rule ~= self.conn.NONE then
+        if tag_rule == self.conn.NONE then
+            local itag_ok, itag_err = self.conn:execute(
+                queries.model.insert_incoming_tag,
+                name,
+                incoming_domain,
+                image_id
+            )
+            if not itag_ok then
+                self:rollback(SP)
+                return nil, itag_err
+            end
+        else
             local tag_ok, tag_err =
                 self:associateTagWithImage(image_id, tag_rule.tag_id)
             if not tag_ok then

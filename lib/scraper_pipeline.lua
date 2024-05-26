@@ -690,7 +690,7 @@ local function task_for_entry(queue_entry)
     end
     -- Queued -> Dead
     if queue_entry.retry_count > 4 then
-        return RetryExceededScraperError()
+        return nil, RetryExceededScraperError()
     end
     -- Queued -> (NeedsHelp, Dead, Archived)
     return task_for_scraping(queue_entry)
