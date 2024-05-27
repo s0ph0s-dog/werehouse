@@ -325,7 +325,7 @@ local function scrape_sources(source_links)
         return ArchiveEntryTask(scraped_no_errors[1], source_links)
     else
         local max_results =
-            math.max(table.unpack(table.map(scraped, function(item)
+            math.max(table.unpack(table.map(scraped_no_errors, function(item)
                 return #item
             end)))
         if max_results == 1 then

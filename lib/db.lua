@@ -642,7 +642,7 @@ local queries = {
             SET "tombstone" = ?
             WHERE qid = ?;]],
         update_queue_item_status_to_zero = [[UPDATE "queue"
-            SET "tombstone" = 0, "retry_count" = 0
+            SET "tombstone" = 0, "retry_count" = 0, "disambiguation_request" = NULL, "disambiguation_data" = NULL
             WHERE qid = ?;]],
         update_queue_item_disambiguation_req = [[UPDATE "queue"
             SET "disambiguation_request" = ?
