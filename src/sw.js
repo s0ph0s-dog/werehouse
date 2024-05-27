@@ -1,7 +1,7 @@
 const cacheKey = "WerehouseCache";
-const cacheVersion = "3";
+const cacheVersion = "4";
 const cacheName = cacheKey + ".v" + cacheVersion;
-const precachedResources = ["/home", "/index.js", "/style.css", "/icon.svg"];
+const precachedResources = ["/index.js", "/style.css", "/icon.svg"];
 
 async function precache() {
   const cache = await caches.open(cacheName);
@@ -67,14 +67,11 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  if (precachedResources.includes(url.pathname)) {
-    event.respondWith(cacheFirst(event.request));
-  } else if (
+  if (
+    precachedResources.includes(url.pathname) ||
     url.pathname.includes("/queue-image/") ||
     url.pathname.includes("/image-file/")
   ) {
     event.respondWith(cacheFirstWithRefresh(event.request));
-  } else {
-    event.respondWith(networkFirst(event.request));
   }
 });
