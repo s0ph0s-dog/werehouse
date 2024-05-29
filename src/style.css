@@ -25,9 +25,24 @@ html {
   display: block;
   margin-bottom: 0.5em;
 }
+
+input[type="color"],
+input[type="date"],
+input[type="datetime"],
+input[type="datetime-local"],
+input[type="email"],
+input[type="month"],
+input[type="number"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
 input[type="text"],
+input[type="time"],
 input[type="url"],
-input[type="password"] {
+input[type="week"],
+select,
+select:focus,
+textarea {
   border: 1px solid GrayText;
   border-radius: 4px;
   width: 100%;
@@ -212,6 +227,10 @@ footer {
 }
 
 @media (max-width: 639px) {
+  html,
+  body {
+    font-size: 18px;
+  }
   .sidebar-grid {
     display: block;
   }
@@ -273,8 +292,37 @@ footer {
     width: calc(50% - 0.25em);
   }
   .gallery figure img {
-    max-width: 11em;
-    max-height: 11em;
+    max-width: 10em;
+    max-height: 10em;
+  }
+  .gallery figure span {
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+  }
+  input[type="color"],
+  input[type="date"],
+  input[type="datetime"],
+  input[type="datetime-local"],
+  input[type="email"],
+  input[type="month"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="text"],
+  input[type="time"],
+  input[type="url"],
+  input[type="week"],
+  input[type="submit"],
+  input[type="reset"],
+  button,
+  select,
+  select:focus,
+  textarea {
+    font-size: 16px;
+  }
+  .buttons {
+    flex-wrap: wrap;
   }
 }
 
