@@ -403,7 +403,7 @@ local queries = {
                 FROM image_artists
                 GROUP BY artist_id
             ) ON artists.artist_id = artist_id_for_count
-            GROUP BY artist_handles.artist_id
+            GROUP BY artists.artist_id
             ORDER BY artists.name COLLATE NOCASE
             LIMIT ?
             OFFSET ?;]],
