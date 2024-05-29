@@ -367,7 +367,7 @@ local queries = {
         get_image_by_id = [[SELECT image_id, file, saved_at, category, rating, kind
             FROM images
             WHERE image_id = ?;]],
-        get_artists_for_image = [[SELECT artists.artist_id, artists.name
+        get_artists_for_image = [[SELECT artists.artist_id, artists.name, artists.manually_confirmed
             FROM artists INNER JOIN image_artists
             ON image_artists.artist_id = artists.artist_id
             WHERE image_artists.image_id = ?;]],
