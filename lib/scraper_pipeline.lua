@@ -598,11 +598,17 @@ end
 
 local function task_for_scraping(queue_entry)
     local sources, find_src_err = get_sources_for_entry(queue_entry)
-    if not sources or (type(sources) == "table" and #sources < 1) then
+    if not sources then
         return nil,
             TempScraperError(
                 "I couldn't find sources for %s: %s"
-                    % { queue_entry.qid, find_src_err or "0 rows in table" }
+                    % { queue_entry.qid, find_src_err }
+            )
+    end
+    if type(sources) == "table" and #sources < 1 then
+        return nil,
+            PermScraperError(
+                "No sources found for this image in the FuzzySearch database"
             )
     end
     local task, scrape_err = scrape_sources(sources)
@@ -703,17 +709,17 @@ local function process_entry(model, queue_entry)
     )
     -- 1. Generate task for queue entry
     local task, task_err = task_for_entry(queue_entry)
-    if not task then
-        handle_queue_error(model, queue_entry, task_err)
-        return nil
-    end
-    -- Only increment the retry count when we're trying to archive the entry.
-    if task.archive then
+    -- Only increment the retry count when we're trying to archive the entry, or if there was an error.
+    if not task or task.archive then
         local rt_ok, rt_err =
             model:incrementQueueItemRetryCount(queue_entry.qid)
         if not rt_ok then
             Log(kLogInfo, "Unable to update queue retry count: %s" % { rt_err })
         end
+    end
+    if not task then
+        handle_queue_error(model, queue_entry, task_err)
+        return nil
     end
     -- 3. Validate task
     local validated_task, validation_err = check_for_duplicates(model, task)

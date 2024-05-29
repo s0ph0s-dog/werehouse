@@ -3,6 +3,7 @@
 {% for tag_idx = 1, #pending_tags[handle_idx] do %}
 <li>
   <div class="input-cell">
+    <input type="hidden" name="pending_ids[]" value="{%& handle_idx %}" />
     <input
       data-1p-ignore
       type="text"
@@ -78,6 +79,7 @@
       #pending_handles do %}
       <li>
         <div class="input-cell">
+          <input type="hidden" name="pending_ids[]" value="{%& h_idx %}" />
           <input
             data-1p-ignore
             type="text"

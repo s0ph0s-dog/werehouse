@@ -736,8 +736,11 @@ local accept_queue = login_required(function(r)
             r.session.error = err
         end
     elseif r.params.error then
-        local ok, err =
-            Model:setQueueItemsStatus(r.params.qids, 1, "Manually forced error")
+        local ok, err = Model:setQueueItemsStatusAndDescription(
+            r.params.qids,
+            1,
+            "Manually forced error"
+        )
         if not ok then
             r.session.error = err
         end
