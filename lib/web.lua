@@ -629,7 +629,8 @@ local render_image_share = login_required(function(r, user_record)
             chat_id,
             file_path,
             r.params.sources_text,
-            r.params.ping_text
+            r.params.ping_text,
+            r.params.spoiler ~= nil
         )
         return Fm.serveRedirect("/image/" .. image_id, 302)
     end
@@ -638,12 +639,17 @@ local render_image_share = login_required(function(r, user_record)
         Log(kLogInfo, pd_err)
         return Fm.serve500()
     end
-    local sources_text = table.concat(
-        table.map(sources, function(s)
-            return string.format("• %s", s.link)
-        end),
-        "\n"
-    )
+    local sources_text
+    if #sources == 1 then
+        sources_text = sources[1].link
+    else
+        sources_text = table.concat(
+            table.map(sources, function(s)
+                return string.format("• %s", s.link)
+            end),
+            "\n"
+        )
+    end
     local ping_text = table.concat(
         table.map(ping_data, function(d)
             return string.format("%s: %s", d.handle, d.tag_names)
@@ -654,12 +660,16 @@ local render_image_share = login_required(function(r, user_record)
     if attribution then
         ping_text = ping_text .. "\n\n" .. attribution
     end
+    local form_sources_text = r.params.sources_text or sources_text
+    local form_ping_text = r.params.ping_text or ping_text
     return Fm.serveContent("image_share", {
         user = user_record,
         image = image,
         share_ping_list = spl,
-        sources_text = r.params.sources_text or sources_text,
-        ping_text = r.params.ping_text or ping_text,
+        sources_text = form_sources_text,
+        sources_text_size = form_sources_text:linecount(),
+        ping_text = form_ping_text,
+        ping_text_size = form_ping_text:linecount(),
     })
 end)
 

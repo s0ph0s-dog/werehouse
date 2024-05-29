@@ -245,8 +245,9 @@ function bot.notify_account_linked(tg_userid, username)
     )
 end
 
-function bot.post_image(to_chat, image_file, caption, follow_up)
-    local photo_result, err = api.send_photo(to_chat, image_file, nil, caption)
+function bot.post_image(to_chat, image_file, caption, follow_up, spoiler)
+    local photo_result, err =
+        api.send_photo(to_chat, image_file, nil, caption, nil, nil, spoiler)
     if not photo_result or not photo_result.ok then
         Log(kLogWarn, EncodeJson(err))
         return

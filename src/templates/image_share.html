@@ -5,9 +5,17 @@
     width="{%& image.width %}"
     height="{%& image.height %}"
   />
-  <textarea name="sources_text">{%& sources_text %}</textarea>
+  <label class="inline">
+    <input type="checkbox" name="spoiler" />
+    Send image as spoiler
+  </label>
+  <textarea name="sources_text" rows="{%& sources_text_size %}">
+{%& sources_text %}</textarea
+  >
   {% if ping_text then %}
-  <textarea name="ping_text">{%& ping_text %}</textarea>
+  <textarea name="ping_text" rows="{%& ping_text_size %}">
+{%& ping_text %}</textarea
+  >
   {% end %}
   <span class="buttons">
     <input type="submit" name="cancel" value="Cancel" />

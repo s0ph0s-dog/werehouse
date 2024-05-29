@@ -65,6 +65,18 @@ function string.utf16sub(s, i, j)
     return s:sub(real_i, real_j)
 end
 
+function string.linecount(s)
+    local lines = 1
+    for i = 1, #s do
+        local c = s:sub(i, i)
+        if c == "\n" then
+            lines = lines + 1
+        end
+    end
+
+    return lines
+end
+
 ---@generic T : any, U : any
 ---@param sequence (T[])
 ---@param transformation (fun(item: T): U)
