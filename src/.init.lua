@@ -48,6 +48,7 @@ function OnWorkerStart()
     unix.setrlimit(unix.RLIMIT_CPU, 2)
 
     assert(unix.unveil(".", "rwc"))
+    assert(unix.unveil("/etc", "r"))
     assert(unix.unveil(nil, nil))
 end
 function OnWorkerStop()
