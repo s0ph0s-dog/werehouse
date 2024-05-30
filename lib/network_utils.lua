@@ -38,6 +38,8 @@ local ext_to_mime = {
     jpeg = "image/jpeg",
     png = "image/png",
     gif = "image/gif",
+    mp4 = "video/mp4",
+    webm = "video/webm",
 }
 
 local function guess_mime_from_url(url)

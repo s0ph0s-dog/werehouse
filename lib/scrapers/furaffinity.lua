@@ -98,6 +98,7 @@ local function scrape_image_metadata(root)
         return t:getcontent()
     end)
     return {
+        kind = DbUtil.k.ImageKind.Image,
         raw_image_uri = full_image_src,
         mime_type = mime_type,
         width = tonumber(width),

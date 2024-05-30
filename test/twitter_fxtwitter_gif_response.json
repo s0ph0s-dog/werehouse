@@ -1,0 +1,82 @@
+{
+  "code": 200,
+  "message": "OK",
+  "tweet": {
+    "url": "https://twitter.com/bigcozyorca/status/1793851828477788591",
+    "id": "1793851828477788591",
+    "text": "You GOTTA be careful of strange liquids hitting you. Never know if it's just regular milk or something different.",
+    "author": {
+      "id": "1443048970662547457",
+      "name": "BigCozyOrca💫🔞",
+      "screen_name": "bigcozyorca",
+      "avatar_url": "https://pbs.twimg.com/profile_images/1780081098791202816/jLUwxD8B_200x200.jpg",
+      "banner_url": "https://pbs.twimg.com/profile_banners/1443048970662547457/1712038513",
+      "description": "🔞NSFW ACCOUNT (18+)! i'm a huge ol pan fishie! some kink stuff! Any Pronouns! Bestest friend: @UpTheRiverNile💙 !20! Alt: @BigSchnozyOrca",
+      "location": "Knothole Springs",
+      "url": "https://twitter.com/bigcozyorca",
+      "followers": 82248,
+      "following": 1475,
+      "joined": "Wed Sep 29 03:04:35 +0000 2021",
+      "likes": 74247,
+      "website": {
+        "url": "https://www.patreon.com/bigcozyorca",
+        "display_url": "patreon.com/bigcozyorca"
+      },
+      "tweets": 10561,
+      "avatar_color": null
+    },
+    "replies": 17,
+    "retweets": 359,
+    "likes": 1786,
+    "created_at": "Fri May 24 03:49:38 +0000 2024",
+    "created_timestamp": 1716522578,
+    "possibly_sensitive": false,
+    "views": 26840,
+    "is_note_tweet": false,
+    "community_note": null,
+    "lang": "en",
+    "replying_to": null,
+    "replying_to_status": null,
+    "media": {
+      "all": [
+        {
+          "url": "https://video.twimg.com/tweet_video/GOUJuRLWwAA151Q.mp4",
+          "thumbnail_url": "https://pbs.twimg.com/tweet_video_thumb/GOUJuRLWwAA151Q.jpg",
+          "duration": 0,
+          "width": 636,
+          "height": 492,
+          "format": "video/mp4",
+          "type": "gif",
+          "variants": [
+            {
+              "bitrate": 0,
+              "content_type": "video/mp4",
+              "url": "https://video.twimg.com/tweet_video/GOUJuRLWwAA151Q.mp4"
+            }
+          ]
+        }
+      ],
+      "videos": [
+        {
+          "url": "https://video.twimg.com/tweet_video/GOUJuRLWwAA151Q.mp4",
+          "thumbnail_url": "https://pbs.twimg.com/tweet_video_thumb/GOUJuRLWwAA151Q.jpg",
+          "duration": 0,
+          "width": 636,
+          "height": 492,
+          "format": "video/mp4",
+          "type": "gif",
+          "variants": [
+            {
+              "bitrate": 0,
+              "content_type": "video/mp4",
+              "url": "https://video.twimg.com/tweet_video/GOUJuRLWwAA151Q.mp4"
+            }
+          ]
+        }
+      ]
+    },
+    "source": "Twitter Web App",
+    "twitter_card": "player",
+    "color": null
+  }
+}

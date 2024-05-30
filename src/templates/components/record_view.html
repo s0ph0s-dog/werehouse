@@ -1,0 +1,22 @@
+{% if record.kind == kind.Image then %}
+<img
+  src="/image-file/{%& record.file %}"
+  class="height-limit"
+  width="{%& record.width %}"
+  height="{%& record.height %}"
+/>
+{% elseif record.kind == kind.Video then %}
+<video
+  controls
+  class="height-limit"
+  width="{%& record.width %}"
+  height="{%& record.height %}"
+  src="/image-file/{%& record.file %}"
+>
+  Your browser doesn't support this video. Try
+  <a href="{%& record.file %}">downloading the file</a> to play it in an
+  application on your computer.
+</video>
+{% else %}
+<p class="height-limit">This record kind isn't supported yet.</p>
+{% end %}

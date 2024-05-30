@@ -359,6 +359,36 @@ local function scrape_sources(source_links)
     return nil, PermScraperError("This should be unreachable")
 end
 
+local function fetch_record_file(uri)
+    local status, headers, body = Fetch(uri)
+    if status ~= 200 then
+        return nil,
+            TempScraperError(
+                "I got a %d (%s) error when trying to download the image from '%s'."
+                    % { status, headers, uri }
+            )
+    end
+    Log(kLogVerbose, "Successfully fetched record file")
+    -- The smallest possible GIF file is 35 bytes, which is smaller than PNG (68 B) or JPEG (119 B). I'm using it as a reasonable minimum for file size.
+    -- https://stackoverflow.com/questions/2570633/smallest-filesize-for-transparent-single-pixel-image
+    -- https://stackoverflow.com/questions/2253404/what-is-the-smallest-valid-jpeg-file-size-in-bytes
+    if #body < 35 then
+        return nil,
+            TempScraperError(
+                "I got an image file that was too small to be real from '%s'."
+                    % { uri }
+            )
+    end
+    local content_type = headers["Content-Type"]
+    if not content_type then
+        return nil,
+            PermScraperError(
+                "%s didn't tell me what kind of image they sent." % { uri }
+            )
+    end
+    return body, content_type
+end
+
 ---@param model Model
 ---@param scraped_data ScrapedSourceData[]
 ---@param queue_entry table
@@ -402,36 +432,11 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
         end
         local this_item_sources = table.uniq(sources_with_dupes)
         -- 1. Download image file.
-        local status, headers, body = Fetch(data.raw_image_uri)
-        if status ~= 200 then
+        local body, content_type = fetch_record_file(data.raw_image_uri)
+        if not body then
             model:rollback(SP_QUEUE)
-            return nil,
-                TempScraperError(
-                    "I got a %d (%s) error when trying to download the image from '%s'."
-                        % { status, headers, data.raw_image_uri }
-                )
+            return nil, content_type
         end
-        Log(kLogVerbose, "Successfully fetched image")
-        -- The smallest possible GIF file is 35 bytes, which is smaller than PNG (68 B) or JPEG (119 B). I'm using it as a reasonable minimum for file size.
-        -- https://stackoverflow.com/questions/2570633/smallest-filesize-for-transparent-single-pixel-image
-        -- https://stackoverflow.com/questions/2253404/what-is-the-smallest-valid-jpeg-file-size-in-bytes
-        if #body < 35 then
-            model:rollback(SP_QUEUE)
-            return nil,
-                TempScraperError(
-                    "I got an image file that was too small to be real from '%s'."
-                        % { data.raw_image_uri }
-                )
-        end
-        if not headers["Content-Type"] then
-            model:rollback(SP_QUEUE)
-            return nil,
-                PermScraperError(
-                    "%s didn't tell me what kind of image they sent."
-                        % { data.raw_image_uri }
-                )
-        end
-        local content_type = headers["Content-Type"]
         -- 2. Save image file to disk.
         local filename = FsTools.save_image(body, content_type)
         Log(kLogInfo, "Saved image to disk")
@@ -441,7 +446,7 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
             content_type,
             data.width,
             data.height,
-            DbUtil.k.ImageKind.Image,
+            data.kind,
             data.rating,
             #body
         )
@@ -493,6 +498,33 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
                 Log(kLogInfo, "Database error 4: " .. errmsg5)
                 model:rollback(SP_QUEUE)
                 return nil, TempScraperError(errmsg5)
+            end
+        end
+        if data.thumbnails then
+            for i = 1, #data.thumbnails do
+                local thumbnail = data.thumbnails[i]
+                local thumb_data, thumb_content_type =
+                    fetch_record_file(thumbnail.raw_uri)
+                if thumb_data then
+                    local t_ok, t_err = model:insertThumbnailForImage(
+                        image.image_id,
+                        thumb_data,
+                        thumbnail.width,
+                        thumbnail.height,
+                        thumbnail.scale,
+                        thumb_content_type
+                    )
+                    if not t_ok then
+                        model:rollback(SP_QUEUE)
+                        return nil, TempScraperError(t_err)
+                    end
+                else
+                    Log(
+                        kLogInfo,
+                        "Failed to download thumbnail: %s"
+                            % { content_type.description }
+                    )
+                end
             end
         end
     end

@@ -1,7 +1,10 @@
 ---@alias ScrapedAuthor { handle: string, display_name: string, profile_url: string }
 
+--- A thumbnail for a record, if the scraper can provide one. Most useful for videos.
+---@alias Thumbnail { raw_uri: string, width: integer, height: integer, scale: integer }
+
 --- The data produced by a scraper.
----@alias ScrapedSourceData { raw_image_uri: string, mime_type: string, width: integer, height: integer, this_source: string, additional_sources: string[]?, canonical_domain: string, authors: ScrapedAuthor[], rating: integer, incoming_tags: string[]? }
+---@alias ScrapedSourceData { kind: integer, raw_image_uri: string, mime_type: string, width: integer, height: integer, this_source: string, additional_sources: string[]?, canonical_domain: string, authors: ScrapedAuthor[], rating: integer, incoming_tags: string[]?, thumbnails: Thumbnail[]?}
 
 --- ScraperProcess function: given a URI, scrape whatever info is needed for archiving
 --- from that website.

@@ -35,5 +35,6 @@
 </div>
 {% end %}
 <h1>Recently Archived Items</h1>
-{% render("components/image_gallery", {image_records = image_records, fn = fn })
-%}{% end %}{% render("layouts/main", { title = "Home", user = user }) %}
+{% render("components/image_gallery", {image_records = image_records, fn = fn,
+kind = kind }) %}{% end %}{% render("layouts/main", { title = "Home", user =
+user }) %}

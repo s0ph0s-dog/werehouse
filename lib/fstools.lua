@@ -3,6 +3,8 @@ local MIME_TO_EXT = {
     ["image/png"] = ".png",
     ["image/webp"] = ".webp",
     ["text/plain"] = ".txt",
+    ["video/webm"] = ".webm",
+    ["video/mp4"] = ".mp4",
 }
 
 local function make_image_path_from_filename(filename)

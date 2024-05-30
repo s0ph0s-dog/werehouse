@@ -20,7 +20,13 @@
     {% for i = 1, #image_records do local image = image_records[i] %}
     <figure>
       <a href="/image/{%& image.image_id %}">
+        {% if image.first_thumbnail_id then %}
+        <img src="/thumbnail-file/{%& image.first_thumbnail_id %}" />
+        {% elseif image.kind == fn.kind.Image then %}
         <img src="/image-file/{%& image.file %}" />
+        {% else %}
+        <div>Unable to preview this record</div>
+        {% end %}
       </a>
       <figcaption>
         <label>

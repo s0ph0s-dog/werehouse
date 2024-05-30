@@ -1,10 +1,6 @@
 {% function block.content() %}
 <form class="vbox" method="POST">
-  <img
-    src="/image-file/{%& image.file %}"
-    width="{%& image.width %}"
-    height="{%& image.height %}"
-  />
+  {% render("components/record_view", {record = image, kind = fn.kind }) %}
   <label class="inline">
     <input type="checkbox" name="spoiler" />
     Send image as spoiler

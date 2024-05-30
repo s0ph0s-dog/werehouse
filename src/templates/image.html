@@ -4,7 +4,8 @@ groups }) %}
   <div class="main-image">
     <input id="fit-to-screen" type="checkbox" />
     <label for="fit-to-screen"> Fit to screen</label>
-    <img src="/image-file/{%& image.file %}" />
+    {% render("components/record_view", {record = image, kind =
+    DbUtilK.ImageKind}) %}
   </div>
   <div class="sidebar">
     <a class="edit" href="/image/{%& image.image_id %}/edit">Edit</a>

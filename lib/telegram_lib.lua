@@ -194,6 +194,55 @@ function api.send_photo(
     return success, res
 end
 
+function api.send_video(
+    chat_id,
+    video,
+    message_thread_id,
+    duration,
+    width,
+    height,
+    caption,
+    parse_mode,
+    has_spoiler,
+    supports_streaming,
+    disable_notification,
+    protect_content,
+    reply_parameters,
+    reply_markup
+) -- https://core.telegram.org/bots/api#sendvideo
+    caption_entities = type(caption_entities) == "table"
+            and EncodeJson(caption_entities)
+        or caption_entities
+    reply_parameters = type(reply_parameters) == "table"
+            and EncodeJson(reply_parameters)
+        or reply_parameters
+    reply_markup = type(reply_markup) == "table" and EncodeJson(reply_markup)
+        or reply_markup
+    local success, res = api.request(
+        config.endpoint .. api.token .. "/sendVideo",
+        {
+            ["chat_id"] = chat_id,
+            ["message_thread_id"] = message_thread_id,
+            ["duration"] = duration,
+            ["width"] = width,
+            ["height"] = height,
+            ["caption"] = caption,
+            ["parse_mode"] = parse_mode,
+            ["caption_entities"] = caption_entities,
+            ["has_spoiler"] = has_spoiler,
+            ["supports_streaming"] = supports_streaming,
+            ["disable_notification"] = disable_notification,
+            ["protect_content"] = protect_content,
+            ["reply_parameters"] = reply_parameters,
+            ["reply_markup"] = reply_markup,
+        },
+        {
+            ["video"] = video,
+        }
+    )
+    return success, res
+end
+
 function api.edit_message_text(
     chat_id,
     message_id,

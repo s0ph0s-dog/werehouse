@@ -40,6 +40,7 @@ SRCS := src/.init.lua \
     src/templates/layouts/dialog.html \
     src/templates/components/artist_verified.html \
     src/templates/components/image_gallery.html \
+    src/templates/components/record_view.html \
     src/templates/components/pagination_controls.html \
     src/templates/components/group_box.html \
     src/templates/accept_invite.html \

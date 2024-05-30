@@ -48,6 +48,7 @@ local function process_attachment_blocks(post)
             mime_type = "image/jpeg"
         end
         return {
+            kind = DbUtil.k.ImageKind.Image,
             authors = { author },
             this_source = post.singlePostPageUrl,
             raw_image_uri = block.attachment.fileURL,

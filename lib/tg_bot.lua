@@ -261,6 +261,31 @@ function bot.post_image(to_chat, image_file, caption, follow_up, spoiler)
     end
 end
 
+function bot.post_video(to_chat, video_file, caption, follow_up, spoiler)
+    local video_result, err = api.send_video(
+        to_chat,
+        video_file,
+        nil,
+        nil,
+        nil,
+        nil,
+        caption,
+        nil,
+        spoiler
+    )
+    if not video_result or not video_result.ok then
+        Log(kLogWarn, EncodeJson(err))
+        return
+    end
+    if follow_up then
+        local ping_result
+        ping_result, err = api.reply_to_message(video_result.result, follow_up)
+        if not ping_result then
+            Log(kLogWarn, EncodeJson(err))
+        end
+    end
+end
+
 function bot.update_queue_message_with_status(chat_id, message_id, new_text)
     api.edit_message_text(chat_id, message_id, new_text)
 end

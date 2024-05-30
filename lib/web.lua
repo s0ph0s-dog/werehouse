@@ -208,6 +208,7 @@ local image_functions = {
     kind_str = function(kind)
         return DbUtil.k.ImageKindLoopable[kind]
     end,
+    kind = DbUtil.k.ImageKind,
 }
 
 local render_home = login_required(function(r, user_record)
@@ -241,6 +242,19 @@ local render_queue_image = login_required(function(r, _)
         ContentType = result.image_mime_type,
         ["Cache-Control"] = "private; max-age=31536000",
     }, result.image)
+end)
+
+local render_thumbnail_file = login_required(function(r, _)
+    local result, errmsg = Model:getThumbnailImageById(r.params.thumbnail_id)
+    if not result then
+        Log(kLogDebug, errmsg)
+        return Fm.serve404()
+    end
+    r.headers.ContentType = result.mime_type
+    return Fm.serveResponse(200, {
+        ContentType = result.mime_type,
+        ["Cache-Control"] = "private; max-age=31536000",
+    }, result.thumbnail)
 end)
 
 local allowed_image_types = {
@@ -625,13 +639,35 @@ local render_image_share = login_required(function(r, user_record)
     if r.params.share then
         local _, file_path = FsTools.make_image_path_from_filename(image.file)
         local chat_id = spl.share_data.chat_id
-        Bot.post_image(
-            chat_id,
-            file_path,
-            r.params.sources_text,
-            r.params.ping_text,
-            r.params.spoiler ~= nil
-        )
+        if image.kind == DbUtil.k.ImageKind.Image then
+            Bot.post_image(
+                chat_id,
+                file_path,
+                r.params.sources_text,
+                r.params.ping_text,
+                r.params.spoiler ~= nil
+            )
+        elseif image.kind == DbUtil.k.ImageKind.Video then
+            if image.file_size > (49 * 1024 * 1024) then
+                return Fm.serveError(
+                    400,
+                    "Video too large for Telegram (must be < 50 MB)"
+                )
+            end
+            if image.mime_type ~= "video/mp4" then
+                return Fm.serveError(
+                    400,
+                    "Unsupported video type for Telegram (must be MP4)"
+                )
+            end
+            Bot.post_video(
+                chat_id,
+                file_path,
+                r.params.sources_text,
+                r.params.ping_text,
+                r.params.spoiler ~= nil
+            )
+        end
         return Fm.serveRedirect("/image/" .. image_id, 302)
     end
     local ping_data, pd_err = Model:getPingsForImage(image_id, spl_id)
@@ -670,6 +706,7 @@ local render_image_share = login_required(function(r, user_record)
         sources_text_size = form_sources_text:linecount(),
         ping_text = form_ping_text,
         ping_text_size = form_ping_text:linecount(),
+        fn = image_functions,
     })
 end)
 
@@ -2109,6 +2146,7 @@ local function setup()
     Fm.setRoute(Fm.POST { "/queue/:qid[%d]/help" }, accept_queue_help)
     Fm.setRoute("/home", render_home)
     Fm.setRoute("/image-file/:filename", render_image_file)
+    Fm.setRoute("/thumbnail-file/:thumbnail_id[%d]", render_thumbnail_file)
     Fm.setRoute(Fm.GET { "/image" }, render_images)
     Fm.setRoute(Fm.POST { "/image" }, accept_images)
     Fm.setRoute("/image/:image_id", render_image)

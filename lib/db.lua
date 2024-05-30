@@ -165,7 +165,8 @@ local user_setup = [[
         width,
         height,
         saved_at,
-        artists
+        artists,
+         first_thumbnail_id
     ) AS SELECT
         images.image_id,
         images.file,
@@ -173,11 +174,21 @@ local user_setup = [[
         images.width,
         images.height,
         images.saved_at,
-        group_concat(artists.name, ", ") AS artists
+        group_concat(artists.name, ", ") AS artists,
+        first_thumbnail_id
     FROM images
         LEFT NATURAL JOIN image_artists
         LEFT NATURAL JOIN artists
+        LEFT NATURAL JOIN (
+            SELECT DISTINCT image_id, first_value(thumbnail_id) OVER (
+                PARTITION BY image_id
+                ORDER BY thumbnail_id
+                ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+             ) AS first_thumbnail_id
+             FROM thumbnails
+        )
         GROUP BY images.image_id;
+
 
     CREATE TABLE IF NOT EXISTS "share_ping_list" (
         "spl_id" INTEGER NOT NULL UNIQUE,
@@ -238,6 +249,7 @@ local user_setup = [[
         "width" INTEGER NOT NULL,
         "height" INTEGER NOT NULL,
         "scale" INTEGER NOT NULL,
+        "mime_type" TEXT NOT NULL DEFAULT 'image/jpeg',
         PRIMARY KEY("thumbnail_id"),
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
         ON UPDATE CASCADE ON DELETE CASCADE
@@ -351,7 +363,7 @@ local queries = {
         get_queue_image_by_id = [[SELECT image, image_mime_type FROM queue
             WHERE qid = ?;]],
         get_image_entry_count = [[SELECT COUNT(*) as count FROM images;]],
-        get_recent_image_entries = [[SELECT image_id, file, kind, artists
+        get_recent_image_entries = [[SELECT image_id, file, kind, artists, first_thumbnail_id
             FROM images_for_gallery
             ORDER BY saved_at DESC
             LIMIT 20;]],
@@ -359,12 +371,14 @@ local queries = {
                 image_id,
                 file,
                 kind,
-                artists
+                artists,
+                first_thumbnail_id
             FROM images_for_gallery
             ORDER BY saved_at DESC
             LIMIT ?
             OFFSET ?;]],
-        get_image_by_id = [[SELECT image_id, file, saved_at, category, rating, kind
+        get_image_by_id = [[SELECT
+                image_id, file, saved_at, category, rating, kind, file_size, mime_type
             FROM images
             WHERE image_id = ?;]],
         get_artists_for_image = [[SELECT artists.artist_id, artists.name, artists.manually_confirmed
@@ -431,7 +445,8 @@ local queries = {
                 images_for_gallery.image_id,
                 images_for_gallery.file,
                 images_for_gallery.kind,
-                images_for_gallery.artists
+                images_for_gallery.artists,
+                images_for_gallery.first_thumbnail_id
             FROM images_for_gallery
             LEFT NATURAL JOIN image_artists
             WHERE image_artists.artist_id = ?
@@ -441,7 +456,8 @@ local queries = {
                 images_for_gallery.image_id,
                 images_for_gallery.file,
                 images_for_gallery.kind,
-                images_for_gallery.artists
+                images_for_gallery.artists,
+                images_for_gallery.first_thumbnail_id
             FROM images_for_gallery
             LEFT NATURAL JOIN image_tags
             WHERE image_tags.tag_id = ?
@@ -492,7 +508,8 @@ local queries = {
                 images_for_gallery.width,
                 images_for_gallery.height,
                 images_for_gallery.kind,
-                images_for_gallery.artists
+                images_for_gallery.artists,
+                images_for_gallery.first_thumbnail_id
             FROM images_in_group
             LEFT NATURAL JOIN images_for_gallery
             WHERE ig_id = ?
@@ -562,6 +579,9 @@ local queries = {
             INNER JOIN share_ping_list_entry ON share_ping_list_entry.spl_entry_id = pl_entry_negative_tags.spl_entry_id
             INNER JOIN tags ON pl_entry_negative_tags.tag_id = tags.tag_id
             WHERE share_ping_list_entry.spl_id = ?]],
+        get_thumbnail_by_id = [[SELECT
+                thumbnail_id, thumbnail, width, height, scale, mime_type
+            FROM thumbnails WHERE thumbnail_id = ?;]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '')
@@ -616,6 +636,9 @@ local queries = {
             (spl_entry_id, tag_id) VALUES (?, ?);]],
         insert_negative_tag = [[INSERT OR IGNORE INTO pl_entry_negative_tags
             (spl_entry_id, tag_id) VALUES (?, ?);]],
+        insert_thumbnail = [[INSERT INTO "thumbnails"
+            ( "image_id", "thumbnail", "width", "height", "scale", "mime_type" )
+            VALUES (?, ?, ?, ?, ?, ?);]],
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
         delete_image_by_id = [[DELETE FROM "images" WHERE image_id = ?;]],
         delete_artist_by_id = [[DELETE FROM "artists" WHERE artist_id = ?;]],
@@ -1040,6 +1063,33 @@ function Model:insertImage(
         kind,
         rating,
         file_size
+    )
+end
+
+function Model:insertThumbnailForImage(
+    image_id,
+    thumbnail_data,
+    width,
+    height,
+    scale,
+    mime_type
+)
+    return self.conn:execute(
+        queries.model.insert_thumbnail,
+        image_id,
+        thumbnail_data,
+        width,
+        height,
+        scale,
+        mime_type
+    )
+end
+
+function Model:getThumbnailImageById(thumbnail_id)
+    return fetchOneExactly(
+        self.conn,
+        queries.model.get_thumbnail_by_id,
+        thumbnail_id
     )
 end
 

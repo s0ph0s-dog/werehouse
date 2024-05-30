@@ -194,7 +194,7 @@ footer {
   grid-area: main;
 }
 
-.main-image img {
+.main-image .height-limit {
   max-width: 100%;
   margin: 0 auto;
   display: block;
@@ -204,7 +204,7 @@ footer {
   display: inline-block;
 }
 
-.main-image input:checked ~ img {
+.main-image input:checked ~ .height-limit {
   max-height: 95vh;
 }
 

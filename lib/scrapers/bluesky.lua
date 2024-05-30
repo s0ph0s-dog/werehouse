@@ -181,6 +181,7 @@ local function process_uri(uri)
                 }
             end
             return {
+                kind = DbUtil.k.ImageKind.Image,
                 raw_image_uri = make_image_uri(did, image.image.ref["$link"]),
                 mime_type = image.image.mimeType,
                 width = aspectRatio.width,

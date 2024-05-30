@@ -1,5 +1,5 @@
 {% function block.content() %}
 <h1>Images</h1>
 {% render("components/image_gallery", { image_records = image_records, pages =
-pages, fn = fn, editable = true }) %}{% end %}{% render("layouts/main", { title
-= "Images", user = user }) %}
+pages, fn = fn, editable = true, kind = kind }) %}{% end %}{%
+render("layouts/main", { title = "Images", user = user }) %}

@@ -3,11 +3,19 @@ local ALLOWED_EXTS = {
     jpeg = true,
     png = true,
     gif = true,
+    webm = true,
 }
 local RATING_MAP = {
     s = DbUtil.k.Rating.General,
     q = DbUtil.k.Rating.Adult,
     e = DbUtil.k.Rating.Explicit,
+}
+local EXT_TO_KIND_MAP = {
+    webm = DbUtil.k.ImageKind.Video,
+    jpg = DbUtil.k.ImageKind.Image,
+    png = DbUtil.k.ImageKind.Image,
+    jpeg = DbUtil.k.ImageKind.Image,
+    gif = DbUtil.k.ImageKind.Image,
 }
 local CANONICAL_DOMAIN = "e621.net"
 
@@ -33,6 +41,21 @@ end
 
 local function filter_user_pages(sources)
     return table.filter(sources, is_user_page)
+end
+
+local function make_thumbnail(post)
+    if post.preview then
+        return {
+            {
+                raw_uri = post.preview.url,
+                width = post.preview.width,
+                height = post.preview.height,
+                scale = 1,
+            },
+        }
+    else
+        return nil
+    end
 end
 
 local function process_post(json, clean_uri, pool_uri)
@@ -70,7 +93,9 @@ local function process_post(json, clean_uri, pool_uri)
         artist_tags = {}
     end
     artist_tags = table.filter(artist_tags, function(x)
-        return x ~= "third-party_edit" and x ~= "conditional_dnp"
+        return x ~= "third-party_edit"
+            and x ~= "conditional_dnp"
+            and x ~= "sound_warning"
     end)
     local incoming_tags = table.filter(
         table.flatten {
@@ -102,6 +127,7 @@ local function process_post(json, clean_uri, pool_uri)
     end)
     return Ok {
         {
+            kind = EXT_TO_KIND_MAP[file.ext],
             raw_image_uri = file.url,
             width = file.width,
             height = file.height,
@@ -112,6 +138,7 @@ local function process_post(json, clean_uri, pool_uri)
             authors = authors,
             rating = RATING_MAP[json.post.rating],
             incoming_tags = incoming_tags,
+            thumbnails = make_thumbnail(json.post),
         },
     }
 end
