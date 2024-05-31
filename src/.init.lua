@@ -11,6 +11,7 @@ local web = require("web")
 local _ = require("functools")
 ScraperPipeline = require("scraper_pipeline")
 Bot = require("tg_bot")
+GifTools = require("giftools")
 
 local session_key = os.getenv("SESSION_KEY")
 if session_key then
@@ -70,5 +71,3 @@ Bot.run()
 
 web.setup()
 web.run()
-
-print("wtf")

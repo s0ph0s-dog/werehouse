@@ -428,7 +428,7 @@ function TestScraperPipeline:testValidTwitterLinks()
     local expectedGif = {
         archive = {
             {
-                kind = DbUtil.k.ImageKind.Video,
+                kind = DbUtil.k.ImageKind.Animation,
                 this_source = "https://twitter.com/bigcozyorca/status/1793851828477788591",
                 canonical_domain = "twitter.com",
                 height = 492,

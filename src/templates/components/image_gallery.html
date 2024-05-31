@@ -22,7 +22,8 @@
       <a href="/image/{%& image.image_id %}">
         {% if image.first_thumbnail_id then %}
         <img src="/thumbnail-file/{%& image.first_thumbnail_id %}" />
-        {% elseif image.kind == fn.kind.Image then %}
+        {% elseif image.kind == fn.kind.Image or (image.kind ==
+        fn.kind.Animation and image.mime_type == "image/gif") then %}
         <img src="/image-file/{%& image.file %}" />
         {% else %}
         <div>Unable to preview this record</div>

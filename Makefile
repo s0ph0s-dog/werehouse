@@ -11,6 +11,7 @@ LIBS := lib/third_party/fullmoon.lua \
     lib/db.lua \
 	lib/functools.lua \
 	lib/fstools.lua \
+	lib/giftools.lua \
 	lib/scraper_pipeline.lua \
 	lib/scraper_types.lua \
 	lib/scrapers/bluesky.lua \

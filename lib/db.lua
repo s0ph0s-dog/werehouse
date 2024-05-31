@@ -162,6 +162,7 @@ local user_setup = [[
         image_id,
         file,
         kind,
+        mime_type,
         width,
         height,
         saved_at,
@@ -171,6 +172,7 @@ local user_setup = [[
         images.image_id,
         images.file,
         images.kind,
+        images.mime_type,
         images.width,
         images.height,
         images.saved_at,
@@ -363,7 +365,7 @@ local queries = {
         get_queue_image_by_id = [[SELECT image, image_mime_type FROM queue
             WHERE qid = ?;]],
         get_image_entry_count = [[SELECT COUNT(*) as count FROM images;]],
-        get_recent_image_entries = [[SELECT image_id, file, kind, artists, first_thumbnail_id
+        get_recent_image_entries = [[SELECT image_id, file, kind, mime_type, artists, first_thumbnail_id
             FROM images_for_gallery
             ORDER BY saved_at DESC
             LIMIT 20;]],
@@ -371,6 +373,7 @@ local queries = {
                 image_id,
                 file,
                 kind,
+                mime_type,
                 artists,
                 first_thumbnail_id
             FROM images_for_gallery
@@ -445,6 +448,7 @@ local queries = {
                 images_for_gallery.image_id,
                 images_for_gallery.file,
                 images_for_gallery.kind,
+                images_for_gallery.mime_type,
                 images_for_gallery.artists,
                 images_for_gallery.first_thumbnail_id
             FROM images_for_gallery
@@ -456,6 +460,7 @@ local queries = {
                 images_for_gallery.image_id,
                 images_for_gallery.file,
                 images_for_gallery.kind,
+                images_for_gallery.mime_type,
                 images_for_gallery.artists,
                 images_for_gallery.first_thumbnail_id
             FROM images_for_gallery
@@ -508,6 +513,7 @@ local queries = {
                 images_for_gallery.width,
                 images_for_gallery.height,
                 images_for_gallery.kind,
+                images_for_gallery.mime_type,
                 images_for_gallery.artists,
                 images_for_gallery.first_thumbnail_id
             FROM images_in_group
@@ -2242,6 +2248,7 @@ local ImageKind = {
     Video = 2,
     Audio = 3,
     Flash = 4,
+    Animation = 5,
 }
 local Rating = {
     General = 1,

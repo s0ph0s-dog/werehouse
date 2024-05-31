@@ -1,13 +1,15 @@
-{% if record.kind == kind.Image then %}
+{% if record.kind == kind.Image or (record.kind == kind.Animation and
+record.mime_type == "image/gif") then %}
 <img
   src="/image-file/{%& record.file %}"
   class="height-limit"
   width="{%& record.width %}"
   height="{%& record.height %}"
 />
-{% elseif record.kind == kind.Video then %}
+{% elseif record.kind == kind.Video or (record.kind == kind.Animation and
+record.mime_type == "video/mp4") then %}
 <video
-  controls
+  {% if record.kind == kind.Video then %}controls{% else %}loop autoplay{% end %}
   class="height-limit"
   width="{%& record.width %}"
   height="{%& record.height %}"

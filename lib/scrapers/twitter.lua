@@ -6,7 +6,7 @@ local TWITTER_URI_EXP = assert(
 local TYPE_TO_KIND_MAP = {
     photo = DbUtil.k.ImageKind.Image,
     video = DbUtil.k.ImageKind.Video,
-    gif = DbUtil.k.ImageKind.Video,
+    gif = DbUtil.k.ImageKind.Animation,
 }
 -- Eat Shit, Elon
 local CANONICAL_DOMAIN = "twitter.com"
