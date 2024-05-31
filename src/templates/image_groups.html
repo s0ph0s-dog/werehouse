@@ -1,9 +1,9 @@
 {% function block.content() %}
-<h1>Image Groups</h1>
+<h1>Record Groups</h1>
 {% if pages.current > 1 and #ig_records == 0 then %}
 <p>You've fallen off the end of the page counter!</p>
 {% elseif #ig_records == 0 then %}
-<p>No image groups yet.</p>
+<p>No record groups yet.</p>
 {% else %}
 <form method="POST">
   {% if error and type(error) == "string" then %}
@@ -27,7 +27,7 @@
           <th class="num"></th>
           <th class="num">ID</th>
           <th class="txt">Name</th>
-          <th class="num">Saved Images</th>
+          <th class="num">Record Count</th>
         </tr>
       </thead>
       {% for _, item in ipairs(ig_records) do %}
@@ -47,5 +47,5 @@
   {% render("components/pagination_controls", { pages = pages, kind_plural =
   "groups" }) %}
 </form>
-{% end %}{% end %}{% render("layouts/main", { title = "Image Groups", user =
+{% end %}{% end %}{% render("layouts/main", { title = "Record Groups", user =
 user }) %}

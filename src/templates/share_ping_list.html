@@ -16,13 +16,13 @@
     {%& entry.handle %}
     <ul>
       <li>
-        Ping this person if a shared image has any of these tags:
+        Ping this person if a shared record has any of these tags:
         <ul>
           {% tags_for_handle(entry.spl_entry_id, positive_tags) %}
         </ul>
       </li>
       <li>
-        But not if the shared image has any of these tags:
+        But not if the shared record has any of these tags:
         <ul>
           {% tags_for_handle(entry.spl_entry_id, negative_tags) %}
         </ul>

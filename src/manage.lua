@@ -84,7 +84,7 @@ local function update_image_sizes(other_args)
     for i = 1, #users do
         local user = users[i]
         print(
-            "Checking images for user %s (%d of %d)…"
+            "Checking records for user %s (%d of %d)…"
                 % { user.user_id, i, #users }
         )
         local model = DbUtil.Model:new(nil, user.user_id)
@@ -98,7 +98,7 @@ local function update_image_sizes(other_args)
         for j = 1, #images do
             local image = images[j]
             if j % 50 == 1 then
-                print("Checking image %d of %d…" % { j, #images })
+                print("Checking record %d of %d…" % { j, #images })
             end
             local _, image_path =
                 FsTools.make_image_path_from_filename(image.file)
@@ -106,7 +106,7 @@ local function update_image_sizes(other_args)
             if not image_stat then
                 Log(
                     kLogWarn,
-                    "Image %s referenced in database for user %s does not exist on disk at %s"
+                    "Record %s referenced in database for user %s does not exist on disk at %s"
                         % { image.file, user.user_id, image_path }
                 )
             else

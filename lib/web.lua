@@ -912,7 +912,7 @@ local accept_images = login_required(function(r, _)
         table.sort(image_ids)
         if #image_ids < 1 then
             r.session.error =
-                "You must select at least one image to add to the group!"
+                "You must select at least one record to add to the group!"
             return Fm.serveRedirect(redirect_path, 302)
         end
         local ig_id, g_err =
@@ -1242,8 +1242,7 @@ local accept_image_groups = login_required(function(r)
         ig_ids = table.map(ig_ids, tonumber)
         table.sort(ig_ids)
         if #ig_ids < 2 then
-            r.session.error =
-                "You must select at least two image groups to merge!"
+            r.session.error = "You must select at least two groups to merge!"
             return Fm.serveRedirect(redirect_path, 302)
         end
         local merge_into_id = table.remove(ig_ids, 1)

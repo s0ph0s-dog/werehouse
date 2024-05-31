@@ -18,7 +18,7 @@ groups }) %}
     </ul>
     <h1>Artists</h1>
     {% if #artists == 0 then %}
-    <p>No artists recorded for this image yet.</p>
+    <p>No artists for this record yet.</p>
     {% else %}
     <ul>
       {% for _, artist in ipairs(artists) do %}
@@ -31,7 +31,7 @@ groups }) %}
     {% end %}
     <h1>Tags</h1>
     {% if #tags == 0 then %}
-    <p>No tags for this image yet.</p>
+    <p>No tags for this record yet.</p>
     {% else %}
     <ul>
       {% for i = 1, #tags do local tag = tags[i] %}
@@ -44,7 +44,7 @@ groups }) %}
     {% end %}
     <h1>Sources</h1>
     {% if #sources == 0 then %}
-    <p>No sources for this image yet.</p>
+    <p>No sources for this record yet.</p>
     {% else %}
     <ul>
       {% for _, source in ipairs(sources) do %}
@@ -67,5 +67,5 @@ groups }) %}
     </form>
   </div>
 </div>
-{% end %}{% render("layouts/main", { title = "Image " ..
+{% end %}{% render("layouts/main", { title = "Record " ..
 tostring(image.image_id), user = user }) %}
