@@ -1,0 +1,19 @@
+{% function block.content() %}
+<p>
+  I found and automatically applied these tag changes based on the updated rule
+  list:
+</p>
+<ul>
+  {% for i = 1, #changes do local change = changes[i] %}
+  <li>
+    Added {%& change.tag_name %} to
+    <a href="/image/{%& change.image_id %}">Record {%& change.image_id %}</a>
+  </li>
+  {% end %}
+</ul>
+<form class="vbox" method="POST">
+  <span class="buttons">
+    <input type="submit" name="ok" value="OK" />
+  </span>
+</form>
+{% end %}{% render("layouts/dialog", { title = "Tag Rule Changes" }) %}

@@ -179,6 +179,12 @@ footer {
   margin-top: 1em;
 }
 
+.sidebar h2 {
+  font-size: 1em;
+  margin-bottom: 0.2em;
+  margin-top: 1em;
+}
+
 .sidebar ul {
   margin-top: 0;
   padding-left: 1.25em;
@@ -196,6 +202,7 @@ footer {
 
 .main-image .height-limit {
   max-width: 100%;
+  height: auto;
   margin: 0 auto;
   display: block;
 }
@@ -206,6 +213,7 @@ footer {
 
 .main-image input:checked ~ .height-limit {
   max-height: 95vh;
+  width: auto;
 }
 
 .links > a {
@@ -376,4 +384,9 @@ table img {
   color: GrayText;
   font-size: 0.9em;
   margin-left: 0.75rem;
+}
+
+.rule-box {
+  margin-bottom: 0.5em;
+  border-bottom: 1px solid CanvasText;
 }

@@ -91,6 +91,7 @@ local user_setup = [[
         "image_id" INTEGER NOT NULL,
         "name" TEXT NOT NULL,
         "domain" TEXT NOT NULL,
+        "applied" INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY("itid"),
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
         ON UPDATE CASCADE ON DELETE CASCADE
@@ -120,6 +121,24 @@ local user_setup = [[
         FOREIGN KEY("tag_id") REFERENCES "tags"("tag_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
+
+    CREATE VIEW IF NOT EXISTS "incoming_tags_now_matched_by_tag_rules" (
+        itid,
+        image_id,
+        tag_id,
+        tag_name,
+        applied
+    ) AS SELECT
+        incoming_tags.itid,
+        incoming_tags.image_id,
+        tag_rules.tag_id,
+        tags.name,
+        incoming_tags.applied
+    FROM tag_rules
+    INNER NATURAL JOIN tags
+    INNER JOIN incoming_tags ON
+        tag_rules.incoming_domain = incoming_tags.domain
+        AND tag_rules.incoming_name = incoming_tags.name;
 
     CREATE TABLE IF NOT EXISTS "sources" (
         "source_id" INTEGER NOT NULL UNIQUE,
@@ -381,7 +400,8 @@ local queries = {
             LIMIT ?
             OFFSET ?;]],
         get_image_by_id = [[SELECT
-                image_id, file, saved_at, category, rating, kind, file_size, mime_type
+                image_id, file, saved_at, category, rating, height, width,
+                kind, file_size, mime_type
             FROM images
             WHERE image_id = ?;]],
         get_artists_for_image = [[SELECT artists.artist_id, artists.name, artists.manually_confirmed
@@ -394,6 +414,15 @@ local queries = {
             ON image_tags.tag_id = tags.tag_id
             JOIN tag_counts ON tag_counts.tag_id = image_tags.tag_id
             WHERE image_tags.image_id = ?;]],
+        get_incoming_tags_for_image_by_id = [[SELECT name, itid
+            FROM incoming_tags WHERE image_id = ? AND applied = 0;]],
+        get_incoming_tag_by_id = [[SELECT itid, name, domain, applied
+            FROM incoming_tags
+            WHERE itid = ?;]],
+        get_images_and_tags_for_new_tag_rules = [[SELECT
+                tag_name, image_id, itid
+            FROM incoming_tags_now_matched_by_tag_rules
+            WHERE applied = 0;]],
         get_all_tags = [[SELECT tag_id, name FROM tags;]],
         get_sources_for_image = [[SELECT source_id, link
             FROM sources
@@ -625,9 +654,18 @@ local queries = {
                 "tag_id"
             ) VALUES (?, ?, ?)
             RETURNING tag_rule_id;]],
+        insert_image_tags_for_new_tag_rules_and_mark_used_incoming_tags = [[
+            INSERT OR IGNORE INTO image_tags (image_id, tag_id)
+            SELECT image_id, tag_id
+            FROM incoming_tags_now_matched_by_tag_rules
+            WHERE applied = 0;
+            UPDATE incoming_tags SET applied = 1 WHERE itid IN
+                (SELECT itid
+                    FROM incoming_tags_now_matched_by_tag_rules
+                    WHERE applied = 0);]],
         insert_incoming_tag = [[INSERT INTO
-                "incoming_tags" ("name", "domain", "image_id")
-            VALUES (?, ?, ?);]],
+                "incoming_tags" ("name", "domain", "image_id", "applied")
+            VALUES (?, ?, ?, ?);]],
         insert_share_ping_list = [[INSERT INTO share_ping_list (
                 name,
                 share_data
@@ -1751,18 +1789,19 @@ function Model:addIncomingTagsForImage(
             self:rollback(SP)
             return nil, tag_rule_err
         end
-        if tag_rule == self.conn.NONE then
-            local itag_ok, itag_err = self.conn:execute(
-                queries.model.insert_incoming_tag,
-                name,
-                incoming_domain,
-                image_id
-            )
-            if not itag_ok then
-                self:rollback(SP)
-                return nil, itag_err
-            end
-        else
+        local applied = tag_rule ~= self.conn.NONE
+        local itag_ok, itag_err = self.conn:execute(
+            queries.model.insert_incoming_tag,
+            name,
+            incoming_domain,
+            image_id,
+            applied
+        )
+        if not itag_ok then
+            self:rollback(SP)
+            return nil, itag_err
+        end
+        if applied then
             local tag_ok, tag_err =
                 self:associateTagWithImage(image_id, tag_rule.tag_id)
             if not tag_ok then
@@ -1773,6 +1812,58 @@ function Model:addIncomingTagsForImage(
     end
     self:release_savepoint(SP)
     return true
+end
+
+function Model:getIncomingTagsForImage(image_id)
+    return self.conn:fetchAll(
+        queries.model.get_incoming_tags_for_image_by_id,
+        image_id
+    )
+end
+
+function Model:getIncomingTagsByIds(itids)
+    local result = {}
+    assert(#itids > 0)
+    for i = 1, #itids do
+        local it, err = fetchOneExactly(
+            self.conn,
+            queries.model.get_incoming_tag_by_id,
+            itids[i]
+        )
+        if not it then
+            return nil, err
+        end
+        result[#result + 1] = it
+    end
+    return result
+end
+
+function Model:applyIncomingTagsNowMatchedByTagRules()
+    local SP = "apply_incoming_tags_now_matched_by_tag_rules"
+    self:create_savepoint(SP)
+    local changes, c_err =
+        self.conn:fetchAll(queries.model.get_images_and_tags_for_new_tag_rules)
+    if not changes then
+        self:rollback(SP)
+        Log(kLogDebug, "error in first query")
+        return nil, c_err
+    end
+    if changes == self.conn.NONE then
+        Log(kLogDebug, "no results from first query")
+        self:release_savepoint(SP)
+        return changes
+    end
+    local apply_ok, apply_err = self.conn:execute(
+        queries.model.insert_image_tags_for_new_tag_rules_and_mark_used_incoming_tags
+    )
+    if not apply_ok then
+        Log(kLogDebug, "failed to make changes")
+        self:rollback(SP)
+        return nil, apply_err
+    end
+    Log(kLogDebug, "made it to the end successfully")
+    self:release_savepoint(SP)
+    return changes
 end
 
 function Model:createSharePingList(name, share_data)

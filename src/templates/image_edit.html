@@ -84,6 +84,22 @@
         {% end end %}
         <li id="tag_insert_mark"><input data-1p-ignore type="text" name="pending_tags[]" id="add_tag_field" data-kind="tag" placeholder="Add Tag" autocomplete="off" list="all-tags" autocapitalize="words"/></li> </ul>
       <button type="submit" name="add_tag" value="add_tag" data-kind="tag" formnovalidate>Add Another Tag…</button>
+      {% if incoming_tags and #incoming_tags > 0 then %}
+      <h2>Tags found by the scraper</h2>
+      <details open><summary>Hide/Show</summary>
+      <ul>
+        {% for i = 1, #incoming_tags do local inc_tag = incoming_tags[i] %}
+        <li>
+          <label class="inline">
+            <input type="checkbox" name="itids[]" value="{%& inc_tag.itid %}" />
+            <tt>{%& inc_tag.name %}</tt>
+          </label>
+        </li>
+        {% end %}
+      </ul>
+      <button formnovalidate type="submit" name="make_rules" value="make_rules">Create Rules and Add Tags…</button>
+      </details>
+      {% end %}
       <h1>Sources</h1>
       <div id="deleted_source_container">
       {% if delete_sources then for i = 1, #delete_sources do %}

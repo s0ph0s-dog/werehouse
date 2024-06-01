@@ -42,6 +42,7 @@ SRCS := src/.init.lua \
     src/templates/components/artist_verified.html \
     src/templates/components/image_gallery.html \
     src/templates/components/record_view.html \
+    src/templates/components/thumbnail.html \
     src/templates/components/pagination_controls.html \
     src/templates/components/group_box.html \
     src/templates/accept_invite.html \
@@ -71,6 +72,8 @@ SRCS := src/.init.lua \
     src/templates/tag_edit.html \
     src/templates/tag_add.html \
     src/templates/tag_rule_add.html \
+    src/templates/tag_rule_changelist.html \
+    src/templates/tag_rule_bulk_add.html \
     src/templates/tag_rules.html \
     src/templates/tag_rule.html \
     src/templates/tag_rule_edit.html \

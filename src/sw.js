@@ -1,5 +1,5 @@
 const cacheKey = "WerehouseCache";
-const cacheVersion = "5";
+const cacheVersion = "6";
 const cacheName = cacheKey + ".v" + cacheVersion;
 const precachedResources = ["/index.js", "/style.css", "/icon.svg"];
 

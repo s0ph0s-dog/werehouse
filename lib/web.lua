@@ -315,15 +315,16 @@ local function not_emptystr(x)
 end
 
 local function render_image_internal(r, user_record)
-    if not r.params.image_id then
+    local image_id = r.params.image_id
+    if not image_id then
         return Fm.serve400()
     end
-    local image, image_err = Model:getImageById(r.params.image_id)
+    local image, image_err = Model:getImageById(image_id)
     if not image then
         Log(kLogInfo, image_err)
         return Fm.serve404()
     end
-    local artists, artists_err = Model:getArtistsForImage(r.params.image_id)
+    local artists, artists_err = Model:getArtistsForImage(image_id)
     if not artists then
         Log(kLogInfo, artists_err)
     end
@@ -337,7 +338,7 @@ local function render_image_internal(r, user_record)
     if not allartists then
         Log(kLogInfo, allartists_err)
     end
-    local tags, tags_err = Model:getTagsForImage(r.params.image_id)
+    local tags, tags_err = Model:getTagsForImage(image_id)
     if not tags then
         Log(kLogInfo, tags_err)
     end
@@ -351,7 +352,11 @@ local function render_image_internal(r, user_record)
     if not alltags then
         Log(kLogInfo, alltags_err)
     end
-    local sources, sources_err = Model:getSourcesForImage(r.params.image_id)
+    local incoming_tags, it_err = Model:getIncomingTagsForImage(image_id)
+    if not incoming_tags then
+        Log(kLogInfo, it_err)
+    end
+    local sources, sources_err = Model:getSourcesForImage(image_id)
     if not sources then
         Log(kLogInfo, sources_err)
     end
@@ -361,13 +366,13 @@ local function render_image_internal(r, user_record)
             return table.find(delete_sources, s.source_id) ~= nil
         end)
     end
-    local groups, group_errmsg = Model:getGroupsForImage(r.params.image_id)
+    local groups, group_errmsg = Model:getGroupsForImage(image_id)
     if not groups then
         Log(kLogInfo, group_errmsg)
     end
     for _, ig in ipairs(groups) do
         local siblings, sibling_errmsg =
-            Model:getPrevNextImagesInGroupForImage(ig.ig_id, r.params.image_id)
+            Model:getPrevNextImagesInGroupForImage(ig.ig_id, image_id)
         if not siblings then
             Log(kLogInfo, sibling_errmsg)
         end
@@ -404,6 +409,7 @@ local function render_image_internal(r, user_record)
         delete_tags = delete_tags,
         pending_tags = pending_tags,
         alltags = alltags,
+        incoming_tags = incoming_tags,
         sources = sources,
         delete_sources = delete_sources,
         pending_sources = pending_sources,
@@ -616,6 +622,23 @@ local accept_edit_image = login_required(function(r, user_record)
         -- Done!
         return Fm.serveRedirect("/image/" .. r.params.image_id, 302)
     end
+    if r.params.make_rules then
+        local itids = r.params.itids
+        if not itids or #itids < 1 then
+            return Fm.serveError(
+                400,
+                "Must select at least one found tag to make a rule out of"
+            )
+        end
+        local params = table.map(itids, function(i)
+            return { "itids[]", i }
+        end)
+        local redirect_url = EncodeUrl {
+            path = "/tag-rule/add-bulk",
+            params = params,
+        }
+        return Fm.serveRedirect(302, redirect_url)
+    end
     return render_image_internal(r, user_record)
 end)
 
@@ -707,6 +730,134 @@ local render_image_share = login_required(function(r, user_record)
         ping_text = form_ping_text,
         ping_text_size = form_ping_text:linecount(),
         fn = image_functions,
+    })
+end)
+
+local lowerList = {
+    ["at"] = true,
+    ["but"] = true,
+    ["by"] = true,
+    ["down"] = true,
+    ["for"] = true,
+    ["from"] = true,
+    ["in"] = true,
+    ["into"] = true,
+    ["like"] = true,
+    ["near"] = true,
+    ["of"] = true,
+    ["off"] = true,
+    ["on"] = true,
+    ["onto"] = true,
+    ["out"] = true,
+    ["over"] = true,
+    ["past"] = true,
+    ["plus"] = true,
+    ["to"] = true,
+    ["up"] = true,
+    ["upon"] = true,
+    ["with"] = true,
+    ["nor"] = true,
+    ["yet"] = true,
+    ["so"] = true,
+    ["the"] = true,
+}
+
+local function titleCase(word, first, rest)
+    word = word:lower()
+    if lowerList[word] then
+        return word
+    else
+        return first:upper() .. rest:lower()
+    end
+end
+
+local function canonicalize_tag_name(incoming_name)
+    local no_underscores = incoming_name:gsub("_", " ")
+    return string.gsub(no_underscores, "((%a)([%w_']*))", titleCase)
+end
+
+local render_add_tag_rule_bulk = login_required(function(r, user_record)
+    if r.params.add then
+        local incoming_names = r.params.incoming_names
+        local incoming_domains = r.params.incoming_domains
+        local tag_names = r.params.tag_names
+        if not incoming_names or not incoming_domains or not tag_names then
+            return Fm.serveError(
+                400,
+                "incoming_names[], incoming_domains[], and tag_names[] are all required parameters"
+            )
+        end
+        if
+            not #incoming_names == #incoming_domains
+            and #incoming_domains == #tag_names
+        then
+            return Fm.serveError(
+                400,
+                "All three list parameters must contain the same number of values"
+            )
+        end
+        local SP = "bulk_add_tag_rule"
+        Model:create_savepoint(SP)
+        for i = 1, #incoming_names do
+            local tr_ok, tr_err = Model:createTagRule(
+                incoming_names[i],
+                incoming_domains[i],
+                tag_names[i]
+            )
+            if not tr_ok then
+                Model:rollback(SP)
+                Log(kLogInfo, tr_err)
+                return Fm.serve500()
+            end
+        end
+        Model:release_savepoint(SP)
+        local changes, change_err =
+            Model:applyIncomingTagsNowMatchedByTagRules()
+        assert((changes == nil) ~= (change_err == nil))
+        if not changes then
+            Log(kLogInfo, change_err)
+            return Fm.serve500()
+        end
+        if #changes < 1 then
+            local redirect_url = r.session.after_dialog_action
+            if not redirect_url then
+                redirect_url = "/tag-rule"
+            end
+            return Fm.serveRedirect(302, redirect_url)
+        end
+        return Fm.serveContent("tag_rule_changelist", {
+            changes = changes,
+        })
+    elseif r.params.ok then
+        local redirect_url = r.session.after_dialog_action
+        if not redirect_url then
+            redirect_url = "/tag-rule"
+        end
+        return Fm.serveRedirect(302, redirect_url)
+    else
+        r.session.after_dialog_action = r.headers.Referer
+    end
+    local itids = r.params.itids
+    if not itids then
+        return Fm.serveError(
+            400,
+            "Must provide list of incoming tag IDs to create rules from"
+        )
+    end
+    local incoming_tags, it_err = Model:getIncomingTagsByIds(itids)
+    if not incoming_tags then
+        Log(kLogInfo, it_err)
+        return Fm.serve500()
+    end
+    local alltags, at_err = Model:getAllTags()
+    if not alltags then
+        Log(kLogInfo, at_err)
+        return Fm.serve500()
+    end
+    return Fm.serveContent("tag_rule_bulk_add", {
+        incoming_tags = incoming_tags,
+        alltags = alltags,
+        canonicalize_tag_name = canonicalize_tag_name,
     })
 end)
 
@@ -2185,6 +2336,7 @@ local function setup()
     Fm.setRoute(Fm.POST { "/tag-rule" }, accept_tag_rules)
     Fm.setRoute(Fm.GET { "/tag-rule/add" }, render_add_tag_rule)
     Fm.setRoute(Fm.POST { "/tag-rule/add" }, accept_add_tag_rule)
+    Fm.setRoute("/tag-rule/add-bulk", render_add_tag_rule_bulk)
     Fm.setRoute(Fm.GET { "/tag-rule/:tag_rule_id[%d]" }, render_tag_rule)
     Fm.setRoute(
         Fm.GET { "/tag-rule/:tag_rule_id[%d]/edit" },

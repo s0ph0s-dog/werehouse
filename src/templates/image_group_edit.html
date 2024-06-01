@@ -26,11 +26,7 @@
       {% for i = 1, #images do local image = images[i] %}
       <tr>
         <td>
-          <img
-            src="/image-file/{%& image.file %}"
-            width="{%& image.width %}"
-            height="{%& image.height %}"
-          />
+          {% render("components/thumbnail", { record = image, fn = fn }) %}
         </td>
         <td>
           <input
