@@ -25,14 +25,6 @@ ServerVersion = string.format(
     about.REDBEAN_VERSION
 )
 
-IdPrefixes = {
-    user = "u_",
-    session = "s_",
-    csrf = "csrf_",
-    invite = "i_",
-    telegram_link_request = "tglr_",
-}
-
 ProgramContentType("webmanifest", "application/manifest+json")
 
 Accounts = DbUtil.Accounts:new()

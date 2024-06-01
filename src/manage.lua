@@ -27,6 +27,9 @@ local function help()
     print(
         "- import_tags <db_filename>: read one tag per line from stdin and insert into the database file listed."
     )
+    print(
+        "- make_invite <username>: Generate a new invite link with the specified user marked as the inviter."
+    )
 end
 
 local function db_migrate(other_args)
@@ -169,10 +172,33 @@ local function import_tags(other_args)
     db:close()
 end
 
+local function make_invite(other_args)
+    local username = other_args[1]
+    if not username then
+        help()
+        return 1
+    end
+    local accounts = DbUtil.Accounts:new()
+    local user, u_err = accounts:findUser(username)
+    if not user then
+        print("Unable to find user: " .. u_err)
+        return 1
+    end
+    local invite_ok, invite_err = accounts:makeInviteForUser(user.user_id)
+    if not invite_ok then
+        print("Unable to create invite: " .. invite_err)
+        return 1
+    end
+    print("Invite created! Tell the user to check their /account page.")
+    accounts.conn:close()
+    return 0
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
     import_tags = import_tags,
+    make_invite = make_invite,
 }
 
 local remaining_args = arg

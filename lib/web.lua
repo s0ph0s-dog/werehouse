@@ -21,7 +21,7 @@ local password_validator_rule = {
     maxlen = 128,
     msg = "%s must be between 16 and 128 characters",
 }
-local invite_validator_rule = { "invite_code", minlen = 36, maxlen = 36 }
+local invite_validator_rule = { "invite_code", minlen = 24, maxlen = 24 }
 
 local invite_validator = Fm.makeValidator {
     invite_validator_rule,

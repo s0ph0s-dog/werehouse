@@ -1,6 +1,14 @@
 local ACCOUNTS_DB_FILE = "db/werehouse-accounts.sqlite3"
 local USER_DB_FILE_TEMPLATE = "db/werehouse-%s.sqlite3"
 
+local IdPrefixes = {
+    user = "u_",
+    session = "s_",
+    csrf = "csrf_",
+    invite = "i_",
+    telegram_link_request = "tglr_",
+}
+
 local accounts_setup = [[
     PRAGMA journal_mode=WAL;
     PRAGMA busy_timeout = 5000;
@@ -306,7 +314,7 @@ local queries = {
         insert_user = [[INSERT INTO "users" ("user_id", "username", "password")
             VALUES (?, ?, ?);]],
         assign_invite = [[UPDATE "invites" SET "invitee" = ?
-            WHERE invite_id = ? AND "invitee" = NULL;]],
+            WHERE invite_id = ? AND "invitee" IS NULL;]],
         find_user_by_name = [[SELECT "user_id", "username", "password"
             FROM "users"
             WHERE "username" = ?;]],
@@ -339,6 +347,8 @@ local queries = {
         insert_telegram_account_id = [[INSERT INTO "telegram_accounts"
             ("user_id", "tg_userid")
             VALUES (?, ?);]],
+        insert_invite_for_user = [[INSERT INTO "invites" ("invite_id", "inviter", "created_at")
+            VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));]],
         update_session_last_seen = [[UPDATE "sessions"
             SET last_seen = ?, ip = ?
             WHERE session_id = ?;]],
@@ -2107,14 +2117,38 @@ function Accounts:getAllInvitesCreatedByUser(user_id)
     )
 end
 
+function Accounts:makeInviteForUser(user_id)
+    local invite_id = NanoID.simple_with_prefix(IdPrefixes.invite)
+    return self.conn:execute(
+        queries.accounts.insert_invite_for_user,
+        invite_id,
+        user_id
+    )
+end
+
 function Accounts:acceptInvite(invite_id, username, password_hash)
     local user_id = NanoID.simple_with_prefix(IdPrefixes.user)
-    local result, errmsg = self.conn:execute {
-        { queries.accounts.insert_user, user_id, username, password_hash },
-        { queries.accounts.assign_invite, user_id, invite_id },
-    }
+    local SP = "accept_invite"
+    self:create_savepoint(SP)
+    local user_ok, user_err = self.conn:execute(
+        queries.accounts.insert_user,
+        user_id,
+        username,
+        password_hash
+    )
+    if not user_ok then
+        self:rollback(SP)
+        return nil, user_err
+    end
+    local invite_ok, invite_err =
+        self.conn:execute(queries.accounts.assign_invite, user_id, invite_id)
+    if not invite_ok then
+        self:rollback(SP)
+        return nil, invite_err
+    end
     Model:new(nil, user_id)
-    return result, errmsg
+    self:release_savepoint(SP)
+    return invite_ok
 end
 
 function Accounts:findUser(username)
