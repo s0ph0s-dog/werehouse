@@ -460,7 +460,7 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
         if not image then
             Log(kLogInfo, "Database error 1: %s" % { errmsg2 })
             model:rollback(SP_QUEUE)
-            return nil, TempScraperError(errmsg2)
+            return nil, PermScraperError(errmsg2)
         end
         Log(
             kLogInfo,

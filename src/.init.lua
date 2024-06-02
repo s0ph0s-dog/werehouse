@@ -37,10 +37,12 @@ end
 function OnWorkerStart()
     Accounts = DbUtil.Accounts:new()
 
-    unix.setrlimit(unix.RLIMIT_AS, 100 * 1024 * 1024)
+    unix.setrlimit(unix.RLIMIT_AS, 200 * 1024 * 1024)
     unix.setrlimit(unix.RLIMIT_CPU, 2)
 
     assert(unix.unveil(".", "rwc"))
+    assert(unix.unveil("/tmp", "rwc"))
+    assert(unix.unveil("/var/tmp", "rwc"))
     assert(unix.unveil("/etc", "r"))
     assert(unix.unveil(nil, nil))
 end

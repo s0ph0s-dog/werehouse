@@ -1108,7 +1108,9 @@ function Model:insertImage(
     if not rating then
         rating = DbUtil.k.Rating.General
     end
-    return self.conn:fetchOne(
+    local ok, image, i_err = pcall(
+        self.conn.fetchOne,
+        self.conn,
         queries.model.insert_image_into_images,
         image_file,
         mime_type,
@@ -1118,6 +1120,13 @@ function Model:insertImage(
         rating,
         file_size
     )
+    if not ok then
+        return nil, "Duplicate record file hash"
+    end
+    if not image then
+        return nil, i_err
+    end
+    return image
 end
 
 function Model:insertThumbnailForImage(

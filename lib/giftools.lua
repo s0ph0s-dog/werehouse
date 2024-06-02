@@ -108,7 +108,11 @@ local function is_gif(bitstream)
         end
         current_block_idx = current_block_idx + current_block_size
         if current_block_size == 0 then
-            Log(kLogFatal, "block size was 0, this is probably a mistake")
+            Log(
+                kLogError,
+                "block size was 0, this is probably a bug, bailing and assuming animated"
+            )
+            return true, true
         end
     end
     return true, (image_descriptor_count > 1 and max_delay_ms > 0)
