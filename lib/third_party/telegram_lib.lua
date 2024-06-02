@@ -1,3 +1,4 @@
+-- Code included selectively from https://github.com/wrxck/telegram-bot-lua/tree/cdcc49ab57763f2c68ce83f8c9514ebdb10e5fcf, and modified slightly to work with Redbean's Lua.
 local api = {}
 local config = {
     endpoint = "https://api.telegram.org/bot",
@@ -166,12 +167,12 @@ function api.send_photo(
     reply_markup
 ) -- https://core.telegram.org/bots/api#sendphoto
     caption_entities = type(caption_entities) == "table"
-            and json.encode(caption_entities)
+            and EncodeJson(caption_entities)
         or caption_entities
     reply_parameters = type(reply_parameters) == "table"
-            and json.encode(reply_parameters)
+            and EncodeJson(reply_parameters)
         or reply_parameters
-    reply_markup = type(reply_markup) == "table" and json.encode(reply_markup)
+    reply_markup = type(reply_markup) == "table" and EncodeJson(reply_markup)
         or reply_markup
     local success, res = api.request(
         config.endpoint .. api.token .. "/sendPhoto",

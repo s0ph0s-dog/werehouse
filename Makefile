@@ -8,6 +8,7 @@ LIBS := lib/third_party/fullmoon.lua \
     lib/third_party/htmlparser/ElementNode.lua \
     lib/third_party/htmlparser/voidelements.lua \
     lib/third_party/multipart.lua \
+	lib/third_party/telegram_lib.lua \
     lib/db.lua \
 	lib/functools.lua \
 	lib/fstools.lua \
@@ -21,7 +22,6 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/scrapers/e621.lua \
 	lib/scrapers/test.lua \
 	lib/network_utils.lua \
-	lib/telegram_lib.lua \
 	lib/tg_bot.lua \
 	lib/nanoid.lua \
 	lib/web.lua

@@ -1,4 +1,4 @@
-local api = require("telegram_lib")
+local api = require("third_party.telegram_lib")
 
 local bot = {}
 

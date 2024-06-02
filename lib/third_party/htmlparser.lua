@@ -1,3 +1,4 @@
+-- Code from https://github.com/msva/lua-htmlparser/tree/5ce9a775a345cf458c0388d7288e246bb1b82bff
 -- vim: ft=lua ts=2 sw=2
 
 -- Syntactic Sugar {{{

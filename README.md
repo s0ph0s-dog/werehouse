@@ -35,4 +35,4 @@ Contributions are welcome, as long as they don't draw the project away from its 
 
 # License
 
-ISC, like Redbean and Cosmopolitan.
+ISC, like Redbean and Cosmopolitan. Code in the `lib/third_party` folder is from other places, and is subject to different license requirements. The original source is linked at the top of each module.
