@@ -314,6 +314,21 @@ local function not_emptystr(x)
     return x and #x > 0
 end
 
+local function render_share_widget(user_id, params)
+    local share_ping_lists, spl_err = Model:getAllSharePingLists()
+    if not share_ping_lists then
+        Log(kLogInfo, spl_err)
+    end
+    local telegram_accounts, tg_err =
+        Accounts:getAllTelegramAccountsForUser(user_id)
+    if not telegram_accounts then
+        Log(kLogInfo, tg_err)
+    end
+
+    params.share_ping_lists = share_ping_lists
+    params.telegram_accounts = telegram_accounts
+end
+
 local function render_image_internal(r, user_record)
     local image_id = r.params.image_id
     if not image_id then
@@ -378,10 +393,6 @@ local function render_image_internal(r, user_record)
         end
         ig.siblings = siblings
     end
-    local share_ping_lists, spl_err = Model:getAllSharePingLists()
-    if not share_ping_lists then
-        Log(kLogInfo, spl_err)
-    end
     local pending_artists = r.params.pending_artists
     if pending_artists then
         pending_artists = table.filter(pending_artists, not_emptystr)
@@ -398,7 +409,7 @@ local function render_image_internal(r, user_record)
     if r.path:endswith("/edit") then
         template_name = "image_edit"
     end
-    return Fm.serveContent(template_name, {
+    local params = {
         user = user_record,
         image = image,
         artists = artists,
@@ -416,10 +427,11 @@ local function render_image_internal(r, user_record)
         groups = groups,
         category = r.params.category or image.category,
         rating = r.params.rating or image.rating,
-        share_ping_lists = share_ping_lists,
         fn = image_functions,
         DbUtilK = DbUtil.k,
-    })
+    }
+    render_share_widget(user_record.user_id, params)
+    return Fm.serveContent(template_name, params)
 end
 
 local render_image = login_required(function(r, user_record)
@@ -435,6 +447,24 @@ local render_image = login_required(function(r, user_record)
             end
             return Fm.serveRedirect(
                 "/image/%d/share?to=%d" % { r.params.image_id, share_option },
+                302
+            )
+        end
+        for tg_userid_str in r.params.share_option:gmatch("%((%d+)%)") do
+            local tg_userid = tonumber(tg_userid_str)
+            if not tg_userid then
+                return Fm.serveError(400, "Invalid Telegram user ID")
+            end
+            if
+                not Accounts:isTelegramAccountLinkedToUser(
+                    user_record.user_id,
+                    tg_userid
+                )
+            then
+                return Fm.serveError(400, "That isn't your Telegram account")
+            end
+            return Fm.serveRedirect(
+                "/image/%d/share?to_user=%d" % { r.params.image_id, tg_userid },
                 302
             )
         end
@@ -645,23 +675,40 @@ end)
 local render_image_share = login_required(function(r, user_record)
     local image_id = tonumber(r.params.image_id)
     local spl_id = tonumber(r.params.to)
+    local tg_userid = tonumber(r.params.to_user)
     local image, image_err = Model:getImageById(r.params.image_id)
     if not image then
         Log(kLogInfo, image_err)
         return Fm.serve500()
     end
-    local spl, spl_err = Model:getSharePingListById(spl_id)
-    if not spl then
-        Log(kLogInfo, spl_err)
-        return Fm.serve500()
+    local spl, spl_err = nil, nil
+    if spl_id then
+        spl, spl_err = Model:getSharePingListById(spl_id)
+        if not spl then
+            Log(kLogInfo, spl_err)
+            return Fm.serve500()
+        end
+    elseif tg_userid then
+        if
+            not Accounts:isTelegramAccountLinkedToUser(
+                user_record.user_id,
+                tg_userid
+            )
+        then
+            return Fm.serveError(
+                500,
+                "That Telegram account isn't linked to your account"
+            )
+        end
     end
     local sources, sources_err = Model:getSourcesForImage(image_id)
     if not sources then
+        Log(kLogInfo, sources_err)
         return Fm.serve500()
     end
     if r.params.share then
         local _, file_path = FsTools.make_image_path_from_filename(image.file)
-        local chat_id = spl.share_data.chat_id
+        local chat_id = (spl and spl.share_data.chat_id) or tg_userid
         if image.kind == DbUtil.k.ImageKind.Image then
             Bot.post_image(
                 chat_id,
@@ -690,13 +737,41 @@ local render_image_share = login_required(function(r, user_record)
                 r.params.ping_text,
                 r.params.spoiler ~= nil
             )
+        elseif image.kind == DbUtil.k.ImageKind.Animation then
+            if image.file_size > (49 * 1024 * 1024) then
+                return Fm.serveError(
+                    400,
+                    "Animation too large for Telegram (must be < 50 MB)"
+                )
+            end
+            if
+                not (
+                    image.mime_type == "video/mp4"
+                    or image.mime_type == "image/gif"
+                )
+            then
+                return Fm.serveError(
+                    400,
+                    "Unsupported GIF type for Telegram (must be MP4 or GIF)"
+                )
+            end
+            Bot.post_animation(
+                chat_id,
+                file_path,
+                r.params.sources_text,
+                r.params.ping_text,
+                r.params.spoiler ~= nil
+            )
         end
         return Fm.serveRedirect("/image/" .. image_id, 302)
     end
-    local ping_data, pd_err = Model:getPingsForImage(image_id, spl_id)
-    if not ping_data then
-        Log(kLogInfo, pd_err)
-        return Fm.serve500()
+    local ping_data, pd_err = {}, nil
+    if spl_id then
+        ping_data, pd_err = Model:getPingsForImage(image_id, spl_id)
+        if not ping_data then
+            Log(kLogInfo, pd_err)
+            return Fm.serve500()
+        end
     end
     local sources_text
     if #sources == 1 then
@@ -730,6 +805,102 @@ local render_image_share = login_required(function(r, user_record)
         ping_text = form_ping_text,
         ping_text_size = form_ping_text:linecount(),
         fn = image_functions,
+    })
+end)
+
+local render_image_group_share = login_required(function(r, user_record)
+    local ig_id = tonumber(r.params.ig_id)
+    local spl_id = tonumber(r.params.to)
+    local tg_userid = tonumber(r.params.to_user)
+    local images, images_err = Model:getImagesForGroup(ig_id)
+    if not images then
+        Log(kLogInfo, images_err)
+        return Fm.serve500()
+    end
+    local spl, spl_err = nil, nil
+    if spl_id then
+        spl, spl_err = Model:getSharePingListById(spl_id)
+        if not spl then
+            Log(kLogInfo, spl_err)
+            return Fm.serve500()
+        end
+    elseif tg_userid then
+        if
+            not Accounts:isTelegramAccountLinkedToUser(
+                user_record.user_id,
+                tg_userid
+            )
+        then
+            return Fm.serveError(
+                500,
+                "That Telegram account isn't linked to your Werehouse account"
+            )
+        end
+    end
+    for i = 1, #images do
+        local image = images[i]
+        local sources, sources_err = Model:getSourcesForImage(image.image_id)
+        if not sources then
+            Log(kLogInfo, sources_err)
+            return Fm.serve500()
+        end
+        image.sources = sources
+        image.sources_text = r.params["sources_text_record_" .. image.image_id]
+        image.spoiler = r.params["spoiler_record_" .. image.image_id]
+        local _, file_path = FsTools.make_image_path_from_filename(image.file)
+        image.file_path = file_path
+    end
+    if r.params.share then
+        local chat_id = (spl and spl.share_data.chat_id) or tg_userid
+        Bot.post_media_group(chat_id, images, r.params.ping_text)
+        return Fm.serveRedirect("/image-group/" .. ig_id, 302)
+    end
+    local ping_data, pd_err = {}, nil
+    if spl_id then
+        ping_data, pd_err = Model:getPingsForImageGroup(ig_id, spl_id)
+        if not ping_data then
+            Log(kLogInfo, pd_err)
+            return Fm.serve500()
+        end
+    end
+    for i = 1, #images do
+        local image = images[i]
+        local sources_text
+        if #image.sources == 1 then
+            sources_text = image.sources[1].link
+        else
+            sources_text = table.concat(
+                table.map(image.sources, function(s)
+                    return string.format("• %s", s.link)
+                end),
+                "\n"
+            )
+        end
+        image.sources_text = sources_text
+        image.sources_text_size = sources_text:linecount()
+    end
+    local ping_text = table.concat(
+        table.map(ping_data, function(d)
+            return string.format("%s: %s", d.handle, d.tag_names)
+        end),
+        "\n"
+    )
+    local attribution = "Shared by %s" % { user_record.username }
+    if attribution then
+        ping_text = ping_text .. "\n\n" .. attribution
+    end
+    -- local form_sources_text = r.params.sources_text or sources_text
+    local form_ping_text = r.params.ping_text or ping_text
+    return Fm.serveContent("image_share", {
+        user = user_record,
+        ig_id = r.params.ig_id,
+        images = images,
+        share_ping_list = spl,
+        ping_text = form_ping_text,
+        ping_text_size = form_ping_text:linecount(),
+        fn = image_functions,
+        print = print,
+        EncodeJson = EncodeJson,
     })
 end)
 
@@ -1411,6 +1582,40 @@ local render_image_group = login_required(function(r, user_record)
     if not r.params.ig_id then
         return Fm.serve400()
     end
+    if r.params.share then
+        if not r.params.share_option then
+            return Fm.serveError(400, "Must provide share_option")
+        end
+        for share_option_str in r.params.share_option:gmatch("(%d+):") do
+            local share_option = tonumber(share_option_str)
+            if not share_option then
+                return Fm.serveError(400, "Invalid share option")
+            end
+            return Fm.serveRedirect(
+                "/image-group/%d/share?to=%d" % { r.params.ig_id, share_option },
+                302
+            )
+        end
+        for tg_userid_str in r.params.share_option:gmatch("%((%d+)%)") do
+            local tg_userid = tonumber(tg_userid_str)
+            if not tg_userid then
+                return Fm.serveError(400, "Invalid Telegram user ID")
+            end
+            if
+                not Accounts:isTelegramAccountLinkedToUser(
+                    user_record.user_id,
+                    tg_userid
+                )
+            then
+                return Fm.serveError(400, "That isn't your Telegram account")
+            end
+            return Fm.serveRedirect(
+                "/image-group/%d/share?to_user=%d"
+                    % { r.params.ig_id, tg_userid },
+                302
+            )
+        end
+    end
     local ig, ig_errmsg = Model:getImageGroupById(r.params.ig_id)
     if not ig then
         Log(kLogInfo, ig_errmsg)
@@ -1421,12 +1626,14 @@ local render_image_group = login_required(function(r, user_record)
         Log(kLogInfo, image_errmsg)
     end
     set_after_dialog_action(r)
-    return Fm.serveContent("image_group", {
+    local params = {
         user = user_record,
         ig = ig,
         images = images,
         fn = image_functions,
-    })
+    }
+    render_share_widget(user_record.user_id, params)
+    return Fm.serveContent("image_group", params)
 end)
 
 local render_edit_image_group = login_required(function(r, user_record)
@@ -1532,6 +1739,7 @@ local accept_telegram_link = login_required(function(r, user_record)
             Accounts:setTelegramUserIDForUserAndDeleteLinkRequest(
                 user_record.user_id,
                 tg.tg_userid,
+                tg.username,
                 r.params.request_id
             )
         if not link_ok then
@@ -2323,6 +2531,7 @@ local function setup()
         Fm.POST { "/image-group/:ig_id[%d]/edit" },
         accept_edit_image_group
     )
+    Fm.setRoute("/image-group/:ig_id[%d]/share", render_image_group_share)
     Fm.setRoute(Fm.GET { "/link-telegram/:request_id" }, render_telegram_link)
     Fm.setRoute(Fm.POST { "/link-telegram/:request_id" }, accept_telegram_link)
     Fm.setRoute(Fm.GET { "/tag" }, render_tags)

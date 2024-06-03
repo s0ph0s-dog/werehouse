@@ -179,6 +179,22 @@ function table.find(sequence, needle)
     return nil
 end
 
+function table.batch(sequence, batch_size)
+    if not sequence then
+        return nil
+    end
+    local result = {}
+    local current_range_start = 1
+    local current_range_end = current_range_start + batch_size - 1
+    while current_range_end <= #sequence do
+        current_range_end = current_range_start + batch_size - 1
+        result[#result + 1] =
+            { table.unpack(sequence, current_range_start, current_range_end) }
+        current_range_start = current_range_end + 1
+    end
+    return result
+end
+
 ---@generic T
 ---@generic E
 ---@class ResultInternal<T, E>

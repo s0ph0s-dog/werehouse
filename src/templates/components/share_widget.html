@@ -1,0 +1,13 @@
+<form method="POST">
+  <span class="buttons">
+    <select name="share_option">
+      {% for i = 1, #share_ping_lists do local spl = share_ping_lists[i] %}
+      <option>{%& spl.spl_id %}: {%& spl.name %}</option>
+      {% end %}{% for i = 1, #telegram_accounts do local tg_acct =
+      telegram_accounts[i] %}
+      <option>@{%& tg_acct.tg_username %} ({%& tg_acct.tg_userid %})</option>
+      {% end %}
+    </select>
+    <input type="submit" name="share" value="Share…" />
+  </span>
+</form>

@@ -261,6 +261,37 @@ function bot.post_image(to_chat, image_file, caption, follow_up, spoiler)
     end
 end
 
+function bot.post_animation(
+    to_chat,
+    animation_file,
+    caption,
+    follow_up,
+    spoiler
+)
+    local animation_result, err = api.send_video(
+        to_chat,
+        animation_file,
+        nil,
+        nil,
+        nil,
+        caption,
+        nil,
+        spoiler
+    )
+    if not animation_result or not animation_result.ok then
+        Log(kLogWarn, tostring(EncodeJson(err)))
+        return
+    end
+    if follow_up then
+        local ping_result
+        ping_result, err =
+            api.reply_to_message(animation_result.result, follow_up)
+        if not ping_result then
+            Log(kLogWarn, tostring(EncodeJson(err)))
+        end
+    end
+end
+
 function bot.post_video(to_chat, video_file, caption, follow_up, spoiler)
     local video_result, err = api.send_video(
         to_chat,
@@ -282,6 +313,77 @@ function bot.post_video(to_chat, video_file, caption, follow_up, spoiler)
         ping_result, err = api.reply_to_message(video_result.result, follow_up)
         if not ping_result then
             Log(kLogWarn, EncodeJson(err))
+        end
+    end
+end
+
+local TYPE_MAP = {
+    [DbUtil.k.ImageKind.Video] = "video",
+    [DbUtil.k.ImageKind.Image] = "photo",
+    [DbUtil.k.ImageKind.Animation] = "animation",
+}
+
+function bot.post_media_group(to_chat, media_list, follow_up)
+    assert(media_list)
+    assert(#media_list > 0)
+    if #media_list < 2 then
+        local media = media_list[1]
+        if media.kind == DbUtil.k.ImageKind.Image then
+            bot.post_image(
+                to_chat,
+                media.file_path,
+                media.caption,
+                follow_up,
+                media.spoiler
+            )
+        elseif media.kind == DbUtil.k.ImageKind.Video then
+            bot.post_video(
+                to_chat,
+                media.file_path,
+                media.caption,
+                follow_up,
+                media.spoiler
+            )
+        elseif media.kind == DbUtil.k.ImageKind.Animation then
+            bot.post_animation(
+                to_chat,
+                media.file_path,
+                media.caption,
+                follow_up,
+                media.spoiler
+            )
+        end
+    end
+    local media_upload = {}
+    local api_media_list = table.map(media_list, function(item)
+        media_upload[item.file] = item.file_path
+        return {
+            type = TYPE_MAP[item.kind],
+            caption = item.sources_text,
+            has_spoiler = item.spoiler,
+            media = "attach://" .. item.file,
+        }
+    end)
+    local batches = table.batch(api_media_list, 10)
+    local fist_media_group_result = nil
+    local media_group_result, mg_err
+    for i = 1, #batches do
+        media_group_result, mg_err =
+            api.send_media_group(to_chat, batches[i], media_upload)
+        if not media_group_result then
+            Log(kLogWarn, tostring(EncodeJson(mg_err)))
+            return
+        end
+        if not first_media_group_result then
+            first_media_group_result = media_group_result
+        end
+    end
+    if follow_up then
+        -- TODO: confirm that this actually replies.
+        local ping_result, p_err =
+            api.reply_to_message(media_group_result.result, follow_up)
+        if not ping_result then
+            Log(kLogWarn, tostring(EncodeJson(p_err)))
         end
     end
 end

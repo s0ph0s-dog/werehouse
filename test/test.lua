@@ -137,6 +137,13 @@ function TestFunctools:testCollectLenientWorks()
     end
 end
 
+function TestFunctools:testBatchWorks()
+    local input = { 0, 1, 2, 3, 4, 5, 6 }
+    local expected = { { 0, 1 }, { 2, 3 }, { 4, 5 }, { 6 } }
+    local result = table.batch(input, 2)
+    luaunit.assertEquals(result, expected)
+end
+
 ---@alias MockData {whenCalledWith: string, thenReturn: any[]}
 
 ---@param data MockData[]

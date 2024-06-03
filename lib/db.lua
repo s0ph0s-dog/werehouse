@@ -25,6 +25,7 @@ local accounts_setup = [[
     CREATE TABLE IF NOT EXISTS "telegram_accounts" (
         "user_id" TEXT NOT NULL,
         "tg_userid" INTEGER NOT NULL UNIQUE,
+        "tg_username" TEXT,
         PRIMARY KEY("tg_userid", "user_id")
     );
 
@@ -339,14 +340,16 @@ local queries = {
         get_telegram_link_request_by_id = [[SELECT request_id, display_name, username, tg_userid, created_at
             FROM telegram_link_requests
             WHERE request_id = ?;]],
-        get_telegram_accounts_by_user_id = [[SELECT tg_userid
+        get_telegram_accounts_by_user_id = [[SELECT tg_userid, tg_username
             FROM telegram_accounts WHERE user_id = ?;]],
+        get_telegram_account_by_user_id_and_tg_userid = [[SELECT tg_username
+            FROM telegram_accounts WHERE user_id = ? AND tg_userid = ?;]],
         insert_telegram_link_request = [[INSERT INTO "telegram_link_requests"
             ("request_id", "display_name", "username", "tg_userid", "created_at")
             VALUES (?, ?, ?, ?, ?);]],
         insert_telegram_account_id = [[INSERT INTO "telegram_accounts"
-            ("user_id", "tg_userid")
-            VALUES (?, ?);]],
+            ("user_id", "tg_userid", "tg_username")
+            VALUES (?, ?, ?);]],
         insert_invite_for_user = [[INSERT INTO "invites" ("invite_id", "inviter", "created_at")
             VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'));]],
         update_session_last_seen = [[UPDATE "sessions"
@@ -600,6 +603,28 @@ local queries = {
                     inner natural join pl_entry_negative_tags
                     inner natural join share_ping_list_entry
                     where image_tags.image_id = ? and share_ping_list_entry.spl_id = ?
+                )
+            group by "share_ping_list_entry".handle
+            order by tag_count desc, "share_ping_list_entry".handle;]],
+        get_pings_for_image_group = [[select
+                "share_ping_list_entry".handle,
+                group_concat(tags.name, ", ") AS tag_names,
+                count(tags.name) AS tag_count
+            from images_in_group
+                inner natural join image_tags
+                inner join pl_entry_positive_tags on image_tags.tag_id = pl_entry_positive_tags.tag_id
+                left join tags on tags.tag_id = pl_entry_positive_tags.tag_id
+                left join share_ping_list_entry on "share_ping_list_entry".spl_entry_id = "pl_entry_positive_tags".spl_entry_id
+            where
+                images_in_group.ig_id = ?
+                and share_ping_list_entry.spl_id = ?
+                and pl_entry_positive_tags.spl_entry_id not in (
+                    select pl_entry_negative_tags.spl_entry_id
+                    from images_in_group
+                    inner natural join image_tags
+                    inner natural join pl_entry_negative_tags
+                    inner natural join share_ping_list_entry
+                    where images_in_group.ig_id = ? and share_ping_list_entry.spl_id = ?
                 )
             group by "share_ping_list_entry".handle
             order by tag_count desc, "share_ping_list_entry".handle;]],
@@ -874,6 +899,16 @@ function Model:getPingsForImage(image_id, spl_id)
         image_id,
         spl_id,
         image_id,
+        spl_id
+    )
+end
+
+function Model:getPingsForImageGroup(ig_id, spl_id)
+    return self.conn:fetchAll(
+        queries.model.get_pings_for_image_group,
+        ig_id,
+        spl_id,
+        ig_id,
         spl_id
     )
 end
@@ -2285,6 +2320,18 @@ function Accounts:getAllTelegramAccountsForUser(user_id)
     )
 end
 
+function Accounts:isTelegramAccountLinkedToUser(user_id, tg_userid)
+    local result, err = self.conn:fetchOne(
+        queries.accounts.get_telegram_account_by_user_id_and_tg_userid,
+        user_id,
+        tg_userid
+    )
+    if not result or result == self.conn.NONE then
+        return false
+    end
+    return true
+end
+
 function Accounts:getAllUserIds()
     return self.conn:fetchAll(queries.accounts.get_all_user_ids)
 end
@@ -2312,6 +2359,7 @@ end
 function Accounts:setTelegramUserIDForUserAndDeleteLinkRequest(
     user_id,
     tg_userid,
+    tg_username,
     request_id
 )
     local SP_TGLINK = "link_telegram_to_user"
@@ -2319,7 +2367,8 @@ function Accounts:setTelegramUserIDForUserAndDeleteLinkRequest(
     local insert_ok, insert_err = self.conn:execute(
         queries.accounts.insert_telegram_account_id,
         user_id,
-        tg_userid
+        tg_userid,
+        tg_username
     )
     if not insert_ok then
         self:rollback(SP_TGLINK)

@@ -1,16 +1,28 @@
-{% function block.content() %}
-<form class="vbox" method="POST">
-  <div class="main-image">
-    {% render("components/record_view", {record = image, kind = fn.kind }) %}
-  </div>
-  <label class="inline">
-    <input type="checkbox" name="spoiler" />
-    Send as spoiler
-  </label>
-  <textarea name="sources_text" rows="{%& sources_text_size %}">
+{% function block.record_view(record, sources_text, sources_text_size, group) %}
+<div class="main-image">
+  {% render("components/record_view", {record = record, kind = fn.kind }) %}
+</div>
+<label class="inline">
+  {% if not group then %}
+  <input type="checkbox" name="spoiler" />
+  {% else %}
+  <input type="checkbox" name="spoiler_record_{%& record.image_id %}" />
+  {% end %} Send as spoiler
+</label>
+{% if not group then %}
+<textarea name="sources_text" rows="{%& sources_text_size %}">
+{% else %}
+<textarea name="sources_text_record_{%& record.image_id %}" rows="{%& sources_text_size %}">
+{% end %}
 {%& sources_text %}</textarea
-  >
-  {% if ping_text then %}
+>
+{% end %}{% function block.content() %}
+<form class="vbox" method="POST">
+  {% if images then %}{% for i = 1, #images do local image = images[i] %}{%
+  block.record_view(image, image.sources_text, image.sources_text_size, true)
+  %}{% end %}{% elseif image then %}{% block.record_view(image, sources_text,
+  sources_text_size, false) %}{% else %}There's a bug{% end %}{% if ping_text
+  then %}
   <textarea name="ping_text" rows="{%& ping_text_size %}">
 {%& ping_text %}</textarea
   >
@@ -20,4 +32,4 @@
     <input type="submit" name="share" value="Share" />
   </span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Share " .. image.image_id }) %}
+{% end %}{% render("layouts/dialog", { title = "Share " .. ig_id }) %}

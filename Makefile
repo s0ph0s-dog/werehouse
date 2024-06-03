@@ -45,6 +45,7 @@ SRCS := src/.init.lua \
     src/templates/components/thumbnail.html \
     src/templates/components/pagination_controls.html \
     src/templates/components/group_box.html \
+    src/templates/components/share_widget.html \
     src/templates/accept_invite.html \
     src/templates/link_telegram.html \
     src/templates/login.html \

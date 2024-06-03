@@ -20,7 +20,7 @@ function api.configure(token, debug)
     return api
 end
 
-function api.request(endpoint, parameters, file)
+function api.request(endpoint, parameters, files)
     assert(endpoint, "Must specify endpoint")
     parameters = parameters or {}
     for k, v in pairs(parameters) do
@@ -29,8 +29,7 @@ function api.request(endpoint, parameters, file)
     if api.debug then
         Log(kLogDebug, EncodeJson(parameters))
     end
-    if file and next(file) ~= nil then
-        local file_key, file_name = next(file)
+    for file_key, file_name in pairs(files or {}) do
         local file_data, err = Slurp(file_name)
         if file_data then
             parameters[file_key] = {
@@ -195,6 +194,32 @@ function api.send_photo(
     return success, res
 end
 
+function api.send_animation(chat_id, animation, message_thread_id, duration, width, height, thumbnail, caption,
+    parse_mode, caption_entities, has_spoiler, disable_notification, protect_content, reply_parameters, reply_markup) -- https://core.telegram.org/bots/api#sendanimation
+    caption_entities = type(caption_entities) == 'table' and EncodeJson(caption_entities) or caption_entities
+    reply_parameters = type(reply_parameters) == 'table' and EncodeJson(reply_parameters) or reply_parameters
+    reply_markup = type(reply_markup) == 'table' and EncodeJson(reply_markup) or reply_markup
+    local success, res = api.request(config.endpoint .. api.token .. '/sendAnimation', {
+        ['chat_id'] = chat_id,
+        ['message_thread_id'] = message_thread_id,
+        ['duration'] = duration,
+        ['width'] = width,
+        ['height'] = height,
+        ['caption'] = caption,
+        ['parse_mode'] = parse_mode,
+        ['caption_entities'] = caption_entities,
+        ['has_spoiler'] = has_spoiler,
+        ['disable_notification'] = disable_notification,
+        ['protect_content'] = protect_content,
+        ['reply_parameters'] = reply_parameters,
+        ['reply_markup'] = reply_markup
+    }, {
+        ['animation'] = animation,
+        ['thumbnail'] = thumbnail
+    })
+    return success, res
+end
+
 function api.send_video(
     chat_id,
     video,
@@ -241,6 +266,20 @@ function api.send_video(
             ["video"] = video,
         }
     )
+    return success, res
+end
+
+function api.send_media_group(chat_id, media, media_map, message_thread_id, disable_notification, protect_content, reply_parameters) -- https://core.telegram.org/bots/api#sendmediagroup
+    reply_parameters = type(reply_parameters) == 'table' and EncodeJson(reply_parameters) or reply_parameters
+    media = type(media) == "table" and EncodeJson(media) or media
+    local success, res = api.request(config.endpoint .. api.token .. '/sendMediaGroup', {
+        ['chat_id'] = chat_id,
+        ['message_thread_id'] = message_thread_id,
+        ['media'] = media,
+        ['disable_notification'] = disable_notification,
+        ['protect_content'] = protect_content,
+        ['reply_parameters'] = reply_parameters
+    }, media_map)
     return success, res
 end
 
