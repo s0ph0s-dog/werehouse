@@ -183,14 +183,22 @@ function table.batch(sequence, batch_size)
     if not sequence then
         return nil
     end
+    if batch_size < 1 then
+        return {}
+    end
+    if #sequence < 1 then
+        return {}
+    end
     local result = {}
     local current_range_start = 1
-    local current_range_end = current_range_start + batch_size - 1
-    while current_range_end <= #sequence do
-        current_range_end = current_range_start + batch_size - 1
+    local current_range_end =
+        math.min(current_range_start + batch_size - 1, #sequence + 1)
+    while (current_range_end - current_range_start) > 0 do
         result[#result + 1] =
             { table.unpack(sequence, current_range_start, current_range_end) }
         current_range_start = current_range_end + 1
+        current_range_end =
+            math.min(current_range_start + batch_size - 1, #sequence + 1)
     end
     return result
 end

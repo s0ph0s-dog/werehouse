@@ -144,6 +144,13 @@ function TestFunctools:testBatchWorks()
     luaunit.assertEquals(result, expected)
 end
 
+function TestFunctools:testBatchWorksWhenBatchSizeSmallerThanList()
+    local input = { 0 }
+    local expected = { { 0 } }
+    local result = table.batch(input, 2)
+    luaunit.assertEquals(result, expected)
+end
+
 ---@alias MockData {whenCalledWith: string, thenReturn: any[]}
 
 ---@param data MockData[]

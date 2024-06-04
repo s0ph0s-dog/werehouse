@@ -15,6 +15,8 @@ groups }) %}
       <li>Categories: {%& fn.category_str(image.category) %}</li>
       <li>Rating: {%& fn.rating_str(image.rating) %}</li>
       <li>Kind: {%& fn.kind_str(image.kind) %}</li>
+      <li>Width: {%& image.width %}</li>
+      <li>Height: {%& image.height %}</li>
     </ul>
     <h1>Artists</h1>
     {% if #artists == 0 then %}

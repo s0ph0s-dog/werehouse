@@ -354,22 +354,35 @@ function bot.post_media_group(to_chat, media_list, follow_up)
             )
         end
     end
-    local media_upload = {}
     local api_media_list = table.map(media_list, function(item)
-        media_upload[item.file] = item.file_path
         return {
             type = TYPE_MAP[item.kind],
             caption = item.sources_text,
             has_spoiler = item.spoiler,
             media = "attach://" .. item.file,
+            file = item.file,
+            file_path = item.file_path,
         }
     end)
     local batches = table.batch(api_media_list, 10)
-    local fist_media_group_result = nil
+    if not batches or #batches == 0 then
+        return
+    end
+    local first_media_group_result = nil
     local media_group_result, mg_err
     for i = 1, #batches do
+        local batch = batches[i]
+        local media_upload = {}
+        for i = 1, #batch do
+            local media = batch[i]
+            media_upload[media.file] = media.file_path
+        end
         media_group_result, mg_err =
-            api.send_media_group(to_chat, batches[i], media_upload)
+            api.send_media_group(to_chat, batch, media_upload)
+        Log(
+            kLogDebug,
+            "media_group_result=%s" % { EncodeJson(media_group_result) }
+        )
         if not media_group_result then
             Log(kLogWarn, tostring(EncodeJson(mg_err)))
             return
@@ -381,7 +394,7 @@ function bot.post_media_group(to_chat, media_list, follow_up)
     if follow_up then
         -- TODO: confirm that this actually replies.
         local ping_result, p_err =
-            api.reply_to_message(media_group_result.result, follow_up)
+            api.reply_to_message(first_media_group_result.result[1], follow_up)
         if not ping_result then
             Log(kLogWarn, tostring(EncodeJson(p_err)))
         end

@@ -32,4 +32,5 @@
     <input type="submit" name="share" value="Share" />
   </span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Share " .. ig_id }) %}
+{% end %}{% render("layouts/dialog", { title = "Share " .. (ig_id or
+image.image_id) }) %}
