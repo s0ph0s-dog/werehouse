@@ -13,7 +13,12 @@
 {% if #telegram_accounts > 0 then %}
 <ul>
   {% for i = 1, #telegram_accounts do local tg_acct = telegram_accounts[i] %}
-  <li><code>{%& tg_acct.tg_userid %}</code></li>
+  <li>
+    <a href="https://t.me/{%& tg_acct.tg_username %}"
+      >@{%& tg_acct.tg_username %}</a
+    >
+    ({%& tg_acct.tg_userid %})
+  </li>
   {% end %}
 </ul>
 {% else %}
