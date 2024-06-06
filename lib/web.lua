@@ -99,28 +99,81 @@ local function get_client_ip(r)
     return ip
 end
 
+local COOKIE_HASH = "SHA256"
+local COOKIE_FORMAT = "%s.%s.%s"
+local COOKIE_PATTERN = "(.-)%.(.-)%.(.+)"
+local COOKIE_NAME = "login"
+local COOKIE_OPTIONS = {
+    MaxAge = 10 * 365 * 24 * 60 * 60,
+    Path = "/",
+    Secure = false,
+    HttpOnly = true,
+    SameSite = "Strict",
+}
+-- TODO: align this more closely with Fullmoon's session key when the env var is unset
+local COOKIE_KEY = DecodeBase64(os.getenv("SESSION_KEY") or "")
+
+local function set_login_cookie(r, value)
+    local signature =
+        EncodeBase64(GetCryptoHash(COOKIE_HASH, value, COOKIE_KEY))
+    local cookie_value = COOKIE_FORMAT:format(value, COOKIE_HASH, signature)
+    if value then
+        r.cookies[COOKIE_NAME] = {
+            cookie_value,
+            maxage = COOKIE_OPTIONS.MaxAge,
+            path = COOKIE_OPTIONS.Path,
+            secure = COOKIE_OPTIONS.Secure,
+            httponly = COOKIE_OPTIONS.HttpOnly,
+            samesite = COOKIE_OPTIONS.SameSite,
+        }
+        Log(kLogDebug, "set login cookie to %s" % { cookie_value })
+    end
+end
+
+local function get_login_cookie(r)
+    local cookie_value = r.cookies[COOKIE_NAME]
+    if not cookie_value then
+        Log(kLogDebug, "No login cookie")
+        return nil
+    end
+    local value, hash_type, signature = cookie_value:match(COOKIE_PATTERN)
+    if not value then
+        return nil
+    end
+    if hash_type ~= COOKIE_HASH or not pcall(GetCryptoHash, hash_type, "") then
+        Log(kLogWarn, "invalid login cookie hash type")
+        return nil
+    end
+    if
+        DecodeBase64(signature) ~= GetCryptoHash(COOKIE_HASH, value, COOKIE_KEY)
+    then
+        Log(kLogWarn, "invalid login cookie signature")
+        return nil
+    end
+    return value
+end
+
 local function login_required(handler)
     return function(r)
-        Log(kLogInfo, "session token: %s" % { EncodeJson(r.session.token) })
-        if not r.session.token then
+        local token = get_login_cookie(r)
+        Log(kLogInfo, "session token: %s" % { EncodeJson(token) })
+        if not token then
             r.session.after_login_url = r.url
             return Fm.serveRedirect("/login", 302)
         end
-        local session, errmsg = Accounts:findSessionById(r.session.token)
+        local session, errmsg = Accounts:findSessionById(token)
         if not session then
             Log(kLogDebug, errmsg)
             r.session.after_login_url = r.url
             return Fm.serveRedirect("/login", 302)
         end
         local ip = get_client_ip(r)
-        local u_ok, u_err =
-            Accounts:updateSessionLastSeenToNow(r.session.token, ip)
+        local u_ok, u_err = Accounts:updateSessionLastSeenToNow(token, ip)
         if not u_ok then
             Log(kLogInfo, u_err)
         end
         Model = DbUtil.Model:new(nil, session.user_id)
-        local user_record, user_err =
-            Accounts:findUserBySessionId(r.session.token)
+        local user_record, user_err = Accounts:findUserBySessionId(token)
         if not user_record then
             Log(kLogDebug, user_err)
             return Fm.serve500()
@@ -162,7 +215,7 @@ local function accept_login(r)
         r.session.error = errmsg
         return Fm.serveRedirect("/login", 302)
     end
-    r.session.token = session_id
+    set_login_cookie(r, session_id)
     local redirect_url = "/home"
     if r.session.after_login_url then
         redirect_url = r.session.after_login_url
