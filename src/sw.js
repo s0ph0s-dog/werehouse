@@ -1,7 +1,7 @@
 const cacheKey = "WerehouseCache";
-const cacheVersion = "6";
+const cacheVersion = "7";
 const cacheName = cacheKey + ".v" + cacheVersion;
-const precachedResources = ["/index.js", "/style.css", "/icon.svg"];
+const precachedResources = ["/icon.svg"];
 
 async function precache() {
   const cache = await caches.open(cacheName);
