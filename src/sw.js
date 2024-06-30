@@ -1,5 +1,5 @@
 const cacheKey = "WerehouseCache";
-const cacheVersion = "7";
+const cacheVersion = "8";
 const cacheName = cacheKey + ".v" + cacheVersion;
 const precachedResources = ["/icon.svg"];
 
@@ -70,7 +70,8 @@ self.addEventListener("fetch", (event) => {
   if (
     precachedResources.includes(url.pathname) ||
     url.pathname.includes("/queue-image/") ||
-    url.pathname.includes("/image-file/")
+    url.pathname.includes("/image-file/") ||
+    url.pathname.includes("/thumbnail-file/")
   ) {
     event.respondWith(cacheFirstWithRefresh(event.request));
   }
