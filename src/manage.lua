@@ -106,7 +106,7 @@ end
 
 local function update_image_sizes(other_args)
     local dry_run = other_args[1] == "-d"
-    for_each_user(function(i, user, model)
+    for_each_user(function(_, user, model)
         local images, images_err = model:getAllImagesForSizeCheck()
         if not images then
             print("Failed :(")
@@ -217,7 +217,7 @@ local function hash(other_args)
         )
         return 1
     end
-    for_each_user(function(i, user, model)
+    for_each_user(function(_, user, model)
         local images, images_err = model:getAllImagesForSizeCheck()
         if not images then
             print("Failed :(")
@@ -237,11 +237,11 @@ local function hash(other_args)
                 print("failed on image_id %d" % { image.image_id })
                 print(load_err)
             else
-                local hash = imageu8:gradienthash()
+                local img_hash = imageu8:gradienthash()
                 update_count = update_count + 1
                 if not dry_run then
                     local update, update_err =
-                        model:insertImageHash(image.image_id, hash)
+                        model:insertImageHash(image.image_id, img_hash)
                     if not update then
                         print("failed on image_id %d" % { image.image_id })
                         print(update_err)
@@ -263,15 +263,20 @@ local function hash(other_args)
                 )
             end
             if qe.image then
-                local imageu8 = img.loadbuffer(qe.image)
-                local hash = imageu8:gradienthash()
-                update_count = update_count + 1
-                if not dry_run then
-                    local update, update_err =
-                        model:insertQueueHash(qe.qid, hash)
-                    if not update then
-                        print("failed on qid %d" % { qe.qid })
-                        print(update_err)
+                local imageu8, load_err = img.loadbuffer(qe.image)
+                if not imageu8 then
+                    print("failed on qid %d" % { qe.qid })
+                    print(load_err)
+                else
+                    local q_hash = imageu8:gradienthash()
+                    update_count = update_count + 1
+                    if not dry_run then
+                        local update, update_err =
+                            model:insertQueueHash(qe.qid, q_hash)
+                        if not update then
+                            print("failed on qid %d" % { qe.qid })
+                            print(update_err)
+                        end
                     end
                 end
             end
@@ -296,7 +301,7 @@ local function thumbnail(other_args)
         )
         return 1
     end
-    for_each_user(function(i, user, model)
+    for_each_user(function(_, user, model)
         local images, images_err = model:getAllImagesForSizeCheck()
         if not images then
             print("Failed :(")
@@ -316,15 +321,15 @@ local function thumbnail(other_args)
                 print("failed on image_id %d" % { image.image_id })
                 print(load_err)
             else
-                local thumbnail = imageu8:resize(192)
-                local thumbnail_webp = thumbnail:savebufferwebp(75.0)
+                local thumbu8 = imageu8:resize(192)
+                local thumbnail_webp = thumbu8:savebufferwebp(75.0)
                 update_count = update_count + 1
                 if not dry_run then
                     local update, update_err = model:insertThumbnailForImage(
                         image.image_id,
                         thumbnail_webp,
-                        thumbnail:width(),
-                        thumbnail:height(),
+                        thumbu8:width(),
+                        thumbu8:height(),
                         1,
                         "image/webp"
                     )
