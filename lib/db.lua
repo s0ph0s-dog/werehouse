@@ -88,6 +88,17 @@ local user_setup = [[
         PRIMARY KEY("image_id")
     );
 
+    CREATE TABLE IF NOT EXISTS "image_gradienthashes" (
+        "image_id" INTEGER NOT NULL UNIQUE,
+        "h1" INTEGER NOT NULL,
+        "h2" INTEGER NOT NULL,
+        "h3" INTEGER NOT NULL,
+        "h4" INTEGER NOT NULL,
+        PRIMARY KEY ("image_id", "h1", "h2", "h3", "h4"),
+        FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
+        ON UPDATE CASCADE ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS "tags" (
         "tag_id" INTEGER NOT NULL UNIQUE,
         "name" TEXT NOT NULL UNIQUE,
@@ -212,7 +223,7 @@ local user_setup = [[
         LEFT NATURAL JOIN (
             SELECT DISTINCT image_id, first_value(thumbnail_id) OVER (
                 PARTITION BY image_id
-                ORDER BY thumbnail_id
+                ORDER BY thumbnail_id DESC
                 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
              ) AS first_thumbnail_id
              FROM thumbnails
@@ -301,6 +312,16 @@ local user_setup = [[
         PRIMARY KEY("qid")
     );
 
+    CREATE TABLE IF NOT EXISTS "queue_gradienthashes" (
+        "qid" INTEGER NOT NULL UNIQUE,
+        "h1" INTEGER NOT NULL,
+        "h2" INTEGER NOT NULL,
+        "h3" INTEGER NOT NULL,
+        "h4" INTEGER NOT NULL,
+        PRIMARY KEY ("qid", "h1", "h2", "h3", "h4"),
+        FOREIGN KEY ("qid") REFERENCES "queue"("qid")
+        ON UPDATE CASCADE ON DELETE CASCADE
+    );
 ]]
 
 local queries = {
@@ -652,6 +673,12 @@ local queries = {
         get_thumbnail_by_id = [[SELECT
                 thumbnail_id, thumbnail, width, height, scale, mime_type
             FROM thumbnails WHERE thumbnail_id = ?;]],
+        get_approximately_equal_image_hashes = [[SELECT image_id, h1, h2, h3, h4
+            FROM image_gradienthashes
+            WHERE h1 = ? OR h2 = ? OR h3 = ? OR h4 = ?;]],
+        get_approximately_equal_queue_hashes = [[SELECT qid, h1, h2, h3, h4
+            FROM queue_gradienthashes
+            WHERE h1 = ? OR h2 = ? OR h3 = ? OR h4 = ?;]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '')
@@ -718,6 +745,12 @@ local queries = {
         insert_thumbnail = [[INSERT INTO "thumbnails"
             ( "image_id", "thumbnail", "width", "height", "scale", "mime_type" )
             VALUES (?, ?, ?, ?, ?, ?);]],
+        insert_image_hash = [[INSERT INTO "image_gradienthashes"
+            ("image_id", "h1", "h2", "h3", "h4")
+            VALUES (?, ?, ?, ?, ?);]],
+        insert_queue_hash = [[INSERT INTO "queue_gradienthashes"
+            ("qid", "h1", "h2", "h3", "h4")
+            VALUES (?, ?, ?, ?, ?);]],
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
         delete_image_by_id = [[DELETE FROM "images" WHERE image_id = ?;]],
         delete_artist_by_id = [[DELETE FROM "artists" WHERE artist_id = ?;]],
@@ -2092,6 +2125,91 @@ function Model:deletePLNegativeTagsByPair(pairs)
     return self:_delete_by_two_ids_arbitrary(
         queries.model.delete_pl_negative_tag,
         pairs
+    )
+end
+
+local function split_hash(hash)
+    local mask = 0xFFFF
+    local h4 = hash & mask
+    local h3 = (hash >> 16) & mask
+    local h2 = (hash >> 32) & mask
+    local h1 = (hash >> 48) & mask
+    return h1, h2, h3, h4
+end
+
+local function assemble_hash(h1, h2, h3, h4)
+    return (h1 << 48) | (h2 << 32) | (h3 << 16) | h4
+end
+
+local popcnt = Popcnt
+
+local function hamming_distance(a, b)
+    -- ~ is Lua's bitwise XOR operator. Redbean provides Popcnt.
+    return popcnt(a ~ b)
+end
+
+local function post_filter_ham(search_hash, max_distance, rows)
+    assert(
+        max_distance <= 3,
+        "this function only produces correct results when max_distance is between 3 and 0 (inclusive)"
+    )
+    local results = {}
+    for _, row in pairs(rows) do
+        local row_hash = assemble_hash(row.h1, row.h2, row.h3, row.h4)
+        if hamming_distance(search_hash, row_hash) <= max_distance then
+            results[#results + 1] = row
+        end
+    end
+    return results
+end
+
+function Model:insertImageHash(image_id, hash)
+    h1, h2, h3, h4 = split_hash(hash)
+    return self.conn:execute(
+        queries.model.insert_image_hash,
+        image_id,
+        h1,
+        h2,
+        h3,
+        h4
+    )
+end
+
+function Model:insertQueueHash(qid, hash)
+    h1, h2, h3, h4 = split_hash(hash)
+    return self.conn:execute(
+        queries.model.insert_queue_hash,
+        qid,
+        h1,
+        h2,
+        h3,
+        h4
+    )
+end
+
+function Model:_findSimilarHashes(query, hash, max_distance)
+    local h1, h2, h3, h4 = split_hash(hash)
+    local rows, err = self.conn:fetchAll(query, h1, h2, h3, h4)
+    if not rows then
+        return nil, err
+    end
+    local results = post_filter_ham(hash, max_distance, rows)
+    return results
+end
+
+function Model:findSimilarImageHashes(hash, max_distance)
+    return self:_findSimilarHashes(
+        queries.model.get_approximately_equal_image_hashes,
+        hash,
+        max_distance
+    )
+end
+
+function Model:findSimilarQueueHashes(hash, max_distance)
+    return self:_findSimilarHashes(
+        queries.model.get_approximately_equal_queue_hashes,
+        hash,
+        max_distance
     )
 end
 

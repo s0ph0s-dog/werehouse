@@ -534,6 +534,27 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
                 end
             end
         end
+        if kind_override == DbUtil.k.ImageKind.Image and img then
+            local imageu8, load_err = img.loadbuffer(body)
+            if not imageu8 then
+                Log(kLogInfo, "Failed to load image file: %s" % { load_err })
+            else
+                local thumbnail = imageu8:resize(192)
+                local thumbnail_webp = thumbnail:savebufferwebp(75.0)
+                local t_ok, t_err = model:insertThumbnailForImage(
+                    image.image_id,
+                    thumbnail_webp,
+                    thumbnail:width(),
+                    thumbnail:height(),
+                    1,
+                    "image/webp"
+                )
+                if not t_ok then
+                    model:rollback(SP_QUEUE)
+                    return nil, TempScraperError(t_err)
+                end
+            end
+        end
     end
     local ok, errmsg3 =
         model:setQueueItemStatusAndDescription(queue_entry.qid, 2, "")
