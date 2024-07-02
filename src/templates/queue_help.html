@@ -31,30 +31,58 @@
 </form>
 {% end %}{% function help_heuristic() %}
 <p>
-  The sources for this entry have different numbers of records, and the
-  application can't guess what to do.
+  The sources for this entry have different numbers of records, and Werehouse
+  can't guess what to do. Check the boxes of the records you'd like to save. All
+  of them will be in a group together.
 </p>
-{% end %}{% function block.content() %}
-<style>
-  body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-  }
-</style>
-<div class="dialog" style="width: 64em">
-  <h1>Provide Help</h1>
-  {% if type(error) == "string" then %}
-  <p style="color: red">{%& error %}</p>
-  {% end %}{% if disambiguation_data.d then %}{% help_dupes() %}{% elseif
-  disambiguation_data.h then %}{% help_heuristic() %}{% else %}
-  <p>
-    Error: something has gone wrong and the scraper pipeline has asked for help
-    in a way that the web front-end doesn't know how to display.
-  </p>
-  {% end %}
-</div>
-{% end %}{% render("layouts/main", { title = "Provide Help", user = user,
-hide_header = true, hide_footer = true }) %}
+<form method="POST">
+  <ol>
+    {% for source_idx, source in ipairs(disambiguation_data.h) do %}
+    <li>
+      <div>
+        <a href="{%& source[1].this_source %}">{%& source[1].this_source %}</a>
+      </div>
+      <ol>
+        {% for image_idx, image in ipairs(source) do %}
+        <li>
+          <label>
+            <input
+              type="checkbox"
+              name="save_images[]"
+              value="{%& source_idx %},{%& image_idx %}"
+            />
+            <a href="{%& image.raw_image_uri %}">
+              <img
+                src="{%& image.raw_image_uri %}"
+                height="{%& image.height %}"
+                width="{%& image.width %}"
+                class="constrain-width"
+              />
+            </a>
+            <span
+              >{%& image.width %} by {%& image.height %} • {%& image.mime_type
+              %} • Posted by {%& image.authors[1].handle %}</span
+            >
+          </label>
+        </li>
+        {% end %}
+      </ol>
+    </li>
+    {% end %}
+  </ol>
+  <span class="buttons"
+    ><input type="submit" name="cancel" value="Cancel" /><input
+      type="submit"
+      name="archive_selected"
+      value="Archive Selected"
+  /></span>
+</form>
+{% end %}{% function block.content() %} {% if disambiguation_data.d then %}{%
+help_dupes() %}{% elseif disambiguation_data.h then %}{% help_heuristic() %}{%
+else %}
+<p>
+  Error: something has gone wrong and the scraper pipeline has asked for help in
+  a way that the web front-end doesn't know how to display.
+</p>
+{% end %}{% end %}{% render("layouts/dialog", { title = "Provide Help", user =
+user, dialog_width = "36em" }) %}

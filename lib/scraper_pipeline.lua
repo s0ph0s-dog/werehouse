@@ -353,7 +353,7 @@ local function scrape_sources(source_links)
             end
             return ArchiveEntryTask({ largest_source }, source_links)
         else
-            return RequestHelpEntryTask(scraped, source_links)
+            return RequestHelpEntryTask({ h = scraped_no_errors }, source_links)
         end
     end
     return nil, PermScraperError("This should be unreachable")
@@ -723,9 +723,24 @@ local function task_for_answering_disambiguation_req(queue_entry)
                 )
         end
         return nil, PermScraperError("Should be unreachable")
-    elseif disambiguation_request.h then
-        -- TODO: implement disambiguation for this.
-        return NoopEntryTask
+    elseif dr.h then
+        if not queue_entry.disambiguation_data then
+            return NoopEntryTask
+        end
+        local response, data_err = DecodeJson(queue_entry.disambiguation_data)
+        if not response or data_err then
+            Log(kLogWarn, "error decoding JSON from queue: %s" % { data_err })
+            return NoopEntryTask
+        end
+        if not response.h then
+            return nil,
+                PermScraperError(
+                    "Unexpected response to request for help (wanted %s): %s"
+                        % { "{'h': something}", queue_entry.disambiguation_data }
+                )
+        end
+        local new_task = ArchiveEntryTask(response.h)
+        return new_task
     end
     return NoopEntryTask
 end

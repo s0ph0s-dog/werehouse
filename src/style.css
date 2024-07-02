@@ -390,3 +390,9 @@ table img {
   margin-bottom: 0.5em;
   border-bottom: 1px solid CanvasText;
 }
+
+.constrain-width {
+  width: 100%;
+  height: auto;
+  max-width: 95vw;
+}

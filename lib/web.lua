@@ -1211,23 +1211,71 @@ local render_queue_help = login_required(function(r, user_record)
     })
 end)
 
-local accept_queue_help = login_required(function(r)
-    local qid = r.params.qid
-    if not qid then
-        return Fm.serve400()
-    end
-    -- TODO: modularize this part so that it can answer both kinds of disambiguation requests
+local function queue_help_dupes(r)
     if
         r.params.save and r.params.discard
         or (not r.params.save and not r.params.discard)
     then
-        return Fm.serve400()
+        return nil, Fm.serve400()
     end
     local result = {}
     if r.params.save then
         result = { d = "save" }
     else
         result = { d = "discard" }
+    end
+    return result
+end
+
+local function queue_help_heuristic(r, dr_data)
+    if
+        r.params.cancel and r.params.archive_selected
+        or (not r.params.cancel and not r.params.archive_selected)
+    then
+        return Fm.serve400()
+    end
+    if r.params.archive_selected then
+        local images_to_save = r.params.save_images
+        if not images_to_save then
+            return nil, Fm.serve400()
+        end
+        local to_archive = {}
+        for i = 1, #images_to_save do
+            local image_indexes = images_to_save[i]
+            local _, _, outer, inner = image_indexes:find("(%d+),(%d+)")
+            outer = tonumber(outer)
+            inner = tonumber(inner)
+            if not outer or not inner then
+                return nil, Fm.serve400()
+            end
+            to_archive[#to_archive + 1] = dr_data.h[outer][inner]
+        end
+        return { h = to_archive }
+    end
+end
+
+local accept_queue_help = login_required(function(r)
+    local qid = r.params.qid
+    if not qid then
+        return Fm.serve400()
+    end
+    local queue_record, queue_err = Model:getQueueEntryById(qid)
+    if not queue_record then
+        Log(kLogInfo, "Database error: %s" % { queue_err })
+        return Fm.serve500()
+    end
+    local dr_data = DecodeJson(queue_record.disambiguation_request)
+    if not dr_data then
+        return Fm.serve500()
+    end
+    local result, r_err = nil, nil
+    if dr_data.d then
+        result, r_err = queue_help_dupes(r)
+    elseif dr_data.h then
+        result, r_err = queue_help_heuristic(r, dr_data)
+    end
+    if not result then
+        return r_err
     end
     local ok, err = Model:setQueueItemDisambiguationResponse(qid, result)
     if not ok or err then

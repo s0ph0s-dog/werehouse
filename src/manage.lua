@@ -36,6 +36,9 @@ local function help()
     print(
         "- thumbnail: Create properly-sized WebP thumbnails for every image that doesn't have one."
     )
+    print(
+        "- redo_bad_disambig_req: Redo all queries that require disambiguation, to fix a bad disambiguation request."
+    )
 end
 
 local function for_each_user(fn)
@@ -352,6 +355,29 @@ local function thumbnail(other_args)
     return 0
 end
 
+local function redo_bad_disambig_req(other_args)
+    for_each_user(function(i, user, model)
+        local query =
+            "select qid from queue where substr(disambiguation_request, 1, 1) = '[' OR disambiguation_request = '';"
+        local results, err = model.conn:fetchAll(query)
+        if not results then
+            print(err)
+        end
+        for j = 1, #results do
+            local result = results[j]
+            local rst_query =
+                "update queue set disambiguation_request = NULL where qid = ?;"
+            local rst_ok, rst_err = model.conn:execute(rst_query, result.qid)
+            if not rst_ok then
+                print(rst_err)
+            else
+                print("cleared qid %d" % { result.qid })
+            end
+        end
+        return 0
+    end)
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
@@ -359,6 +385,7 @@ local commands = {
     make_invite = make_invite,
     hash = hash,
     thumbnail = thumbnail,
+    redo_bad_disambig_req = redo_bad_disambig_req,
 }
 
 local remaining_args = arg
