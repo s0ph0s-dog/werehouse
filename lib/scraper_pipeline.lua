@@ -542,7 +542,7 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
             data.height,
             kind_override,
             data.rating,
-            data.image_data
+            #data.image_data
         )
         if not image then
             Log(kLogInfo, "Database error 1: %s" % { errmsg2 })
