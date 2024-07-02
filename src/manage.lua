@@ -155,6 +155,7 @@ local function update_image_sizes(other_args)
         if dry_run then
             print("(but not really because this is a dry run)")
         end
+        return 0
     end)
 end
 
@@ -221,7 +222,9 @@ local function hash(other_args)
         return 1
     end
     for_each_user(function(_, user, model)
-        local images, images_err = model:getAllImagesForSizeCheck()
+        local images, images_err = model.conn:fetchAll(
+            "SELECT image_id, file FROM images WHERE image_id NOT IN (SELECT image_id FROM image_gradienthashes);"
+        )
         if not images then
             print("Failed :(")
             print(images_err)
@@ -231,7 +234,10 @@ local function hash(other_args)
         for j = 1, #images do
             local image = images[j]
             if j % 50 == 1 then
-                print("Checking record %d of %d…" % { j, #images })
+                print(
+                    "Checking record %d of %d (id %d)…"
+                        % { j, #images, image.image_id }
+                )
             end
             local _, image_path =
                 FsTools.make_image_path_from_filename(image.file)
@@ -240,7 +246,16 @@ local function hash(other_args)
                 print("failed on image_id %d" % { image.image_id })
                 print(load_err)
             else
-                local img_hash = imageu8:gradienthash()
+                local hash_ok, img_hash = pcall(imageu8.gradienthash, imageu8)
+                if not hash_ok then
+                    print("failed on image_id %d" % { image.image_id })
+                end
+                if not img_hash then
+                    print(
+                        "failed to hash image_id %d (nil hash)"
+                            % { image.image_id }
+                    )
+                end
                 update_count = update_count + 1
                 if not dry_run then
                     local update, update_err =
@@ -252,6 +267,8 @@ local function hash(other_args)
                 end
             end
         end
+        -- This is in the schema, but I'm not using it yet, so don't waste time computing them.
+        --[[
         local queue_entries, qe_err = model:getAllActiveQueueEntries()
         if not queue_entries then
             print("Failed :(")
@@ -284,8 +301,9 @@ local function hash(other_args)
                 end
             end
         end
+        ]]
         print(
-            "Updated %d images/queue entries for user %s"
+            "Updated %d images entries for user %s"
                 % { update_count, user.user_id }
         )
         if dry_run then
@@ -305,7 +323,9 @@ local function thumbnail(other_args)
         return 1
     end
     for_each_user(function(_, user, model)
-        local images, images_err = model:getAllImagesForSizeCheck()
+        local images, images_err = model.conn:fetchAll(
+            "SELECT image_id, file FROM images WHERE image_id NOT IN (SELECT DISTINCT image_id FROM thumbnails);"
+        )
         if not images then
             print("Failed :(")
             print(images_err)
@@ -315,7 +335,10 @@ local function thumbnail(other_args)
         for j = 1, #images do
             local image = images[j]
             if j % 50 == 1 then
-                print("Checking record %d of %d…" % { j, #images })
+                print(
+                    "Checking record %d of %d (id %d)…"
+                        % { j, #images, image.image_id }
+                )
             end
             local _, image_path =
                 FsTools.make_image_path_from_filename(image.file)
