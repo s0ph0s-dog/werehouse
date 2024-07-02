@@ -36,10 +36,14 @@ local function process_attachment_blocks(post)
     if post.effectiveAdultContent then
         rating = DbUtil.k.Rating.Explicit
     end
+    local displayName = post.postingProject.displayName
+    if not displayName or displayName == "" then
+        displayName = post.postingProject.handle
+    end
     local author = {
         handle = post.postingProject.handle,
         profile_url = "https://cohost.org/" .. post.postingProject.handle,
-        display_name = post.postingProject.displayName,
+        display_name = displayName,
     }
     return table.map(attachment_blocks, function(block)
         local mime_type = Nu.guess_mime_from_url(block.attachment.fileURL)
