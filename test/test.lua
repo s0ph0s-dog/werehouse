@@ -275,7 +275,7 @@ function TestScraperPipeline:testValidBskyLinks()
         },
     }
     local expected = {
-        archive = table.map({
+        fetch = table.map({
             "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreib2v6upf5gz7q22jpdnrh2fwhtn6yexrsnbp6uh7ythgq3obhf7ia@jpeg",
             "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreidjkqudkq2m6pojavuelcud2fez2eojxiflnxedimplumiygu76pe@jpeg",
         }, function(item)
@@ -333,7 +333,7 @@ function TestScraperPipeline:testBskyLinkWithNoAspectRatio()
         },
     }
     local expected = {
-        archive = table.map({
+        fetch = table.map({
             "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreie4pcim2xsuzgjstzhprtkfjiam2vqlgygjhxujiduvoxs5z2opr4@jpeg",
             "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreiag6auhhw5by6nrkmgzzhtxetqtmsa55o3o7rnyzwhohxga3cfpoq@jpeg",
             "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreibxygqam6gddpcexktzuup6js52g2fx73ytip3ptdetc4d6g3kq4u@jpeg",
@@ -420,7 +420,7 @@ function TestScraperPipeline:testValidTwitterLinks()
         profile_url = "https://twitter.com/Danamasco",
     }
     local expectedImage = {
-        archive = table.map({
+        fetch = table.map({
             "https://pbs.twimg.com/media/GK_fDarXQAE6yBj.jpg",
             "https://pbs.twimg.com/media/GK_fDaaXsAATM_X.jpg",
             "https://pbs.twimg.com/media/GK_fDaUWYAABb40.jpg",
@@ -440,7 +440,7 @@ function TestScraperPipeline:testValidTwitterLinks()
         end),
     }
     local expectedGif = {
-        archive = {
+        fetch = {
             {
                 kind = DbUtil.k.ImageKind.Animation,
                 this_source = "https://twitter.com/bigcozyorca/status/1793851828477788591",
@@ -463,7 +463,7 @@ function TestScraperPipeline:testValidTwitterLinks()
         },
     }
     local expectedVideo = {
-        archive = {
+        fetch = {
             {
                 kind = DbUtil.k.ImageKind.Video,
                 this_source = "https://twitter.com/Danamasco/status/1791127158523314321",
@@ -527,7 +527,7 @@ function TestScraperPipeline:testValidFuraffinityLinks()
         },
     }
     local expected = {
-        archive = {
+        fetch = {
             {
                 kind = DbUtil.k.ImageKind.Image,
                 authors = {
@@ -599,7 +599,7 @@ function TestScraperPipeline:testValidE6Links()
     local inputThirdPartyEdit = "https://e621.net/posts/4721029"
     local inputPool = "https://e621.net/pools/40574"
     local expectedRegular = {
-        archive = {
+        fetch = {
             {
                 kind = DbUtil.k.ImageKind.Image,
                 canonical_domain = "e621.net",
@@ -716,7 +716,7 @@ function TestScraperPipeline:testValidE6Links()
         },
     }
     local expectedPool = {
-        archive = {
+        fetch = {
             {
                 kind = DbUtil.k.ImageKind.Image,
                 additional_sources = {
@@ -894,7 +894,7 @@ function TestScraperPipeline:testValidE6Links()
             input = { inputVideo },
             expected = {
                 {
-                    archive = {
+                    fetch = {
                         {
                             additional_sources = {
                                 "https://www.zonkpunch.wtf/",
@@ -1321,7 +1321,7 @@ function TestScraperPipeline:testValidE6Links()
             input = { inputGif },
             expected = {
                 {
-                    archive = {
+                    fetch = {
                         {
                             kind = DbUtil.k.ImageKind.Image,
                             canonical_domain = "e621.net",
@@ -1429,7 +1429,7 @@ function TestScraperPipeline:testValidE6Links()
             input = { inputThirdPartyEdit },
             expected = {
                 {
-                    archive = {
+                    fetch = {
                         {
                             kind = DbUtil.k.ImageKind.Image,
                             canonical_domain = "e621.net",
@@ -1677,7 +1677,7 @@ function TestScraperPipeline:testValidCohostLinks()
             input = { inputSFW },
             expected = {
                 {
-                    archive = {
+                    fetch = {
                         {
                             kind = DbUtil.k.ImageKind.Image,
                             authors = {
@@ -1712,7 +1712,7 @@ function TestScraperPipeline:testValidCohostLinks()
             input = { inputNSFW },
             expected = {
                 {
-                    archive = {
+                    fetch = {
                         {
                             kind = DbUtil.k.ImageKind.Image,
                             authors = {

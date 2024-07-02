@@ -5,16 +5,21 @@
 <table>
   <thead>
     <tr>
-      <th class="txt">Link</th>
-      <th class="txt">Link Kind</th>
-      <th class="txt">Possible Duplicate</th>
+      <th class="txt">Kind</th>
+      <th class="txt">Info</th>
+      <th class="txt">Maybe Duplicate Of</th>
     </tr>
   </thead>
   <tbody>
     {% for _, dupe in ipairs(disambiguation_data.d.duplicates) do %}
     <tr>
-      <td class="txt"><a href="{%& dupe.url %}">{%& dupe.url %}</a></td>
+      {% if dupe.source_kind == "hash" then %}
+      <td class="txt">content hash</td>
+      <td class="txt">{%& dupe.similarity %}% similar</td>
+      {% else %}
       <td class="txt">{%& dupe.source_kind %} source</td>
+      <td class="txt"><a href="{%& dupe.url %}">{%& dupe.url %}</a></td>
+      {% end %}
       <td class="txt">
         <a href="/image/{%& dupe.image_id %}">Record {%& dupe.image_id %}</a>
       </td>

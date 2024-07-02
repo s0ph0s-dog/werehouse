@@ -405,7 +405,7 @@ local queries = {
                 retry_count
             FROM queue
             WHERE tombstone = 0
-            ORDER BY added_on DESC;]],
+            ORDER BY added_on ASC;]],
         get_queue_entry_count = [[SELECT COUNT(*) AS count FROM "queue";]],
         get_queue_entries_paginated = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
             FROM queue
@@ -2156,7 +2156,9 @@ local function post_filter_ham(search_hash, max_distance, rows)
     local results = {}
     for _, row in pairs(rows) do
         local row_hash = assemble_hash(row.h1, row.h2, row.h3, row.h4)
-        if hamming_distance(search_hash, row_hash) <= max_distance then
+        local distance = hamming_distance(search_hash, row_hash)
+        if distance <= max_distance then
+            row.distance = distance
             results[#results + 1] = row
         end
     end
@@ -2194,6 +2196,9 @@ function Model:_findSimilarHashes(query, hash, max_distance)
         return nil, err
     end
     local results = post_filter_ham(hash, max_distance, rows)
+    table.sort(results, function(a, b)
+        return b.distance < a.distance
+    end)
     return results
 end
 

@@ -24,6 +24,7 @@ local function hash_to_filesystem_safe(hash)
 end
 
 local function save_image(image_data, image_mime_type)
+    assert(image_data ~= nil)
     local hash_raw = GetCryptoHash("SHA256", image_data)
     local hash = hash_to_filesystem_safe(hash_raw)
     local ext = MIME_TO_EXT[image_mime_type] or ""

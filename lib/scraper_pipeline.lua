@@ -245,9 +245,32 @@ local function check_for_duplicates_helper(
     end
 end
 
+---@return FetchedThumbnail
+---@overload fun(imageu8: img.Imageu8): nil, any?
+local function make_thumbnail(imageu8)
+    local thumbnail, thumb_err = imageu8:resize(192)
+    if not thumbnail then
+        return nil, thumb_err
+    end
+    local thumbnail_data, td_err = thumbnail:savebufferwebp(75.0)
+    if not thumbnail_data then
+        return nil, td_err
+    end
+    return {
+        raw_uri = "data:image/png;base64,",
+        image_data = thumbnail_data,
+        mime_type = "image/webp",
+        width = thumbnail:width(),
+        height = thumbnail:height(),
+        scale = 1,
+    }
+end
+
+--- Also does the thumbnailing, because this function already has the decoded image in memory to hash it.
 ---@param model Model
+---@param queue_entry ActiveQueueEntry
 ---@param task EntryTask
-local function check_for_duplicates(model, task)
+local function check_for_duplicates(model, queue_entry, task)
     -- This validation only makes sense for archive tasks, so pass other tasks through unchanged.
     if not task.archive then
         return task
@@ -290,6 +313,40 @@ local function check_for_duplicates(model, task)
                 return nil, addtnl_err
             end
         end
+        -- Hash & thumbnail the image.
+        local imageu8, img_err = img.loadbuffer(data.image_data)
+        if not imageu8 then
+            Log(kLogInfo, "Failed to decode the image: %s" % { img_err })
+        else
+            local thumbnail, thumb_err = make_thumbnail(imageu8)
+            if not thumbnail then
+                Log(
+                    kLogInfo,
+                    "Failed to make thumbnail for image, will bypass: %s"
+                        % { thumb_err }
+                )
+            end
+            if not data.thumbnails then
+                data.thumbnails = {}
+            end
+            data.thumbnails[#data.thumbnails + 1] = thumbnail
+            local hash = imageu8:gradienthash()
+            data.gradienthash = hash
+            local similar, s_err = model:findSimilarImageHashes(hash, 3)
+            if not similar then
+                return nil, TempScraperError(s_err)
+            end
+            for s_idx = 1, #similar do
+                if #similar > 0 then
+                    local similar_record = similar[s_idx]
+                    duplicates[#duplicates + 1] = {
+                        image_id = similar_record.image_id,
+                        source_kind = "hash",
+                        similarity = (64 - similar_record.distance) / 64 * 100,
+                    }
+                end
+            end
+        end
     end
     if #duplicates > 0 then
         Log(kLogInfo, "Found duplicates: %s" % { EncodeJson(duplicates) })
@@ -322,7 +379,7 @@ local function scrape_sources(source_links)
     end
     scraped_no_errors = scraped_no_errors.result
     if #scraped_no_errors == 1 then
-        return ArchiveEntryTask(scraped_no_errors[1], source_links)
+        return FetchEntryTask(scraped_no_errors[1], source_links)
     else
         local max_results =
             math.max(table.unpack(table.map(scraped_no_errors, function(item)
@@ -351,7 +408,7 @@ local function scrape_sources(source_links)
                         "I couldn't figure out which source had the largest version of the image. It's possible that they're down."
                     )
             end
-            return ArchiveEntryTask({ largest_source }, source_links)
+            return FetchEntryTask({ largest_source }, source_links)
         else
             return RequestHelpEntryTask({ h = scraped_no_errors }, source_links)
         end
@@ -390,7 +447,43 @@ local function fetch_record_file(uri)
 end
 
 ---@param model Model
----@param scraped_data ScrapedSourceData[]
+---@param queue_entry ActiveQueueEntry
+---@param task EntryTask
+---@return EntryTask
+---@overload fun(model: Model, queue_entry: ActiveQueueEntry, task: EntryTask): nil, ScraperError?
+local function fetch_files(model, queue_entry, task)
+    Log(kLogInfo, "Fetching files…")
+    if not task.fetch then
+        Log(kLogInfo, "No files to fetch, not a fetch task")
+        return task
+    end
+    for i = 1, #task.fetch do
+        local record = task.fetch[i]
+        Log(kLogVerbose, "Downloading %s…" % { record.raw_image_uri })
+        local body, content_type = fetch_record_file(record.raw_image_uri)
+        if not body then
+            return nil, PermScraperError(content_type)
+        end
+        record.image_data = body
+        record.mime_type = content_type
+        if record.thumbnails then
+            for j = 1, #record.thumbnails do
+                local thumbnail = record.thumbnails[j]
+                local tbody, tcontent_type =
+                    fetch_record_file(thumbnail.raw_uri)
+                if not tbody then
+                    return nil, PermScraperError(tcontent_type)
+                end
+                thumbnail.image_data = tbody
+                thumbnail.mime_type = tcontent_type
+            end
+        end
+    end
+    return ArchiveEntryTask(task.fetch, task.discovered_sources)
+end
+
+---@param model Model
+---@param scraped_data FetchedData[]
 ---@param queue_entry table
 ---@return boolean?
 ---@return ScraperError?
@@ -431,31 +524,25 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
             end
         end
         local this_item_sources = table.uniq(sources_with_dupes)
-        -- 1. Download image file.
-        local body, content_type = fetch_record_file(data.raw_image_uri)
-        if not body then
-            model:rollback(SP_QUEUE)
-            return nil, content_type
-        end
         local kind_override = data.kind
         if data.mime_type == "image/gif" then
-            local is_gif, is_animated = GifTools.is_gif(body)
+            local is_gif, is_animated = GifTools.is_gif(data.image_data)
             if is_gif and is_animated then
                 kind_override = DbUtil.k.ImageKind.Animation
             end
         end
         -- 2. Save image file to disk.
-        local filename = FsTools.save_image(body, content_type)
+        local filename = FsTools.save_image(data.image_data, data.mime_type)
         Log(kLogInfo, "Saved image to disk")
         -- 3. Add image, sources, etc. to database.
         local image, errmsg2 = model:insertImage(
             filename,
-            content_type,
+            data.mime_type,
             data.width,
             data.height,
             kind_override,
             data.rating,
-            #body
+            data.image_data
         )
         if not image then
             Log(kLogInfo, "Database error 1: %s" % { errmsg2 })
@@ -510,49 +597,26 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
         if data.thumbnails then
             for i = 1, #data.thumbnails do
                 local thumbnail = data.thumbnails[i]
-                local thumb_data, thumb_content_type =
-                    fetch_record_file(thumbnail.raw_uri)
-                if thumb_data then
-                    local t_ok, t_err = model:insertThumbnailForImage(
-                        image.image_id,
-                        thumb_data,
-                        thumbnail.width,
-                        thumbnail.height,
-                        thumbnail.scale,
-                        thumb_content_type
-                    )
-                    if not t_ok then
-                        model:rollback(SP_QUEUE)
-                        return nil, TempScraperError(t_err)
-                    end
-                else
-                    Log(
-                        kLogInfo,
-                        "Failed to download thumbnail: %s"
-                            % { content_type.description }
-                    )
-                end
-            end
-        end
-        if kind_override == DbUtil.k.ImageKind.Image and img then
-            local imageu8, load_err = img.loadbuffer(body)
-            if not imageu8 then
-                Log(kLogInfo, "Failed to load image file: %s" % { load_err })
-            else
-                local thumbnail = imageu8:resize(192)
-                local thumbnail_webp = thumbnail:savebufferwebp(75.0)
                 local t_ok, t_err = model:insertThumbnailForImage(
                     image.image_id,
-                    thumbnail_webp,
-                    thumbnail:width(),
-                    thumbnail:height(),
-                    1,
-                    "image/webp"
+                    thumbnail.image_data,
+                    thumbnail.width,
+                    thumbnail.height,
+                    thumbnail.scale,
+                    thumbnail.mime_type
                 )
                 if not t_ok then
                     model:rollback(SP_QUEUE)
                     return nil, TempScraperError(t_err)
                 end
+            end
+        end
+        if data.gradienthash then
+            local h_ok, h_err =
+                model:insertImageHash(image.image_id, data.gradienthash)
+            if not h_ok then
+                model:rollback(SP_QUEUE)
+                return nil, TempScraperError(h_err)
             end
         end
     end
@@ -630,6 +694,7 @@ local function execute_task(model, queue_entry, task)
                 "Archived!"
             )
         end
+        return true
     elseif task.help then
         local json_task = EncodeJson(task.help)
         local ok, errmsg3 =
@@ -645,14 +710,17 @@ local function execute_task(model, queue_entry, task)
                     % { queue_entry.qid }
             )
         end
+        return true
     elseif task.noop then
         -- intentionally do nothing
+        return true
     else
         Log(
             kLogFatal,
             "Unhandled task from process_entry: %s" % { EncodeJson(task) }
         )
         -- Execution stops after a fatal log event.
+        return false
     end
 end
 
@@ -713,7 +781,7 @@ local function task_for_answering_disambiguation_req(queue_entry)
             local new_task = dr.d.original_task
             new_task.no_dupe_check = true
             Log(kLogInfo, "Returning task: %s" % { EncodeJson(new_task) })
-            ---@cast new_task ArchiveEntryTask
+            ---@cast new_task FetchEntryTask
             return new_task
         else
             return nil,
@@ -739,7 +807,7 @@ local function task_for_answering_disambiguation_req(queue_entry)
                         % { "{'h': something}", queue_entry.disambiguation_data }
                 )
         end
-        local new_task = ArchiveEntryTask(response.h)
+        local new_task = FetchEntryTask(response.h)
         return new_task
     end
     return NoopEntryTask
@@ -748,7 +816,11 @@ end
 ---@param queue_entry ActiveQueueEntry
 ---@return EntryTask?
 ---@return ScraperError?
-local function task_for_entry(queue_entry)
+local function task_for_entry(_, queue_entry, _)
+    -- NOTE: DO NOT USE THE FIRST OR THIRD PARAMETERS TO THIS FUNCTION!
+    -- The first one is the database model, which should not be consulted when creating the task. Given a particular queue entry, the output of this function should only depend on network calls.
+    -- The third one is always nil, because there is no prior task.
+
     -- These states are possible, but filtered out by the query that selects active queue entries.
     --[[
     -- Dead -> Dead
@@ -777,14 +849,7 @@ local function task_for_entry(queue_entry)
     return task_for_scraping(queue_entry)
 end
 
-local function process_entry(model, queue_entry)
-    Log(
-        kLogInfo,
-        "Processing queue entry %s" % { queue_entry_tostr(queue_entry) }
-    )
-    -- 1. Generate task for queue entry
-    local task, task_err = task_for_entry(queue_entry)
-    -- Only increment the retry count when we're trying to archive the entry, or if there was an error.
+local function increment_retry_count(model, queue_entry, task)
     if not task or task.archive then
         local rt_ok, rt_err =
             model:incrementQueueItemRetryCount(queue_entry.qid)
@@ -792,21 +857,32 @@ local function process_entry(model, queue_entry)
             Log(kLogInfo, "Unable to update queue retry count: %s" % { rt_err })
         end
     end
-    if not task then
-        handle_queue_error(model, queue_entry, task_err)
-        return nil
-    end
-    -- 3. Validate task
-    local validated_task, validation_err = check_for_duplicates(model, task)
-    if not validated_task then
-        handle_queue_error(model, queue_entry, validation_err)
-        return nil
-    end
-    -- 4. Execute task
-    local execute_err = execute_task(model, queue_entry, validated_task)
-    if execute_err then
-        handle_queue_error(model, queue_entry, execute_err)
-        return nil
+    return task
+end
+
+---@type PipelineFunction[]
+local entry_pipeline = {
+    task_for_entry,
+    increment_retry_count,
+    fetch_files,
+    check_for_duplicates,
+    execute_task,
+}
+
+local function process_entry(model, queue_entry)
+    Log(
+        kLogInfo,
+        "Processing queue entry %s" % { queue_entry_tostr(queue_entry) }
+    )
+    local task, step_err = nil, nil
+    for i = 1, #entry_pipeline do
+        Log(kLogVerbose, "Process entry pipeline step %d" % { i })
+        local step = entry_pipeline[i]
+        task, step_err = step(model, queue_entry, task)
+        if not task then
+            handle_queue_error(model, queue_entry, step_err)
+            return
+        end
     end
 end
 
@@ -837,7 +913,17 @@ local function process_all_queues()
                 "Processing %d queue entries for %s"
                     % { #queue_records, user_id }
             )
-            process_queue(model, queue_records)
+            -- Use pcall to isolate each user's queue processing. That way, if
+            -- one user has something in their queue that causes a problem, it
+            -- doesn't mean that everyone after them gets blocked too.
+            local q_ok, q_err = pcall(process_queue, model, queue_records)
+            if not q_ok then
+                Log(
+                    kLogWarn,
+                    "Error occurred while processing queue for user %s: %s"
+                        % { user_id, q_err }
+                )
+            end
         else
             Log(kLogWarn, errmsg2)
         end

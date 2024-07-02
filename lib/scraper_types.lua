@@ -1,10 +1,16 @@
 ---@alias ScrapedAuthor { handle: string, display_name: string, profile_url: string }
 
 --- A thumbnail for a record, if the scraper can provide one. Most useful for videos.
----@alias Thumbnail { raw_uri: string, width: integer, height: integer, scale: integer }
+---@alias Thumbnail { raw_uri: string, image_data: string?, mime_type: string?, width: integer, height: integer, scale: integer }
+
+--- A thumbnail for a record, with the actual thumbnail file downloaded.
+---@alias FetchedThumbnail { raw_uri: string, image_data: string?, mime_type: string, width: integer, height: integer, scale: integer }
 
 --- The data produced by a scraper.
----@alias ScrapedSourceData { kind: integer, raw_image_uri: string, mime_type: string, width: integer, height: integer, this_source: string, additional_sources: string[]?, canonical_domain: string, authors: ScrapedAuthor[], rating: integer, incoming_tags: string[]?, thumbnails: Thumbnail[]?}
+---@alias ScrapedSourceData { kind: integer, raw_image_uri: string, image_data: string?, mime_type: string, width: integer, height: integer, this_source: string, additional_sources: string[]?, canonical_domain: string, authors: ScrapedAuthor[], rating: integer, incoming_tags: string[]?, thumbnails: Thumbnail[]?}
+
+--- The data produced by a scraper, with fully downloaded images and thumbnails.
+---@alias FetchedData { kind: integer, raw_image_uri: string, image_data: string, mime_type: string, gradienthash: integer, width: integer, height: integer, this_source: string, additional_sources: string[]?, canonical_domain: string, authors: ScrapedAuthor[], rating: integer, incoming_tags: string[]?, thumbnails: FetchedThumbnail[]?}
 
 --- ScraperProcess function: given a URI, scrape whatever info is needed for archiving
 --- from that website.
@@ -27,7 +33,14 @@ function HelpWithHeuristicFailure(original_task)
     return original_task
 end
 
----@alias ArchiveEntryTask { archive: ScrapedSourceData[], discovered_sources: string[] }
+---@alias FetchEntryTask { fetch: ScrapedSourceData[], discovered_sources: string[] }
+function FetchEntryTask(data, discovered_sources)
+    if discovered_sources and #discovered_sources == 1 then
+        discovered_sources = nil
+    end
+    return { fetch = data, discovered_sources = discovered_sources }
+end
+---@alias ArchiveEntryTask { archive: FetchedData[], discovered_sources: string[] }
 function ArchiveEntryTask(data, discovered_sources)
     if discovered_sources and #discovered_sources == 1 then
         discovered_sources = nil
@@ -43,7 +56,9 @@ function RequestHelpEntryTask(data, discovered_sources)
 end
 ---@alias NoopEntryTask { noop: true }
 NoopEntryTask = { noop = true }
----@alias EntryTask (ArchiveEntryTask|RequestHelpEntryTask|NoopEntryTask)
+---@alias EntryTask (FetchEntryTask|ArchiveEntryTask|RequestHelpEntryTask|NoopEntryTask)
+
+---@alias PipelineFunction fun(model: Model, queue_entry: ActiveQueueEntry, task: EntryTask) -> EntryTask
 
 ---@class ScraperError {description: string, type: integer}
 ScraperError = {
