@@ -26,6 +26,7 @@ ServerVersion = string.format(
 )
 
 ProgramContentType("webmanifest", "application/manifest+json")
+ProgramCache(60 * 60 * 24 * 365, "private")
 
 Accounts = DbUtil.Accounts:new()
 Accounts:bootstrapInvites()

@@ -293,7 +293,7 @@ local render_queue_image = login_required(function(r, _)
     r.headers.ContentType = result.image_mime_type
     return Fm.serveResponse(200, {
         ContentType = result.image_mime_type,
-        ["Cache-Control"] = "private; max-age=31536000",
+        ["Cache-Control"] = "private, max-age=31536000",
     }, result.image)
 end)
 
@@ -306,7 +306,7 @@ local render_thumbnail_file = login_required(function(r, _)
     r.headers.ContentType = result.mime_type
     return Fm.serveResponse(200, {
         ContentType = result.mime_type,
-        ["Cache-Control"] = "private; max-age=31536000",
+        ["Cache-Control"] = "private, max-age=31536000",
     }, result.thumbnail)
 end)
 
@@ -359,7 +359,7 @@ local render_image_file = login_required(function(r)
             r.params.filename:sub(2, 2),
             r.params.filename,
         }
-    SetHeader("Cache-Control", "public; max-age=31536000")
+    SetHeader("Cache-Control", "private, max-age=31536000")
     return Fm.serveAsset(path)
 end)
 

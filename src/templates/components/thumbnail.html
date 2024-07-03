@@ -1,8 +1,16 @@
 {% if record.first_thumbnail_id then %}
-<img src="/thumbnail-file/{%& record.first_thumbnail_id %}" />
+<img
+  src="/thumbnail-file/{%& record.first_thumbnail_id %}"
+  width="{%& record.first_thumbnail_width %}"
+  height="{%& record.first_thumbnail_height %}"
+/>
 {% elseif record.kind == fn.kind.Image or (record.kind == fn.kind.Animation and
 record.mime_type == "image/gif") then %}
-<img src="/image-file/{%& record.file %}" />
+<img
+  src="/image-file/{%& record.file %}"
+  width="{%& record.width %}"
+  height="{%& record.height %}"
+/>
 {% else %}
 <div>Unable to preview this record</div>
 {% end %}

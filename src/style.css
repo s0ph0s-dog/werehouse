@@ -116,8 +116,9 @@ footer {
   margin: 0;
 }
 .gallery figure img {
-  max-width: 12em;
-  max-height: 12em;
+  width: 12em;
+  height: 12em;
+  object-fit: contain;
   display: block;
   margin: 0 auto;
   border: 3px solid LinkText;

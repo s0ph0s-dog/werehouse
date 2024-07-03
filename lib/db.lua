@@ -206,7 +206,9 @@ local user_setup = [[
         height,
         saved_at,
         artists,
-         first_thumbnail_id
+        first_thumbnail_id,
+        first_thumbnail_width,
+        first_thumbnail_height
     ) AS SELECT
         images.image_id,
         images.file,
@@ -216,17 +218,24 @@ local user_setup = [[
         images.height,
         images.saved_at,
         group_concat(artists.name, ", ") AS artists,
-        first_thumbnail_id
+        first_thumbnail_id,
+        first_thumbnail_width,
+        first_thumbnail_height
     FROM images
         LEFT NATURAL JOIN image_artists
         LEFT NATURAL JOIN artists
         LEFT NATURAL JOIN (
-            SELECT DISTINCT image_id, first_value(thumbnail_id) OVER (
+            SELECT DISTINCT
+                image_id,
+                first_value(thumbnail_id) OVER thumb_win AS first_thumbnail_id,
+                first_value(width) OVER thumb_win AS first_thumbnail_width,
+                first_value(height) OVER thumb_win AS first_thumbnail_height
+            FROM thumbnails
+            WINDOW thumb_win AS (
                 PARTITION BY image_id
                 ORDER BY thumbnail_id DESC
                 ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-             ) AS first_thumbnail_id
-             FROM thumbnails
+             )
         )
         GROUP BY images.image_id;
 
@@ -418,17 +427,21 @@ local queries = {
         get_queue_image_by_id = [[SELECT image, image_mime_type FROM queue
             WHERE qid = ?;]],
         get_image_entry_count = [[SELECT COUNT(*) as count FROM images;]],
-        get_recent_image_entries = [[SELECT image_id, file, kind, mime_type, artists, first_thumbnail_id
+        get_recent_image_entries = [[SELECT image_id, file, kind, mime_type, artists, first_thumbnail_id, first_thumbnail_width, first_thumbnail_height
             FROM images_for_gallery
             ORDER BY saved_at DESC
             LIMIT 20;]],
         get_image_entries_newest_first_paginated = [[SELECT
                 image_id,
                 file,
+                width,
+                height,
                 kind,
                 mime_type,
                 artists,
-                first_thumbnail_id
+                first_thumbnail_id,
+                first_thumbnail_width,
+                first_thumbnail_height
             FROM images_for_gallery
             ORDER BY saved_at DESC
             LIMIT ?
@@ -513,7 +526,9 @@ local queries = {
                 images_for_gallery.kind,
                 images_for_gallery.mime_type,
                 images_for_gallery.artists,
-                images_for_gallery.first_thumbnail_id
+                images_for_gallery.first_thumbnail_id,
+                images_for_gallery.first_thumbnail_width,
+                images_for_gallery.first_thumbnail_height
             FROM images_for_gallery
             LEFT NATURAL JOIN image_artists
             WHERE image_artists.artist_id = ?
@@ -525,7 +540,9 @@ local queries = {
                 images_for_gallery.kind,
                 images_for_gallery.mime_type,
                 images_for_gallery.artists,
-                images_for_gallery.first_thumbnail_id
+                images_for_gallery.first_thumbnail_id,
+                images_for_gallery.first_thumbnail_width,
+                images_for_gallery.first_thumbnail_height
             FROM images_for_gallery
             LEFT NATURAL JOIN image_tags
             WHERE image_tags.tag_id = ?
@@ -578,7 +595,9 @@ local queries = {
                 images_for_gallery.kind,
                 images_for_gallery.mime_type,
                 images_for_gallery.artists,
-                images_for_gallery.first_thumbnail_id
+                images_for_gallery.first_thumbnail_id,
+                images_for_gallery.first_thumbnail_width,
+                images_for_gallery.first_thumbnail_height
             FROM images_in_group
             LEFT NATURAL JOIN images_for_gallery
             WHERE ig_id = ?
