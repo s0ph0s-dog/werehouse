@@ -373,12 +373,15 @@ function TestScraperPipeline:testValidTwitterLinks()
         "https://twitter.com/bigcozyorca/status/1793851828477788591"
     local tweetVideo =
         "https://twitter.com/Danamasco/status/1791127158523314321"
+    local tweetPhoto1 =
+        "https://vxtwitter.com/JackieTheYeen/status/1810173812761383143/photo/1"
     local mocks = {
         fetch_mock_head_html_200(tweetTrackingParams),
         fetch_mock_head_html_200(tweetVxtwitter),
         fetch_mock_head_html_200(tweetNitter),
         fetch_mock_head_html_200(tweetGif),
         fetch_mock_head_html_200(tweetVideo),
+        fetch_mock_head_html_200(tweetPhoto1),
         {
             whenCalledWith = "https://api.fxtwitter.com/status/1778885919572979806",
             thenReturn = {
@@ -403,6 +406,14 @@ function TestScraperPipeline:testValidTwitterLinks()
                 Slurp("test/twitter_fxtwitter_video_response.json"),
             },
         },
+        {
+            whenCalledWith = "https://api.fxtwitter.com/status/1810173812761383143",
+            thenReturn = {
+                200,
+                {},
+                Slurp("test/twitter_fxtwitter_photo1_response.json"),
+            },
+        },
     }
     local authorImage = {
         handle = "thatFunkybun",
@@ -418,6 +429,11 @@ function TestScraperPipeline:testValidTwitterLinks()
         handle = "Danamasco",
         display_name = "Danamasco",
         profile_url = "https://twitter.com/Danamasco",
+    }
+    local authorPhoto1 = {
+        handle = "JackieTheYeen",
+        display_name = "Jackie the Yeen",
+        profile_url = "https://twitter.com/JackieTheYeen",
     }
     local expectedImage = {
         fetch = table.map({
@@ -485,6 +501,22 @@ function TestScraperPipeline:testValidTwitterLinks()
             },
         },
     }
+    local expectedPhoto1 = {
+        fetch = {
+            {
+                kind = DbUtil.k.ImageKind.Image,
+                authors = { authorPhoto1 },
+                canonical_domain = "twitter.com",
+                height = 1200,
+                kind = DbUtil.k.ImageKind.Image,
+                mime_type = "image/jpeg",
+                rating = DbUtil.k.Rating.General,
+                raw_image_uri = "https://pbs.twimg.com/media/GR8GzykbkAACRqi.jpg",
+                this_source = "https://twitter.com/JackieTheYeen/status/1810173812761383143",
+                width = 1200,
+            },
+        },
+    }
     local tests = {
         {
             input = { tweetTrackingParams },
@@ -505,6 +537,10 @@ function TestScraperPipeline:testValidTwitterLinks()
         {
             input = { tweetVideo },
             expected = { expectedVideo, nil },
+        },
+        {
+            input = { tweetPhoto1 },
+            expected = { expectedPhoto1, nil },
         },
     }
     process_entry_framework(tests, mocks)

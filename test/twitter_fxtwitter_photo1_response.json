@@ -1,0 +1,61 @@
+{
+  "code": 200,
+  "message": "OK",
+  "tweet": {
+    "url": "https://twitter.com/JackieTheYeen/status/1810173812761383143",
+    "id": "1810173812761383143",
+    "text": "\"Oh, how lucky you are to have caught my eye. You'll be safe and sound in the embrace of my coils~\"\n\nMake an offering to your new god. 🐍\n\n🎨credit: @SimarglArtist",
+    "author": {
+      "id": "1129026105225011202",
+      "name": "Jackie the Yeen",
+      "screen_name": "JackieTheYeen",
+      "avatar_url": "https://pbs.twimg.com/profile_images/1737015414092365824/MVomh4zW_200x200.jpg",
+      "banner_url": "https://pbs.twimg.com/profile_banners/1129026105225011202/1686104405",
+      "description": "Hyena | ♏ | Pan / Poly / Plural | They/Them | Genderfluid 🏳️‍⚧️\n@AliosChronicles 4 Years 💜🇦🇺\nBanner by @IndigoBeatss\nhttp://ko-fi.com/jackietheyeen",
+      "location": "✧ Behind You ✧",
+      "url": "https://twitter.com/JackieTheYeen",
+      "followers": 242,
+      "following": 556,
+      "joined": "Thu May 16 14:09:34 +0000 2019",
+      "likes": 63170,
+      "website": null,
+      "tweets": 3358,
+      "avatar_color": null
+    },
+    "replies": 16,
+    "retweets": 358,
+    "likes": 3007,
+    "created_at": "Mon Jul 08 04:47:23 +0000 2024",
+    "created_timestamp": 1720414043,
+    "possibly_sensitive": false,
+    "views": 34134,
+    "is_note_tweet": false,
+    "community_note": null,
+    "lang": "en",
+    "replying_to": null,
+    "replying_to_status": null,
+    "media": {
+      "all": [
+        {
+          "type": "photo",
+          "url": "https://pbs.twimg.com/media/GR8GzykbkAACRqi.jpg",
+          "width": 1200,
+          "height": 1200,
+          "altText": ""
+        }
+      ],
+      "photos": [
+        {
+          "type": "photo",
+          "url": "https://pbs.twimg.com/media/GR8GzykbkAACRqi.jpg",
+          "width": 1200,
+          "height": 1200,
+          "altText": ""
+        }
+      ]
+    },
+    "source": "Twitter Web App",
+    "twitter_card": "summary_large_image",
+    "color": null
+  }
+}
