@@ -79,6 +79,32 @@ local function hash_password(password)
     })
 end
 
+local function hex_encode(str)
+    return (
+        str:gsub(".", function(char)
+            return string.format("%02x", char:byte())
+        end)
+    )
+end
+
+local function check_password_breach(password)
+    local sha1 = hex_encode(GetCryptoHash("SHA1", password))
+    local prefix = sha1:sub(1, 5)
+    local suffix = sha1:sub(6)
+    suffix = suffix:upper()
+    local status, _, body =
+        Fetch("https://api.pwnedpasswords.com/range/" .. prefix)
+    if status ~= 200 then
+        return nil, "HTTP error " .. status
+    end
+    for result in body:gmatch("(%x+):%d+") do
+        if result == suffix then
+            return true
+        end
+    end
+    return false
+end
+
 local function accept_invite(r)
     r.session.error = nil
     local invite_record = Accounts:findInvite(r.params.invite_code)
@@ -106,6 +132,15 @@ local function accept_invite(r)
     if r.params.password ~= r.params.password_confirm then
         -- TODO: password mismatch
         r.session.error = "Passwords do not match."
+        return Fm.serveRedirect(r.path, 302)
+    end
+    local breached, b_err = check_password_breach(r.params.password)
+    if b_err then
+        return Fm.serve500()
+    end
+    if breached then
+        r.session.error =
+            "That password has previously been found in a password breach. Please choose a different one."
         return Fm.serveRedirect(r.path, 302)
     end
     local pw_hash = hash_password(r.params.password)
@@ -2069,6 +2104,8 @@ local render_account = login_required(function(r, user_record)
         Log(kLogDebug, spl_err)
         return Fm.serve500()
     end
+    local pw_change_error = r.session.pw_change_error
+    r.session.pw_change_error = nil
     set_after_dialog_action(r)
     return Fm.serveContent("account", {
         user = user_record,
@@ -2080,6 +2117,7 @@ local render_account = login_required(function(r, user_record)
         share_ping_lists = share_ping_lists,
         sessions = sessions,
         invites = invites,
+        pw_change_error = pw_change_error,
     })
 end)
 
@@ -2110,6 +2148,15 @@ local accept_change_password = login_required(function(r, user_record)
                 "Denying attempted password change for %s due to error from argon2: %s"
                     % { r.params.username, verify_err }
             )
+            return Fm.serveRedirect("/account#change-password", 302)
+        end
+        local breached, b_err = check_password_breach(r.params.password)
+        if b_err then
+            return Fm.serve500()
+        end
+        if breached then
+            r.session.pw_change_error =
+                "That password has previously been found in a password breach. Please choose a different one."
             return Fm.serveRedirect("/account#change-password", 302)
         end
         local pw_hash = hash_password(r.params.password)
