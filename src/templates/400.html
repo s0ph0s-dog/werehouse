@@ -1,0 +1,14 @@
+{% function block.content() %}
+<h1>400: Bad Request</h1>
+<p>The request you made was invalid.</p>
+{% if type(error) == "table" and #error > 0 then %}
+<p>Validation errors:</p>
+<ul>
+  {% for i = 1, #error do %}
+  <li><code>{%& error[i] %}</code></li>
+  {% end %}
+</ul>
+{% else %}
+<p><code>{%& error %} / {%& value %}</code></p>
+{% end %} {% end %}{% render("layouts/main", { title = "400: Bad Request", user
+= user }) %}

@@ -9,6 +9,19 @@ local function render_invite(r)
     )
 end
 
+local function serve_error_page(code)
+    return function(errormsg, value)
+        return Fm.serveResponse(
+            code,
+            nil,
+            Fm.render(tostring(code), {
+                error = errormsg,
+                value = value,
+            })
+        )
+    end
+end
+
 local username_validator_rule = {
     "username",
     minlen = 2,
@@ -21,26 +34,50 @@ local password_validator_rule = {
     maxlen = 128,
     msg = "%s must be between 16 and 128 characters",
 }
+local confirm_password_validator_rule = {
+    "password_confirm",
+    minlen = 16,
+    maxlen = 128,
+    msg = "%s must be between 16 and 128 characters",
+}
 local invite_validator_rule = { "invite_code", minlen = 24, maxlen = 24 }
 
 local invite_validator = Fm.makeValidator {
     invite_validator_rule,
     username_validator_rule,
     password_validator_rule,
-    {
-        "password_confirm",
-        minlen = 16,
-        maxlen = 128,
-        msg = "%s must be between 16 and 128 characters",
-    },
+    confirm_password_validator_rule,
     all = true,
+    otherwise = serve_error_page(400),
 }
 
 local login_validator = Fm.makeValidator {
     username_validator_rule,
     password_validator_rule,
     all = true,
+    otherwise = serve_error_page(400),
 }
+
+local change_password_validator = Fm.makeValidator {
+    {
+        "current_password",
+        minlen = 16,
+        maxlen = 128,
+        msg = "%s must be between 16 and 128 characters",
+    },
+    password_validator_rule,
+    confirm_password_validator_rule,
+    all = true,
+    otherwise = serve_error_page(400),
+}
+
+local function hash_password(password)
+    return argon2.hash_encoded(password, GetRandomBytes(32), {
+        m_cost = 65536,
+        t_cost = 16,
+        parallelism = 4,
+    })
+end
 
 local function accept_invite(r)
     r.session.error = nil
@@ -71,10 +108,7 @@ local function accept_invite(r)
         r.session.error = "Passwords do not match."
         return Fm.serveRedirect(r.path, 302)
     end
-    local pw_hash = argon2.hash_encoded(r.params.password, GetRandomBytes(32), {
-        m_cost = 65536,
-        parallelism = 4,
-    })
+    local pw_hash = hash_password(r.params.password)
     local result, errmsg =
         Accounts:acceptInvite(r.params.invite_code, r.params.username, pw_hash)
     print(result)
@@ -2049,6 +2083,48 @@ local render_account = login_required(function(r, user_record)
     })
 end)
 
+local accept_end_sessions = login_required(function(r, user_record)
+    if r.params.end_all_sessions then
+        local ok, err = Accounts:deleteAllSessionsForUser(user_record.user_id)
+        if not ok then
+            Log(kLogInfo, "Unable to delete sessions: %s" % { err })
+            return Fm.serve500()
+        end
+        return Fm.serveRedirect(302, "/account")
+    end
+    return Fm.serve400()
+end)
+
+local accept_change_password = login_required(function(r, user_record)
+    if r.params.change_password then
+        if r.params.password ~= r.params.password_confirm then
+            r.session.pw_change_error = "New passwords do not match."
+            return Fm.serveRedirect("/account#change-password", 302)
+        end
+        local result, verify_err =
+            argon2.verify(user_record.password, r.params.current_password)
+        if not result then
+            r.session.pw_change_error = "Invalid password"
+            Log(
+                kLogVerbose,
+                "Denying attempted password change for %s due to error from argon2: %s"
+                    % { r.params.username, verify_err }
+            )
+            return Fm.serveRedirect("/account#change-password", 302)
+        end
+        local pw_hash = hash_password(r.params.password)
+        local ok, err =
+            Accounts:updatePasswordForuser(user_record.user_id, pw_hash)
+        if not ok then
+            Log(kLogInfo, "error updating password hash for user: %s" % { err })
+            return Fm.serve500()
+        end
+        r.session.toast = "Password updated!"
+        return Fm.serveRedirect("/account", 302)
+    end
+    return Fm.serve400()
+end)
+
 local render_tag_rules = login_required(function(r, user_record)
     local per_page = 100
     local tag_rule_count, trc_errmsg = Model:getTagRuleCount()
@@ -2598,7 +2674,10 @@ local function setup()
         accept_invite
     )
     Fm.setRoute(Fm.GET { "/login" }, render_login)
-    Fm.setRoute(Fm.POST { "/login", _ = login_validator }, accept_login)
+    Fm.setRoute(
+        Fm.POST { "/login", _ = login_validator, otherwise = 405 },
+        accept_login
+    )
     Fm.setRoute(Fm.GET { "/queue" }, render_queue)
     Fm.setRoute(Fm.POST { "/queue" }, accept_queue)
     Fm.setRoute(Fm.GET { "/queue/:qid[%d]/help" }, render_queue_help)
@@ -2663,6 +2742,11 @@ local function setup()
         render_edit_share_ping_list
     )
     Fm.setRoute("/account", render_account)
+    Fm.setRoute("/account/end-sessions", accept_end_sessions)
+    Fm.setRoute(
+        Fm.POST { "/account/change-password", _ = change_password_validator },
+        accept_change_password
+    )
     -- API routes
     Fm.setRoute(Fm.GET { "/api/queue-image/:id" }, render_queue_image)
     -- Fm.setRoute("/api/telegram-webhook")

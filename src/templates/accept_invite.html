@@ -2,11 +2,23 @@
 <p>You have been invited to use Werehouse. Create your account:</p>
 <form method="POST" class="vbox">
   <label
-    >Username: <input type="text" minlength="2" maxlength="128" name="username"
+    >Username:
+    <input
+      type="text"
+      minlength="2"
+      maxlength="128"
+      name="username"
+      autocomplete="username"
   /></label>
   <label
     >Password:
-    <input type="password" minlength="16" maxlength="128" name="password"
+    <input
+      type="password"
+      minlength="16"
+      maxlength="128"
+      name="password"
+      autocomplete="new-password"
+      passwordrules="minlength: 16; maxlength: 128; required: lower; required: upper; required: digit; required: [-!#$%&()*+=?@^_];"
   /></label>
   <label
     >Password (again):
@@ -14,6 +26,8 @@
       type="password"
       minlength="16"
       maxlength="128"
+      autocomplete="new-password"
+      passwordrules="minlength: 16; maxlength: 128; required: lower; required: upper; required: digit; required: [-!#$%&()*+=?@^_];"
       name="password_confirm"
   /></label>
   <label class="inline">

@@ -378,8 +378,8 @@ local function thumbnail(other_args)
     return 0
 end
 
-local function redo_bad_disambig_req(other_args)
-    for_each_user(function(i, user, model)
+local function redo_bad_disambig_req(_)
+    for_each_user(function(_, _, model)
         local query =
             "select qid from queue where substr(disambiguation_request, 1, 1) = '[' OR disambiguation_request = '';"
         local results, err = model.conn:fetchAll(query)
@@ -401,6 +401,93 @@ local function redo_bad_disambig_req(other_args)
     end)
 end
 
+-- Redbean's Benchmark() throws an exception about the system being too busy even on a machine with a load average of 0.1 and 24 cores.
+local function my_benchmark(fun, count)
+    local cumulative_time = 0
+    for _ = 1, (count + 1) do
+        local start_s, start_ns = unix.clock_gettime(unix.CLOCK_MONOTONIC)
+        fun()
+        local end_s, end_ns = unix.clock_gettime(unix.CLOCK_MONOTONIC)
+        local duration_s = end_s - start_s
+        local duration_ns = end_ns - start_ns
+        if duration_ns < 0 then
+            duration_ns = 1E9 + duration_ns
+        end
+        cumulative_time = cumulative_time + (duration_s * 1E9) + duration_ns
+    end
+    return cumulative_time / count
+end
+
+local function find_hash_params(_)
+    local function hash_benchmark(time, mem, parallelism)
+        local params = {
+            m_cost = mem,
+            t_cost = time,
+            parallelism = parallelism,
+        }
+        return function()
+            return argon2.hash_encoded("password", "somesalt", params)
+        end
+    end
+
+    local time = 4
+    local mem = 2 ^ 16
+    local parallelism = 4
+    repeat
+        print("Trying time = %d…" % { time })
+        local nanos, _, _, _ =
+            my_benchmark(hash_benchmark(time, mem, parallelism), 64)
+        time = time * 2
+        print("Took %f ms" % { nanos / 1E6 })
+    until nanos > 1E9
+
+    print(
+        "Password hash parameters that make hashing take 1s: m_cost = %d, t_cost = %d, parallelism = %d"
+            % { time, mem, parallelism }
+    )
+end
+
+local function clean_orphan_files(other_args)
+    local dry_run = other_args[1] == "-d"
+    local image_files = FsTools.list_all_image_files()
+    print("Total number of files saved:", #image_files)
+    local image_set = {}
+    for i = 1, #image_files do
+        local file_name = image_files[i]
+        image_set[file_name] = true
+    end
+    for_each_user(function(_, _, model)
+        local query = "SELECT file FROM images;"
+        local all_files_for_user, err = model.conn:fetchAll(query)
+        if not all_files_for_user then
+            Log(kLogError, err)
+            return 0
+        end
+        for j = 1, #all_files_for_user do
+            local user_file = all_files_for_user[j].file
+            -- Remove files from the set which are referenced by this user's database.
+            if image_set[user_file] then
+                image_set[user_file] = nil
+            else
+                Log(
+                    kLogWarn,
+                    "File %s is referenced in the database, but doesn't exist on disk!"
+                        % { user_file }
+                )
+            end
+        end
+        return 0
+    end)
+    print("Orphan files:")
+    for file, _ in pairs(image_set) do
+        print(file)
+        if not dry_run then
+            local _, path = FsTools.make_image_path_from_filename(file)
+            unix.unlink(path)
+        end
+    end
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
@@ -409,6 +496,8 @@ local commands = {
     hash = hash,
     thumbnail = thumbnail,
     redo_bad_disambig_req = redo_bad_disambig_req,
+    find_hash_params = find_hash_params,
+    clean_orphan_files = clean_orphan_files,
 }
 
 local remaining_args = arg

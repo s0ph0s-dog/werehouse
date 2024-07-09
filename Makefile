@@ -37,6 +37,9 @@ SRCS := src/.init.lua \
     src/sw.js \
     src/index.js \
     src/manifest.webmanifest \
+    src/templates/400.html \
+    src/templates/404.html \
+    src/templates/500.html \
     src/templates/layouts/main.html \
     src/templates/layouts/dialog.html \
     src/templates/components/artist_verified.html \

@@ -5,6 +5,7 @@
   box-sizing: border-box;
 }
 html {
+  /* font: -apple-system-body; */
   font-family: serif;
 }
 .dialog {

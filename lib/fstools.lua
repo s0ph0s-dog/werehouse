@@ -36,8 +36,37 @@ local function save_image(image_data, image_mime_type)
     return filename
 end
 
+local function list_all_image_files()
+    local image_files = {}
+    for d1_name, d1_kind in assert(unix.opendir("./images")) do
+        if d1_name ~= "." and d1_name ~= ".." and d1_kind == unix.DT_DIR then
+            for d2_name, d2_kind in assert(unix.opendir("./images/" .. d1_name)) do
+                if
+                    d2_name ~= "."
+                    and d2_name ~= ".."
+                    and d2_kind == unix.DT_DIR
+                then
+                    for file_name, file_kind in
+                        assert(
+                            unix.opendir(
+                                "./images/" .. d1_name .. "/" .. d2_name
+                            )
+                        )
+                    do
+                        if file_kind == unix.DT_REG then
+                            image_files[#image_files + 1] = file_name
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return image_files
+end
+
 return {
     save_image = save_image,
     make_image_path_from_filename = make_image_path_from_filename,
+    list_all_image_files = list_all_image_files,
     MIME_TO_EXT = MIME_TO_EXT,
 }

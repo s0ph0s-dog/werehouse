@@ -359,7 +359,7 @@ local queries = {
                 invite_id, (invitee IS NOT NULL) AS used
             FROM invites WHERE inviter = ?;]],
         get_sessions_older_than_stamp = [[SELECT session_id FROM sessions WHERE last_seen < ?;]],
-        get_user_by_session = [[SELECT u.user_id, u.username, u.invites_available FROM "users" AS u
+        get_user_by_session = [[SELECT u.user_id, u.username, u.invites_available, u.password FROM "users" AS u
             INNER JOIN "sessions" on u.user_id = sessions.user_id
             WHERE sessions.session_id = ?;]],
         get_user_by_tg_id = [[SELECT users.user_id, users.username
@@ -386,6 +386,7 @@ local queries = {
             SET last_seen = ?, ip = ?
             WHERE session_id = ?;]],
         update_csrf_token_for_session = [[UPDATE "sessions" SET csrf_token = ? WHERE session_id = ?;]],
+        update_password_for_user = [[UPDATE "users" SET "password" = ? WHERE "user_id" = ?;]],
         delete_telegram_link_request = [[DELETE FROM telegram_link_requests WHERE request_id = ?;]],
         delete_sessions_older_than_stamp = [[DELETE FROM "sessions" WHERE last_seen < ?;]],
         delete_sessions_for_user = [[DELETE FROM "sessions" WHERE user_id = ?;]],
@@ -2364,6 +2365,10 @@ function Accounts:createSessionForUser(user_id, user_agent, ip)
     return session_id
 end
 
+function Accounts:deleteAllSessionsForUser(user_id)
+    return self.conn:execute(queries.accounts.delete_sessions_for_user, user_id)
+end
+
 function Accounts:findSessionById(session_id)
     return fetchOneExactly(
         self.conn,
@@ -2448,6 +2453,14 @@ function Accounts:findUserBySessionId(session_id)
         self.conn,
         queries.accounts.get_user_by_session,
         session_id
+    )
+end
+
+function Accounts:updatePasswordForuser(user_id, new_password_hash)
+    return self.conn:execute(
+        queries.accounts.update_password_for_user,
+        new_password_hash,
+        user_id
     )
 end
 

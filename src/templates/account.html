@@ -80,11 +80,7 @@
       </tbody>
     </table>
   </div>
-  <input
-    type="submit"
-    name="terminate_all_sessions"
-    value="Terminate All Sessions"
-  />
+  <input type="submit" name="end_all_sessions" value="End All Sessions" />
 </form>
 <h1>Invite Links</h1>
 <form method="POST" action="/account/invites">
@@ -133,19 +129,44 @@
   </table>
 </div>
 <h1>Account Management</h1>
-<form class="vbox" method="POST" action="/account/change-password">
+<form
+  class="vbox"
+  method="POST"
+  id="change-password"
+  action="/account/change-password"
+>
   <h2>Change Password</h2>
   <label>
     Current Password:
-    <input type="password" name="current" minlength="16" />
+    <input
+      type="password"
+      name="current_password"
+      minlength="16"
+      maxlength="128"
+      autocomplete="current-password"
+    />
   </label>
   <label
     >New Password:
-    <input type="password" name="new_password" minlength="16" />
+    <input
+      type="password"
+      name="password"
+      minlength="16"
+      maxlength="128"
+      autocomplete="new-password"
+      passwordrules="minlength: 16; maxlength: 128; required: lower; required: upper; required: digit; required: [-!#$%&()*+=?@^_];"
+    />
   </label>
   <label>
     New Password (again):
-    <input type="password" name="new_password_again" minlength="16" />
+    <input
+      type="password"
+      name="password_confirm"
+      minlength="16"
+      maxlength="128"
+      autocomplete="new-password"
+      passwordrules="minlength: 16; maxlength: 128; required: lower; required: upper; required: digit; required: [-!#$%&()*+=?@^_];"
+    />
   </label>
   <span class="buttons">
     <input type="reset" value="Clear" />
