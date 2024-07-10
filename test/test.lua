@@ -208,6 +208,15 @@ local function process_entry_framework(test_data, mocks)
             result.expected[2],
             "error mismatch for input: %s" % { result.input }
         )
+        -- Remove image data (if present) because luaunit.assertEquals chokes when the object is too large.
+        if
+            result.output[1]
+            and result.output[1].fetch
+            and result.output[1].fetch[1]
+            and result.output[1].fetch[1].image_data
+        then
+            result.output[1].fetch[1].image_data = "elided"
+        end
         luaunit.assertEquals(
             result.output[1],
             result.expected[1],
@@ -1853,6 +1862,85 @@ function TestScraperPipeline:testValidCohostLinks()
         {
             whenCalledWith = "https://cohost.org/api/v1/trpc/posts.singlePost?batch=1&input=%7B%220%22%3A%7B%22handle%22%3A%22infinityio%22%2C%22postId%22%3A4685920%7D%7D",
             thenReturn = { 200, {}, Slurp("test/cohost_loggedinonly.json") },
+        },
+    }
+    process_entry_framework(tests, mocks)
+end
+
+function TestScraperPipeline:testItakuEEWorks()
+    local input_nsfw = "https://itaku.ee/images/164381"
+    local tests = {
+        {
+            input = { input_nsfw },
+            expected = {
+                {
+                    fetch = {
+                        {
+                            kind = DbUtil.k.ImageKind.Image,
+                            authors = {
+                                {
+                                    display_name = "Carpetwurm",
+                                    handle = "carpetwurm",
+                                    profile_url = "https://itaku.ee/profile/carpetwurm",
+                                },
+                            },
+                            canonical_domain = "itaku.ee",
+                            incoming_tags = {
+                                "male",
+                                "canine",
+                                "furry",
+                                "duo",
+                                "commission",
+                                "huge_ass",
+                                "big_butt",
+                                "penis",
+                                "balls",
+                                "testicles",
+                                "anus",
+                                "male/male",
+                                "gay",
+                                "homosexual",
+                                "equine_penis",
+                                "background",
+                                "public",
+                                "sweat",
+                                "musk",
+                                "donut_ring",
+                                "yiff",
+                                "exhibitionism",
+                                "musky",
+                                "musk",
+                                "horsecock",
+                                "equine_penis",
+                                "subway",
+                            },
+                            height = 5100,
+                            mime_type = "image/jpeg",
+                            image_data = "elided",
+                            raw_image_uri = "https://itaku.ee/api/media/gallery_imgs/C_Runic_Kshalin_uXs0Ssb.jpg",
+                            this_source = input_nsfw,
+                            width = 3300,
+                            rating = DbUtil.k.Rating.Explicit,
+                        },
+                    },
+                },
+                nil,
+            },
+        },
+    }
+    local mocks = {
+        fetch_mock_head_html_200(input_nsfw),
+        {
+            whenCalledWith = "https://itaku.ee/api/galleries/images/164381/?format=json",
+            thenReturn = { 200, {}, Slurp("test/itakuee_nsfw.json") },
+        },
+        {
+            whenCalledWith = "https://itaku.ee/api/media/gallery_imgs/C_Runic_Kshalin_uXs0Ssb.jpg",
+            thenReturn = {
+                200,
+                { ["Content-Type"] = "image/jpeg" },
+                Slurp("test/itakuee_nsfw.jpg"),
+            },
         },
     }
     process_entry_framework(tests, mocks)

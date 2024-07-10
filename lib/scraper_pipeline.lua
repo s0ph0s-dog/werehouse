@@ -15,6 +15,7 @@ local scrapers = {
     require_only("scrapers.furaffinity"),
     require_only("scrapers.e621"),
     require_only("scrapers.cohost"),
+    require_only("scrapers.itakuee"),
     require_only("scrapers.test"),
 }
 
@@ -22,6 +23,7 @@ local CANONICAL_DOMAINS_WITH_TAGS = {
     "www.furaffinity.net",
     "e621.net",
     "cohost.org",
+    "itaku.ee",
 }
 
 local SITE_TO_POST_URL_MAP = {
@@ -459,13 +461,17 @@ local function fetch_files(model, queue_entry, task)
     end
     for i = 1, #task.fetch do
         local record = task.fetch[i]
-        Log(kLogVerbose, "Downloading %s…" % { record.raw_image_uri })
-        local body, content_type = fetch_record_file(record.raw_image_uri)
-        if not body then
-            return nil, PermScraperError(content_type)
+        if record.image_data then
+            Log(kLogVerbose, "Not downloading, image already has image_data")
+        else
+            Log(kLogVerbose, "Downloading %s…" % { record.raw_image_uri })
+            local body, content_type = fetch_record_file(record.raw_image_uri)
+            if not body then
+                return nil, PermScraperError(content_type)
+            end
+            record.image_data = body
+            record.mime_type = content_type
         end
-        record.image_data = body
-        record.mime_type = content_type
         if record.thumbnails then
             for j = 1, #record.thumbnails do
                 local thumbnail = record.thumbnails[j]
