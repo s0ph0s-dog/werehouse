@@ -179,12 +179,9 @@ local function guess_with_head(link)
         return false
     elseif status ~= 200 then
         return false, "%d while fetching %s" % { status, link }
-    elseif
-        headers["Content-Type"] and headers["Content-Type"]:startswith("image/")
-    then
-        return true
     else
-        return false
+        return headers["Content-Type"]
+            and headers["Content-Type"]:startswith("image/")
     end
 end
 
