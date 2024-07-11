@@ -277,42 +277,43 @@ local function check_for_duplicates(model, queue_entry, task)
     if not task.archive then
         return task
     end
-    if task.no_dupe_check then
-        return task
-    end
     -- Check for duplicate sources already in the database.
     ---@type DuplicateData[]
     local duplicates = {}
-    if task.discovered_sources then
-        local err = check_for_duplicates_helper(
-            model,
-            duplicates,
-            task.discovered_sources,
-            "discovered"
-        )
-        if err then
-            return nil, err
+    if not task.no_dupe_check then
+        if task.discovered_sources then
+            local err = check_for_duplicates_helper(
+                model,
+                duplicates,
+                task.discovered_sources,
+                "discovered"
+            )
+            if err then
+                return nil, err
+            end
         end
     end
     for _, data in ipairs(task.archive) do
-        local this_err = check_for_duplicates_helper(
-            model,
-            duplicates,
-            { data.this_source },
-            "this"
-        )
-        if this_err then
-            return nil, this_err
-        end
-        if data.additional_sources then
-            local addtnl_err = check_for_duplicates_helper(
+        if not task.no_dupe_check then
+            local this_err = check_for_duplicates_helper(
                 model,
                 duplicates,
-                data.additional_sources,
-                "additional"
+                { data.this_source },
+                "this"
             )
-            if addtnl_err then
-                return nil, addtnl_err
+            if this_err then
+                return nil, this_err
+            end
+            if data.additional_sources then
+                local addtnl_err = check_for_duplicates_helper(
+                    model,
+                    duplicates,
+                    data.additional_sources,
+                    "additional"
+                )
+                if addtnl_err then
+                    return nil, addtnl_err
+                end
             end
         end
         -- Hash & thumbnail the image.
@@ -350,9 +351,15 @@ local function check_for_duplicates(model, queue_entry, task)
             end
         end
     end
+    if task.no_dupe_check then
+        return task
+    end
     if #duplicates > 0 then
         Log(kLogInfo, "Found duplicates: %s" % { EncodeJson(duplicates) })
-        return RequestHelpEntryTask { d = HelpWithDuplicates(task, duplicates) }
+        return RequestHelpEntryTask(
+            { d = HelpWithDuplicates(task, duplicates) },
+            task.discovered_sources
+        )
     end
     Log(kLogVerbose, "Found no duplicates by source link")
     return task
@@ -681,6 +688,55 @@ local function queue_entry_tostr(queue_entry)
     return EncodeJson(result)
 end
 
+-- TODO: also base64 the thumbnail's image_data key
+---@return string?
+local function serialize_task(task, discovered_sources)
+    if task.d and task.d.original_task and task.d.original_task.archive then
+        local archive_task = task.d.original_task.archive
+        for i = 1, #archive_task do
+            local scraped_data = archive_task[i]
+            if scraped_data.image_data then
+                scraped_data.image_data = EncodeBase64(scraped_data.image_data)
+            end
+            if scraped_data.thumbnails then
+                for j = 1, #scraped_data.thumbnails do
+                    local thumb = scraped_data.thumbnails[j]
+                    if thumb.image_data then
+                        thumb.image_data = EncodeBase64(thumb.image_data)
+                    end
+                end
+            end
+        end
+    end
+    task.discovered_sources = discovered_sources
+    return EncodeJson(task)
+end
+
+local function deserialize_task(task_str)
+    local task, json_err = DecodeJson(task_str)
+    if not task then
+        return nil, json_err
+    end
+    if task.d and task.d.original_task and task.d.original_task.archive then
+        local archive_task = task.d.original_task.archive
+        for i = 1, #archive_task do
+            local scraped_data = archive_task[i]
+            if scraped_data and scraped_data.image_data then
+                scraped_data.image_data = DecodeBase64(scraped_data.image_data)
+            end
+            if scraped_data and scraped_data.thumbnails then
+                for j = 1, #scraped_data.thumbnails do
+                    local thumb = scraped_data.thumbnails[j]
+                    if thumb and thumb.image_data then
+                        thumb.image_data = DecodeBase64(thumb.image_data)
+                    end
+                end
+            end
+        end
+    end
+    return task
+end
+
 local function execute_task(model, queue_entry, task)
     if task.archive then
         local ok, error2 = save_sources(
@@ -702,7 +758,7 @@ local function execute_task(model, queue_entry, task)
         end
         return true
     elseif task.help then
-        local json_task = EncodeJson(task.help)
+        local json_task = serialize_task(task.help, task.discovered_sources)
         local ok, errmsg3 =
             model:setQueueItemDisambiguationRequest(queue_entry.qid, json_task)
         if not ok then
@@ -757,7 +813,7 @@ local function task_for_answering_disambiguation_req(queue_entry)
     if not disambiguation_request then
         return NoopEntryTask
     end
-    local dr, req_err = DecodeJson(queue_entry.disambiguation_request)
+    local dr, req_err = deserialize_task(queue_entry.disambiguation_request)
     if not dr or req_err then
         Log(kLogWarn, "error decoding JSON from queue: %s" % { req_err })
         return NoopEntryTask
@@ -786,6 +842,7 @@ local function task_for_answering_disambiguation_req(queue_entry)
         elseif response.d == "save" then
             local new_task = dr.d.original_task
             new_task.no_dupe_check = true
+            new_task.discovered_sources = dr.discovered_sources
             Log(kLogInfo, "Returning task: %s" % { EncodeJson(new_task) })
             ---@cast new_task FetchEntryTask
             return new_task
@@ -813,7 +870,7 @@ local function task_for_answering_disambiguation_req(queue_entry)
                         % { "{'h': something}", queue_entry.disambiguation_data }
                 )
         end
-        local new_task = FetchEntryTask(response.h)
+        local new_task = FetchEntryTask(response.h, dr.discovered_sources)
         return new_task
     end
     return NoopEntryTask
