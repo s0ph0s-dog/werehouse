@@ -1,6 +1,6 @@
 local FA_URI_EXP = assert(
     re.compile(
-        [[^https?://(www\.)?(fx|x)?f(u|x)raffinity\.net/(view|full)/([0-9]+)]]
+        [[^https?://(www\.)?(fx|x|vx)?f(u|x)raffinity\.net/(view|full)/([0-9]+)]]
     )
 )
 local RATING_MAP = {
