@@ -790,6 +790,11 @@ local queries = {
             WHERE spl_entry_id = ? AND tag_id = ?;]],
         delete_pl_negative_tag = [[DELETE FROM "pl_entry_negative_tags"
             WHERE spl_entry_id = ? AND tag_id = ?;]],
+        delete_handled_queue_entries = [[DELETE FROM "queue" WHERE
+            (
+                "tombstone" = 2 OR
+                ("tombstone" = 1 AND "status" LIKE 'Duplicate%')
+            ) AND "qid" != (SELECT MAX("qid") FROM "queue");]],
         update_queue_item_status = [[UPDATE "queue"
             SET "status" = ?, "tombstone" = ?
             WHERE qid = ?;]],
@@ -2236,6 +2241,10 @@ function Model:findSimilarQueueHashes(hash, max_distance)
         hash,
         max_distance
     )
+end
+
+function Model:cleanUpQueue()
+    return self.conn:execute(queries.model.delete_handled_queue_entries)
 end
 
 function Model:create_savepoint(name)

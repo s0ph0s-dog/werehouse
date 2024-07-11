@@ -1213,30 +1213,37 @@ local render_queue = login_required(function(r, user_record)
 end)
 
 local accept_queue = login_required(function(r)
-    if not r.params.qids then
-        return Fm.serve400("Must select at least one queue entry.")
-    end
-    if r.params.delete then
-        local ok, err = Model:deleteFromQueue(r.params.qids)
-        if not ok then
-            r.session.error = err
-        end
-    elseif r.params.tryagain then
-        local ok, err = Model:resetQueueItemStatus(r.params.qids)
-        if not ok then
-            r.session.error = err
-        end
-    elseif r.params.error then
-        local ok, err = Model:setQueueItemsStatusAndDescription(
-            r.params.qids,
-            1,
-            "Manually forced error"
-        )
+    if r.params.cleanup then
+        local ok, err = Model:cleanUpQueue()
         if not ok then
             r.session.error = err
         end
     else
-        return Fm.serve400()
+        if not r.params.qids then
+            return Fm.serve400("Must select at least one queue entry.")
+        end
+        if r.params.delete then
+            local ok, err = Model:deleteFromQueue(r.params.qids)
+            if not ok then
+                r.session.error = err
+            end
+        elseif r.params.tryagain then
+            local ok, err = Model:resetQueueItemStatus(r.params.qids)
+            if not ok then
+                r.session.error = err
+            end
+        elseif r.params.error then
+            local ok, err = Model:setQueueItemsStatusAndDescription(
+                r.params.qids,
+                1,
+                "Manually forced error"
+            )
+            if not ok then
+                r.session.error = err
+            end
+        else
+            return Fm.serve400()
+        end
     end
     return Fm.serveRedirect(r.session.after_dialog_action, 302)
 end)
