@@ -415,6 +415,7 @@ local queries = {
                 retry_count
             FROM queue
             WHERE tombstone = 0
+            AND ( (disambiguation_request IS NULL) = (disambiguation_data IS NULL) )
             ORDER BY added_on ASC;]],
         get_queue_entry_count = [[SELECT COUNT(*) AS count FROM "queue";]],
         get_queue_entries_paginated = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data

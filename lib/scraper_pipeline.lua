@@ -317,6 +317,11 @@ local function check_for_duplicates(model, queue_entry, task)
             end
         end
         -- Hash & thumbnail the image.
+        assert(
+            data.image_data,
+            "Task made it to check_for_duplicates without having downloaded the image. Something was supposed to have been fetched from "
+                .. data.raw_image_uri
+        )
         local imageu8, img_err = img.loadbuffer(data.image_data)
         if not imageu8 then
             Log(kLogInfo, "Failed to decode the image: %s" % { img_err })
