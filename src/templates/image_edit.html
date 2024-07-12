@@ -221,6 +221,7 @@
     // Pressing enter while in a form field causes this.
     if (submitter == dummy) {
       initiatingElement = active;
+      return null;
     }
     if (initiatingElement.name.startsWith("add_") || initiatingElement.id.startsWith("add_")) {
       answer.action = action.add;
@@ -245,18 +246,31 @@
     }
   }
 
-  form.addEventListener("submit", (event) => {
+  function handle_submit(event) {
     console.log(event);
     const active = document.activeElement;
-    const answer = what_happened(event.submitter, active);
-    if (answer.action == action.add) {
+    const submitter = event.submitter == null ? event.srcElement : event.submitter;
+    const answer = what_happened(submitter, active);
+    if (answer === null) {
+      event.preventDefault();
+      return;
+    } else if (answer.action == action.add) {
       event.preventDefault();
       add_pending_row(answer.kind);
     } else if (answer.action == action.delete) {
       event.preventDefault();
       handle_delete(event, answer.kind);
     }
-  });
+  }
+
+  form.addEventListener("submit", handle_submit);
+  for (const [key, value] of Object.entries(kind_map)) {
+    value.add_field.addEventListener("keyup", (event) => {
+      if (event.which === 13) {
+        handle_submit(event);
+      }
+    });
+  }
 </script>
 {% end %}{% render("layouts/main", { title = "Editing Record " ..
 tostring(image.image_id), user = user }) %}
