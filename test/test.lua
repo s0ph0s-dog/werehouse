@@ -285,8 +285,8 @@ function TestScraperPipeline:testValidBskyLinks()
     }
     local expected = {
         fetch = table.map({
-            "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreib2v6upf5gz7q22jpdnrh2fwhtn6yexrsnbp6uh7ythgq3obhf7ia@jpeg",
-            "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4gjc5765wbtvrkdxysyvaewz/bafkreidjkqudkq2m6pojavuelcud2fez2eojxiflnxedimplumiygu76pe@jpeg",
+            "https://bsky.social/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3A4gjc5765wbtvrkdxysyvaewz&cid=bafkreib2v6upf5gz7q22jpdnrh2fwhtn6yexrsnbp6uh7ythgq3obhf7ia",
+            "https://bsky.social/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3A4gjc5765wbtvrkdxysyvaewz&cid=bafkreidjkqudkq2m6pojavuelcud2fez2eojxiflnxedimplumiygu76pe",
         }, function(item)
             return {
                 authors = {
@@ -343,9 +343,9 @@ function TestScraperPipeline:testBskyLinkWithNoAspectRatio()
     }
     local expected = {
         fetch = table.map({
-            "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreie4pcim2xsuzgjstzhprtkfjiam2vqlgygjhxujiduvoxs5z2opr4@jpeg",
-            "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreiag6auhhw5by6nrkmgzzhtxetqtmsa55o3o7rnyzwhohxga3cfpoq@jpeg",
-            "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreibxygqam6gddpcexktzuup6js52g2fx73ytip3ptdetc4d6g3kq4u@jpeg",
+            "https://bsky.social/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3Abkq6i3w4hg7zkzuf5phyfdxg&cid=bafkreie4pcim2xsuzgjstzhprtkfjiam2vqlgygjhxujiduvoxs5z2opr4",
+            "https://bsky.social/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3Abkq6i3w4hg7zkzuf5phyfdxg&cid=bafkreiag6auhhw5by6nrkmgzzhtxetqtmsa55o3o7rnyzwhohxga3cfpoq",
+            "https://bsky.social/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3Abkq6i3w4hg7zkzuf5phyfdxg&cid=bafkreibxygqam6gddpcexktzuup6js52g2fx73ytip3ptdetc4d6g3kq4u",
         }, function(item)
             return {
                 authors = {
