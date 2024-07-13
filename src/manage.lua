@@ -39,6 +39,9 @@ local function help()
     print(
         "- redo_bad_disambig_req: Redo all queries that require disambiguation, to fix a bad disambiguation request."
     )
+    print(
+        "- fix_0wh (-d): Fix database entries for images that have unrealistically small width or height."
+    )
 end
 
 local function for_each_user(fn)
@@ -488,6 +491,60 @@ local function clean_orphan_files(other_args)
     end
 end
 
+local function fix_0wh(other_args)
+    local dry_run = other_args[1] == "-d"
+    if not img then
+        Log(
+            kLogError,
+            "No img library, unable to fix records with bad width/height"
+        )
+        return
+    end
+    for_each_user(function(_, _, model)
+        local SP_DIMFIX = "fix_dimensions_for_images"
+        local query =
+            "SELECT image_id, file FROM images WHERE width < 10 OR height < 10;"
+        local wquery =
+            "UPDATE images SET width = ?, height = ? WHERE image_id = ?;"
+        model:create_savepoint(SP_DIMFIX)
+        local wrongdim_files, wdf_err = model.conn:fetchAll(query)
+        if not wrongdim_files then
+            Log(kLogError, wdf_err)
+            model:rollback(SP_DIMFIX)
+            return 0
+        end
+        for j = 1, #wrongdim_files do
+            local user_file = wrongdim_files[j]
+            local _, fullpath =
+                FsTools.make_image_path_from_filename(user_file.file)
+            local imageu8, i_err = img.loadfile(fullpath)
+            if imageu8 and not dry_run then
+                local wok, werr = model.conn:execute(
+                    wquery,
+                    imageu8:width(),
+                    imageu8:height(),
+                    user_file.image_id
+                )
+                if not wok then
+                    model:rollback(SP_DIMFIX)
+                    Log(kLogError, werr)
+                    return 1
+                end
+            elseif dry_run then
+                Log(
+                    kLogInfo,
+                    "Would've updated dimensions for %d (%s)"
+                        % { user_file.image_id, user_file.file }
+                )
+            else
+                Log(kLogError, i_err)
+            end
+        end
+        model:release_savepoint(SP_DIMFIX)
+        return 0
+    end)
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
@@ -498,6 +555,7 @@ local commands = {
     redo_bad_disambig_req = redo_bad_disambig_req,
     find_hash_params = find_hash_params,
     clean_orphan_files = clean_orphan_files,
+    fix_0wh = fix_0wh,
 }
 
 local remaining_args = arg

@@ -323,6 +323,8 @@ local function check_for_duplicates(model, queue_entry, task)
         if not imageu8 then
             Log(kLogInfo, "Failed to decode the image: %s" % { img_err })
         else
+            data.width = imageu8:width()
+            data.height = imageu8:height()
             local thumbnail, thumb_err = make_thumbnail(imageu8)
             if not thumbnail then
                 Log(
