@@ -16,6 +16,7 @@ local scrapers = {
     require_only("scrapers.e621"),
     require_only("scrapers.cohost"),
     require_only("scrapers.itakuee"),
+    require_only("scrapers.mastodon"),
     require_only("scrapers.test"),
 }
 

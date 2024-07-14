@@ -19,6 +19,7 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/scrapers/twitter.lua \
 	lib/scrapers/cohost.lua \
 	lib/scrapers/itakuee.lua \
+	lib/scrapers/mastodon.lua \
 	lib/scrapers/furaffinity.lua \
 	lib/scrapers/e621.lua \
 	lib/scrapers/test.lua \

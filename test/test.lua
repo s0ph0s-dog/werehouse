@@ -1946,6 +1946,114 @@ function TestScraperPipeline:testItakuEEWorks()
     process_entry_framework(tests, mocks)
 end
 
+function TestScraperPipeline:testValidMastodonLinks()
+    local input_image = "https://gulp.cafe/@greedygulo/112300431726424371"
+    local input_gifv = "https://thicc.horse/@QuanZillan/112697596954622744"
+    local tests = {
+        {
+            input = { input_image },
+            expected = {
+                {
+                    fetch = {
+                        {
+                            authors = {
+                                {
+                                    display_name = "GreedyGulo",
+                                    handle = "greedygulo",
+                                    profile_url = "https://gulp.cafe/@greedygulo",
+                                },
+                            },
+                            canonical_domain = "gulp.cafe",
+                            height = 1900,
+                            incoming_tags = {
+                                "furryart",
+                                "yiff",
+                                "transformation",
+                                "condomtf",
+                                "objecttf",
+                            },
+                            kind = 1,
+                            mime_type = "image/png",
+                            rating = 3,
+                            raw_image_uri = "https://cdn.masto.host/gulpcafe/media_attachments/files/112/300/431/644/077/575/original/2f271e53889f543e.png",
+                            this_source = "https://gulp.cafe/@greedygulo/112300431726424371",
+                            thumbnails = {
+                                {
+                                    height = 436,
+                                    raw_uri = "https://cdn.masto.host/gulpcafe/media_attachments/files/112/300/431/644/077/575/small/2f271e53889f543e.png",
+                                    scale = 1,
+                                    width = 528,
+                                },
+                            },
+                            width = 2300,
+                        },
+                    },
+                },
+                nil,
+            },
+        },
+        {
+            input = { input_gifv },
+            expected = {
+                {
+                    fetch = {
+                        {
+                            authors = {
+                                {
+                                    display_name = "Xillin",
+                                    handle = "QuanZillan",
+                                    profile_url = "https://thicc.horse/@QuanZillan",
+                                },
+                            },
+                            canonical_domain = "thicc.horse",
+                            height = 620,
+                            incoming_tags = {
+                                "horsecock",
+                                "infestation",
+                                "animation",
+                                "Art",
+                                "furry",
+                                "porn",
+                                "nsfw",
+                                "horse",
+                                "worms",
+                            },
+                            kind = 5,
+                            mime_type = "video/mp4",
+                            rating = 3,
+                            raw_image_uri = "https://files.thicc.horse/media_attachments/files/112/697/583/091/298/258/original/509430b0cf6f1d1e.mp4",
+                            this_source = "https://thicc.horse/@QuanZillan/112697596954622744",
+                            thumbnails = {
+                                {
+                                    height = 453,
+                                    raw_uri = "https://files.thicc.horse/media_attachments/files/112/697/583/091/298/258/small/509430b0cf6f1d1e.png",
+                                    scale = 1,
+                                    width = 640,
+                                },
+                            },
+                            width = 876,
+                        },
+                    },
+                },
+                nil,
+            },
+        },
+    }
+    local mocks = {
+        fetch_mock_head_html_200(input_image),
+        fetch_mock_head_html_200(input_gifv),
+        {
+            whenCalledWith = "https://thicc.horse/api/v1/statuses/112697596954622744",
+            thenReturn = { 200, {}, Slurp("test/mastodon_gifv.json") },
+        },
+        {
+            whenCalledWith = "https://gulp.cafe/api/v1/statuses/112300431726424371",
+            thenReturn = { 200, {}, Slurp("test/mastodon_image.json") },
+        },
+    }
+    process_entry_framework(tests, mocks)
+end
+
 TestMultipart = {}
 function TestMultipart:testEncode()
     local body, boundary = multipart.encode { foo = "bar" }
