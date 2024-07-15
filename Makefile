@@ -38,6 +38,7 @@ SRCS := src/.init.lua \
     src/icon.svg \
     src/sw.js \
     src/index.js \
+    src/htmx@2.0.1.min.js \
     src/manifest.webmanifest \
     src/templates/400.html \
     src/templates/404.html \

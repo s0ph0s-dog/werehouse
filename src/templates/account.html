@@ -40,7 +40,7 @@
 </p>
 <p><a href="/share-ping-list/add">Add New Share Option…</a></p>
 {% if share_ping_lists and #share_ping_lists > 0 then %}
-<ul>
+<ul hx-boost="true">
   {% for i = 1, #share_ping_lists do local share_ping_list = share_ping_lists[i]
   %}
   <li>

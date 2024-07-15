@@ -1,6 +1,6 @@
 {% function block.content() %}
 <h1>Tag Rules</h1>
-<p><a href="/tag-rule/add">Add Tag Rule…</a></p>
+<p><a href="/tag-rule/add" hx-boost="true">Add Tag Rule…</a></p>
 {% if pages.current > 1 and #tag_rule_records == 0 then %}
 <p>You've fallen off the end of the page counter!</p>
 {% elseif #tag_rule_records == 0 then %}
@@ -41,7 +41,7 @@
         <td class="txt">{%& item.incoming_name %}</td>
         <td class="txt">{%& item.incoming_domain %}</td>
         <td class="txt">{%& item.tag_name %}</td>
-        <td class="txt">
+        <td class="txt" hx-boost="true">
           <a href="/tag-rule/{%& item.tag_rule_id %}">View</a> or
           <a href="/tag-rule/{%& item.tag_rule_id %}/edit">Edit…</a>
         </td>
