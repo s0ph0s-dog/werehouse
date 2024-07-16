@@ -604,10 +604,17 @@ local queries = {
             LEFT NATURAL JOIN images_for_gallery
             WHERE ig_id = ?
             ORDER BY images_in_group."order";]],
-        get_image_groups_by_image_id = [[SELECT image_group.ig_id, image_group.name
+        get_image_groups_by_image_id = [[SELECT DISTINCT
+                image_group.ig_id,
+                image_group.name,
+                COUNT(images_in_group.image_id) OVER (PARTITION BY image_group.ig_id) as group_count
             FROM image_group
-            JOIN images_in_group ON image_group.ig_id = images_in_group.ig_id
-            WHERE images_in_group.image_id = ?;]],
+            JOIN images_in_group ON images_in_group.ig_id = image_group.ig_id
+            WHERE images_in_group.ig_id IN (
+                SELECT ig_id
+                FROM images_in_group
+                WHERE image_id = ?
+            );]],
         get_prev_next_images_in_group = [[SELECT
                 images_in_group."order" AS my_order,
                 siblings.image_id,
@@ -1691,8 +1698,10 @@ function Model:getPrevNextImagesInGroupForImage(ig_id, image_id)
     for _, result in ipairs(results) do
         if result.my_order > result.sibling_order then
             siblings.prev = result.image_id
+            siblings.my_order = result.my_order
         elseif result.my_order < result.sibling_order then
             siblings.next = result.image_id
+            siblings.my_order = result.my_order
         end
     end
     return siblings

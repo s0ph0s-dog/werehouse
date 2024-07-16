@@ -3,7 +3,8 @@
   {% if ig.siblings and ig.siblings.prev then %}
   <a href="/image/{%& ig.siblings.prev %}">←&nbsp;Previous</a>{% else
   %}<span>←&nbsp;Previous</span>{% end %}<a href="/image-group/{%& ig.ig_id %}"
-    >Group: {%& ig.name %}</a
+    >Group: {%& ig.name %} ({%& ig.siblings.my_order %}/{%& ig.group_count
+    %})</a
   >{% if ig.siblings and ig.siblings.next then %}<a
     href="/image/{%& ig.siblings.next %}"
     >Next&nbsp;→</a
