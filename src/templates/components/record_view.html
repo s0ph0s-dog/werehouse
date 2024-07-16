@@ -14,11 +14,23 @@ record.mime_type == "video/mp4") then %}
   width="{%& record.width %}"
   height="{%& record.height %}"
   src="/image-file/{%& record.file %}"
+  data-video-loop-toggled
 >
   Your browser doesn't support this video. Try
   <a href="{%& record.file %}">downloading the file</a> to play it in an
   application on your computer.
 </video>
+<label>
+  <input type="checkbox" data-video-loop-toggler />Loop video
+</label>
+<script>
+  document.querySelectorAll("[data-video-loop-toggler]").forEach(el => {
+    const vp = document.querySelector("[data-video-loop-toggled]");
+    el.addEventListener("change", event => {
+      vp.loop = event.srcElement.checked;
+    })
+  })
+</script>
 {% else %}
 <p class="height-limit">This record kind isn't supported yet.</p>
 {% end %}
