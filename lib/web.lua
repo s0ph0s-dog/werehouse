@@ -794,6 +794,44 @@ local accept_edit_image = login_required(function(r, user_record)
     return render_image_internal(r, user_record)
 end)
 
+local function check_image_against_telegram_rules(image)
+    if image.kind == DbUtil.k.ImageKind.Image then
+        -- TODO: support resizing image down to within the limit
+        if image.file_size > 10 * 1000 * 1000 then
+            return false,
+                "Image file size is too large (must be smaller than 10 MB)"
+        end
+        if (image.width + image.height) > 10000 then
+            return false,
+                "Image dimensions are too large (width + height must be less than 10,000 px)"
+        end
+        local aspect_ratio = image.width / image.height
+        if aspect_ratio > 20 or aspect_ratio < 0.05 then
+            return false,
+                "Image aspect ratio is too extreme (must be at most 20:1)"
+        end
+        return true
+    elseif image.kind == DbUtil.k.ImageKind.Video then
+        if image.file_size > 50 * 1000 * 1000 then
+            return false,
+                "Video file size is too large (must be smaller than 50 MB)"
+        end
+        if image.mime_type ~= "video/mp4" then
+            return false,
+                "Video file container is not supported by Telegram (must be mp4)"
+        end
+        return true
+    elseif image.kind == DbUtil.k.ImageKind.Animation then
+        if image.file_size > 50 * 1000 * 1000 then
+            return false,
+                "Animation file size is too large (must be smaller than 50 MB)"
+        end
+        return true
+    else
+        return false, "Telegram doesn't support this kind of file"
+    end
+end
+
 local render_image_share = login_required(function(r, user_record)
     local image_id = tonumber(r.params.image_id)
     local spl_id = tonumber(r.params.to)
@@ -829,6 +867,10 @@ local render_image_share = login_required(function(r, user_record)
         return Fm.serve500()
     end
     if r.params.share then
+        local share_ok, share_err = check_image_against_telegram_rules(image)
+        if not share_ok then
+            return Fm.serveError(400, share_err)
+        end
         local _, file_path = FsTools.make_image_path_from_filename(image.file)
         local chat_id = (spl and spl.share_data.chat_id) or tg_userid
         if image.kind == DbUtil.k.ImageKind.Image then
@@ -840,18 +882,6 @@ local render_image_share = login_required(function(r, user_record)
                 r.params.spoiler ~= nil
             )
         elseif image.kind == DbUtil.k.ImageKind.Video then
-            if image.file_size > (49 * 1024 * 1024) then
-                return Fm.serveError(
-                    400,
-                    "Video too large for Telegram (must be < 50 MB)"
-                )
-            end
-            if image.mime_type ~= "video/mp4" then
-                return Fm.serveError(
-                    400,
-                    "Unsupported video type for Telegram (must be MP4)"
-                )
-            end
             Bot.post_video(
                 chat_id,
                 file_path,
@@ -860,23 +890,6 @@ local render_image_share = login_required(function(r, user_record)
                 r.params.spoiler ~= nil
             )
         elseif image.kind == DbUtil.k.ImageKind.Animation then
-            if image.file_size > (49 * 1024 * 1024) then
-                return Fm.serveError(
-                    400,
-                    "Animation too large for Telegram (must be < 50 MB)"
-                )
-            end
-            if
-                not (
-                    image.mime_type == "video/mp4"
-                    or image.mime_type == "image/gif"
-                )
-            then
-                return Fm.serveError(
-                    400,
-                    "Unsupported GIF type for Telegram (must be MP4 or GIF)"
-                )
-            end
             Bot.post_animation(
                 chat_id,
                 file_path,
