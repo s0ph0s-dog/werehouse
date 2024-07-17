@@ -252,7 +252,7 @@ function bot.post_image(to_chat, image_file, caption, follow_up, spoiler)
         Log(kLogWarn, EncodeJson(err))
         return
     end
-    if follow_up then
+    if follow_up and #follow_up > 0 then
         local ping_result
         ping_result, err = api.reply_to_message(photo_result.result, follow_up)
         if not ping_result then
