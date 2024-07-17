@@ -833,6 +833,8 @@ local queries = {
                 "tombstone" = 2 OR
                 ("tombstone" = 1 AND "status" LIKE 'Duplicate%')
             ) AND "qid" != (SELECT MAX("qid") FROM "queue");]],
+        delete_share_record_by_id = [[DELETE FROM "share_records" WHERE
+            "share_id" = ?;]],
         update_queue_item_status = [[UPDATE "queue"
             SET "status" = ?, "tombstone" = ?
             WHERE qid = ?;]],
@@ -2348,6 +2350,13 @@ function Model:updatePendingShareRecordWithDateNow(share_id)
         return nil, err
     end
     return true
+end
+
+function Model:deleteShareRecords(share_ids)
+    return self:_delete_by_id(
+        queries.model.delete_share_record_by_id,
+        share_ids
+    )
 end
 
 function Model:create_savepoint(name)

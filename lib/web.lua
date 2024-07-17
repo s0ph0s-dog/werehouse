@@ -908,6 +908,17 @@ local render_image_share = login_required(function(r, user_record)
         Log(kLogInfo, sources_err)
         return Fm.serve500()
     end
+    if r.params.cancel then
+        if not r.params.share_id then
+            return Fm.serveError(400, "Must include share_id in request")
+        end
+        local d_ok, d_err = Model:deleteShareRecords { r.params.share_id }
+        if not d_ok then
+            Log(kLogInfo, d_err)
+            return Fm.serveError(500)
+        end
+        return Fm.serveRedirect("/image/" .. image_id, 302)
+    end
     if r.params.share then
         local token_ok, token_err =
             Model:updatePendingShareRecordWithDateNow(r.params.share_id)
