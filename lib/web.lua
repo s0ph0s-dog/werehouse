@@ -515,6 +515,10 @@ local function render_image_internal(r, user_record)
         end
         ig.siblings = siblings
     end
+    local share_records, sr_err = Model:getShareRecordsForImage(image_id)
+    if not share_records then
+        Log(kLogInfo, sr_err)
+    end
     local pending_artists = r.params.pending_artists
     if pending_artists then
         pending_artists = table.filter(pending_artists, not_emptystr)
@@ -547,6 +551,7 @@ local function render_image_internal(r, user_record)
         delete_sources = delete_sources,
         pending_sources = pending_sources,
         groups = groups,
+        share_records = share_records,
         category = r.params.category or image.category,
         rating = r.params.rating or image.rating,
         fn = image_functions,
@@ -567,28 +572,65 @@ local render_image = login_required(function(r, user_record)
             if not share_option then
                 return Fm.serveError(400, "Invalid share option")
             end
-            return Fm.serveRedirect(
-                "/image/%d/share?to=%d" % { r.params.image_id, share_option },
-                302
+            local spl, spl_err = Model:getSharePingListById(share_option, true)
+            if not spl then
+                Log(
+                    kLogInfo,
+                    "Error while looking up share ping list: %s" % { spl_err }
+                )
+                return Fm.serveError(400, "Invalid share option")
+            end
+            local share_id, sh_err = Model:createPendingShareRecordForImage(
+                r.params.image_id,
+                spl.name
             )
+            if not share_id then
+                Log(kLogInfo, sh_err)
+                return Fm.serve500()
+            end
+            local redirect_url = EncodeUrl {
+                path = "/image/%d/share" % { r.params.image_id },
+                params = {
+                    { "to", share_option },
+                    { "t", share_id },
+                },
+            }
+            return Fm.serveRedirect(redirect_url, 302)
         end
         for tg_userid_str in r.params.share_option:gmatch("%((%d+)%)") do
             local tg_userid = tonumber(tg_userid_str)
             if not tg_userid then
                 return Fm.serveError(400, "Invalid Telegram user ID")
             end
-            if
-                not Accounts:isTelegramAccountLinkedToUser(
+            local tg_account, tg_err =
+                Accounts:getTelegramAccountByUserIdAndTgUserId(
                     user_record.user_id,
                     tg_userid
                 )
-            then
+            if not tg_account then
+                Log(
+                    kLogInfo,
+                    "Error while looking up Telegram account for user %s: %s"
+                        % { user_record.user_id, tg_err }
+                )
                 return Fm.serveError(400, "That isn't your Telegram account")
             end
-            return Fm.serveRedirect(
-                "/image/%d/share?to_user=%d" % { r.params.image_id, tg_userid },
-                302
+            local share_id, sh_err = Model:createPendingShareRecordForImage(
+                r.params.image_id,
+                "@" .. tg_account.tg_username
             )
+            if not share_id then
+                Log(kLogInfo, sh_err)
+                return Fm.serve500()
+            end
+            local redirect_url = EncodeUrl {
+                path = "/image/%d/share" % { r.params.image_id },
+                params = {
+                    { "to_user", tg_userid },
+                    { "t", share_id },
+                },
+            }
+            return Fm.serveRedirect(redirect_url, 302)
         end
     end
     return render_image_internal(r, user_record)
@@ -849,12 +891,12 @@ local render_image_share = login_required(function(r, user_record)
             return Fm.serve500()
         end
     elseif tg_userid then
-        if
-            not Accounts:isTelegramAccountLinkedToUser(
+        local tg_account, ta_err =
+            Accounts:getTelegramAccountByUserIdAndTgUserId(
                 user_record.user_id,
                 tg_userid
             )
-        then
+        if not tg_account then
             return Fm.serveError(
                 500,
                 "That Telegram account isn't linked to your account"
@@ -867,6 +909,15 @@ local render_image_share = login_required(function(r, user_record)
         return Fm.serve500()
     end
     if r.params.share then
+        local token_ok, token_err =
+            Model:updatePendingShareRecordWithDateNow(r.params.share_id)
+        if not token_ok then
+            Log(kLogInfo, token_err)
+            return Fm.serveError(
+                400,
+                "The share token you used is invalid. Did you double-click the share button?"
+            )
+        end
         local share_ok, share_err = check_image_against_telegram_rules(image)
         if not share_ok then
             return Fm.serveError(400, share_err)
@@ -939,6 +990,7 @@ local render_image_share = login_required(function(r, user_record)
         sources_text_size = form_sources_text:linecount(),
         ping_text = form_ping_text,
         ping_text_size = form_ping_text:linecount(),
+        share_id = r.params.t,
         fn = image_functions,
     })
 end)
@@ -960,15 +1012,15 @@ local render_image_group_share = login_required(function(r, user_record)
             return Fm.serve500()
         end
     elseif tg_userid then
-        if
-            not Accounts:isTelegramAccountLinkedToUser(
+        local tg_account, ta_err =
+            Accounts:getTelegramAccountByUserIdAndTgUserId(
                 user_record.user_id,
                 tg_userid
             )
-        then
+        if not tg_account then
             return Fm.serveError(
                 500,
-                "That Telegram account isn't linked to your Werehouse account"
+                "That Telegram account isn't linked to your account"
             )
         end
     end
@@ -986,7 +1038,31 @@ local render_image_group_share = login_required(function(r, user_record)
         image.file_path = file_path
     end
     if r.params.share then
+        local token_ok, token_err =
+            Model:updatePendingShareRecordWithDateNow(r.params.share_id)
+        if not token_ok then
+            Log(kLogInfo, token_err)
+            return Fm.serveError(
+                400,
+                "The share token you used is invalid. Did you double-click the share button?"
+            )
+        end
         local chat_id = (spl and spl.share_data.chat_id) or tg_userid
+        local rule_errors = {}
+        for i = 1, #images do
+            local image = images[i]
+            local i_ok, i_err = check_image_against_telegram_rules(image)
+            if not i_ok then
+                rule_errors[#rule_errors + 1] = "Image %d: %s"
+                    % {
+                        image.image_id,
+                        i_err,
+                    }
+            end
+        end
+        if #rule_errors > 0 then
+            Fm.serveError(400, "Bad Request", rule_errors)
+        end
         Bot.post_media_group(chat_id, images, r.params.ping_text)
         return Fm.serveRedirect("/image-group/" .. ig_id, 302)
     end
@@ -1033,6 +1109,7 @@ local render_image_group_share = login_required(function(r, user_record)
         share_ping_list = spl,
         ping_text = form_ping_text,
         ping_text_size = form_ping_text:linecount(),
+        share_id = r.params.t,
         fn = image_functions,
         print = print,
         EncodeJson = EncodeJson,
@@ -1781,29 +1858,67 @@ local render_image_group = login_required(function(r, user_record)
             if not share_option then
                 return Fm.serveError(400, "Invalid share option")
             end
-            return Fm.serveRedirect(
-                "/image-group/%d/share?to=%d" % { r.params.ig_id, share_option },
-                302
-            )
+            local spl, spl_err = Model:getSharePingListById(share_option, true)
+            if not spl then
+                Log(
+                    kLogInfo,
+                    "Error while looking up share ping list: %s" % { spl_err }
+                )
+                return Fm.serveError(400, "Invalid share option")
+            end
+            local share_id, sh_err =
+                Model:createPendingShareRecordForImageGroup(
+                    r.params.ig_id,
+                    spl.name
+                )
+            if not share_id then
+                Log(kLogInfo, sh_err)
+                return Fm.serve500()
+            end
+            local redirect_url = EncodeUrl {
+                path = "/image-group/%d/share" % { r.params.ig_id },
+                params = {
+                    { "to", share_option },
+                    { "t", share_id },
+                },
+            }
+            return Fm.serveRedirect(redirect_url, 302)
         end
         for tg_userid_str in r.params.share_option:gmatch("%((%d+)%)") do
             local tg_userid = tonumber(tg_userid_str)
             if not tg_userid then
                 return Fm.serveError(400, "Invalid Telegram user ID")
             end
-            if
-                not Accounts:isTelegramAccountLinkedToUser(
+            local tg_account, tg_err =
+                Accounts:getTelegramAccountByUserIdAndTgUserId(
                     user_record.user_id,
                     tg_userid
                 )
-            then
+            if not tg_account then
+                Log(
+                    kLogInfo,
+                    "Error while looking up Telegram account for user %s: %s"
+                        % { user_record.user_id, tg_err }
+                )
                 return Fm.serveError(400, "That isn't your Telegram account")
             end
-            return Fm.serveRedirect(
-                "/image-group/%d/share?to_user=%d"
-                    % { r.params.ig_id, tg_userid },
-                302
-            )
+            local share_id, sh_err =
+                Model:createPendingShareRecordForImageGroup(
+                    r.params.ig_id,
+                    "@" .. tg_account.tg_username
+                )
+            if not share_id then
+                Log(kLogInfo, sh_err)
+                return Fm.serve500()
+            end
+            local redirect_url = EncodeUrl {
+                path = "/image-group/%d/share" % { r.params.ig_id },
+                params = {
+                    { "to_user", tg_userid },
+                    { "t", share_id },
+                },
+            }
+            return Fm.serveRedirect(redirect_url, 302)
         end
     end
     local ig, ig_errmsg = Model:getImageGroupById(r.params.ig_id)
@@ -1815,11 +1930,17 @@ local render_image_group = login_required(function(r, user_record)
     if not images then
         Log(kLogInfo, image_errmsg)
     end
+    local share_records, sr_err =
+        Model:getShareRecordsForImageGroup(r.params.ig_id)
+    if not share_records then
+        Log(kLogInfo, sr_err)
+    end
     set_after_dialog_action(r)
     local params = {
         user = user_record,
         ig = ig,
         images = images,
+        share_records = share_records,
         fn = image_functions,
     }
     render_share_widget(user_record.user_id, params)

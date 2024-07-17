@@ -54,6 +54,10 @@ textarea {
   max-width: 100%;
 }
 
+.btn-disabled {
+  cursor: not-allowed;
+}
+
 .inline,
 .inline a,
 .inline input {

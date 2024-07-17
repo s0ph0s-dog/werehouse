@@ -9,15 +9,14 @@
   <input type="checkbox" name="spoiler_record_{%& record.image_id %}" />
   {% end %} Send as spoiler
 </label>
-{% if not group then %}
-<textarea name="sources_text" rows="{%& sources_text_size %}">
-{% else %}
-<textarea name="sources_text_record_{%& record.image_id %}" rows="{%& sources_text_size %}">
-{% end %}
+{% local ta_name = "sources_text" if group then ta_name = "sources_text_record_"
+.. tostring(record.image_id) end %}
+<textarea name="{%& ta_name %}" rows="{%& sources_text_size %}">
 {%& sources_text %}</textarea
 >
 {% end %}{% function block.content() %}
-<form class="vbox" method="POST">
+<form class="vbox" method="POST" data-once>
+  <input type="hidden" name="share_id" value="{%& share_id %}" />
   {% if images then %}{% for i = 1, #images do local image = images[i] %}{%
   block.record_view(image, image.sources_text, image.sources_text_size, true)
   %}{% end %}{% elseif image then %}{% block.record_view(image, sources_text,
@@ -32,5 +31,22 @@
     <input type="submit" name="share" value="Share" />
   </span>
 </form>
+<script>
+  document.querySelectorAll("[data-once]").forEach((el) => {
+    const buttons = el.querySelectorAll('input[type="submit"]');
+    el.addEventListener("submit", (event) => {
+      buttons.forEach((b) => {
+        b.setAttribute("aria-disabled", "true");
+        b.classList.add("btn-disabled");
+        b.addEventListener("click", (event) => {
+          if (b.getAttribute("aria-disabled") === "true") {
+            event.preventDefault();
+            return;
+          }
+        });
+      });
+    });
+  });
+</script>
 {% end %}{% render("layouts/dialog", { title = "Share " .. (ig_id or
 image.image_id) }) %}

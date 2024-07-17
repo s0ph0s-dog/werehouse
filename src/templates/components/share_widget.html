@@ -11,3 +11,13 @@
     <input type="submit" name="share" value="Share…" />
   </span>
 </form>
+{% if share_records and #share_records > 0 then %}
+<ul>
+  {% for i = 1, #share_records do local sr = share_records[i] %}
+  <li>
+    {% if sr.shared_at then %}Sent: {%& sr.shared_to %} ({%& sr.shared_at %}){%
+    else %}Unsent: {%& sr.shared_to %}{% end %}
+  </li>
+  {% end %}
+</ul>
+{% end %}

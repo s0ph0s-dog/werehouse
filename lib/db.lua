@@ -7,6 +7,7 @@ local IdPrefixes = {
     csrf = "csrf_",
     invite = "i_",
     telegram_link_request = "tglr_",
+    share = "sh_",
 }
 
 local accounts_setup = [[
@@ -200,6 +201,7 @@ local user_setup = [[
     CREATE VIEW IF NOT EXISTS "images_for_gallery" (
         image_id,
         file,
+        file_size,
         kind,
         mime_type,
         width,
@@ -212,6 +214,7 @@ local user_setup = [[
     ) AS SELECT
         images.image_id,
         images.file,
+        images.file_size,
         images.kind,
         images.mime_type,
         images.width,
@@ -331,6 +334,24 @@ local user_setup = [[
         FOREIGN KEY ("qid") REFERENCES "queue"("qid")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS "share_records" (
+        "share_id" TEXT NOT NULL UNIQUE,
+        "image_id" INTEGER,
+        "ig_id" INTEGER,
+        "shared_to" TEXT NOT NULL,
+        "shared_at" TEXT,
+        PRIMARY KEY("share_id"),
+        FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
+        ON UPDATE CASCADE ON DELETE CASCADE,
+        FOREIGN KEY ("ig_id") REFERENCES "image_group"("ig_id")
+        ON UPDATE CASCADE ON DELETE CASCADE
+    );
+
+    CREATE TRIGGER IF NOT EXISTS share_record_use_once
+        BEFORE UPDATE OF "shared_at" ON "share_records"
+        FOR EACH ROW WHEN old.shared_at NOT NULL
+        BEGIN SELECT RAISE(ROLLBACK, 'Share token already used'); END;
 ]]
 
 local queries = {
@@ -592,6 +613,7 @@ local queries = {
                 images_in_group.image_id,
                 images_in_group."order",
                 images_for_gallery.file,
+                images_for_gallery.file_size,
                 images_for_gallery.width,
                 images_for_gallery.height,
                 images_for_gallery.kind,
@@ -707,6 +729,10 @@ local queries = {
         get_approximately_equal_queue_hashes = [[SELECT qid, h1, h2, h3, h4
             FROM queue_gradienthashes
             WHERE h1 = ? OR h2 = ? OR h3 = ? OR h4 = ?;]],
+        get_share_records_for_image = [[SELECT "share_id", "shared_to", "shared_at"
+            FROM "share_records" WHERE "image_id" = ?;]],
+        get_share_records_for_image_group = [[SELECT "share_id", "shared_to", "shared_at"
+            FROM "share_records" WHERE "ig_id" = ?;]],
         insert_link_into_queue = [[INSERT INTO
             "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
             VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '')
@@ -779,6 +805,10 @@ local queries = {
         insert_queue_hash = [[INSERT INTO "queue_gradienthashes"
             ("qid", "h1", "h2", "h3", "h4")
             VALUES (?, ?, ?, ?, ?);]],
+        insert_pending_share_record_for_image = [[INSERT INTO "share_records"
+            ("share_id", "image_id", "shared_to") VALUES (?, ?, ?);]],
+        insert_pending_share_record_for_image_group = [[INSERT INTO "share_records"
+            ("share_id", "ig_id", "shared_to") VALUES (?, ?, ?);]],
         delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
         delete_image_by_id = [[DELETE FROM "images" WHERE image_id = ?;]],
         delete_artist_by_id = [[DELETE FROM "artists" WHERE artist_id = ?;]],
@@ -859,6 +889,9 @@ local queries = {
         update_queue_item_retry_count_increment_by_one = [[UPDATE "queue"
             SET retry_count = retry_count + 1
             WHERE qid = ?;]],
+        update_pending_share_record_with_date_now = [[UPDATE "share_records"
+            SET "shared_at" = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+            WHERE "share_id" = ?;]],
     },
 }
 
@@ -2082,7 +2115,7 @@ function Model:createSPLEntryWithTags(spl_id, handle, pos_tags, neg_tags)
     return true
 end
 
-function Model:getSharePingListById(spl_id)
+function Model:getSharePingListById(spl_id, skip_decode)
     local result, err = fetchOneExactly(
         self.conn,
         queries.model.get_share_ping_list_by_id,
@@ -2091,11 +2124,13 @@ function Model:getSharePingListById(spl_id)
     if not result then
         return nil, err
     end
-    local json, json_err = DecodeJson(result.share_data)
-    if not json then
-        return nil, json_err
+    if not skip_decode then
+        local json, json_err = DecodeJson(result.share_data)
+        if not json then
+            return nil, json_err
+        end
+        result.share_data = json
     end
-    result.share_data = json
     return result
 end
 
@@ -2255,6 +2290,64 @@ end
 
 function Model:cleanUpQueue()
     return self.conn:execute(queries.model.delete_handled_queue_entries)
+end
+
+function Model:createPendingShareRecordForImage(image_id, to_where)
+    local share_id = NanoID.simple_with_prefix(IdPrefixes.share)
+    local ok, err = self.conn:fetchOne(
+        queries.model.insert_pending_share_record_for_image,
+        share_id,
+        image_id,
+        to_where
+    )
+    if not ok then
+        return nil, err
+    end
+    return share_id
+end
+
+function Model:createPendingShareRecordForImageGroup(ig_id, to_where)
+    local share_id = NanoID.simple_with_prefix(IdPrefixes.share)
+    local ok, err = self.conn:fetchOne(
+        queries.model.insert_pending_share_record_for_image_group,
+        share_id,
+        ig_id,
+        to_where
+    )
+    if not ok then
+        return nil, err
+    end
+    return share_id
+end
+
+function Model:getShareRecordsForImage(image_id)
+    return self.conn:fetchAll(
+        queries.model.get_share_records_for_image,
+        image_id
+    )
+end
+
+function Model:getShareRecordsForImageGroup(ig_id)
+    return self.conn:fetchAll(
+        queries.model.get_share_records_for_image_group,
+        ig_id
+    )
+end
+
+function Model:updatePendingShareRecordWithDateNow(share_id)
+    local p_ok, p_err, err = pcall(
+        self.conn.execute,
+        self.conn,
+        queries.model.update_pending_share_record_with_date_now,
+        share_id
+    )
+    if not p_ok then
+        return nil, p_err
+    end
+    if not p_err then
+        return nil, err
+    end
+    return true
 end
 
 function Model:create_savepoint(name)
@@ -2494,16 +2587,12 @@ function Accounts:getAllTelegramAccountsForUser(user_id)
     )
 end
 
-function Accounts:isTelegramAccountLinkedToUser(user_id, tg_userid)
-    local result, err = self.conn:fetchOne(
+function Accounts:getTelegramAccountByUserIdAndTgUserId(user_id, tg_userid)
+    return self.conn:fetchOne(
         queries.accounts.get_telegram_account_by_user_id_and_tg_userid,
         user_id,
         tg_userid
     )
-    if not result or result == self.conn.NONE then
-        return false
-    end
-    return true
 end
 
 function Accounts:getAllUserIds()
