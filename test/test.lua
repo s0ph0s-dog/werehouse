@@ -229,9 +229,13 @@ TestScraperPipeline = {}
 
 function TestScraperPipeline:testMultipartBody()
     local expected =
-        '--__X_PAW_BOUNDARY__\r\nContent-Disposition: form-data; name="image"; filename="C:\\fakepath\\purple.txt"\r\nContent-Type: text/plain\r\n\r\n|test|\r\n--__X_PAW_BOUNDARY__--\r\n\r\n'
-    local result =
-        pipeline.multipart_body("__X_PAW_BOUNDARY__", "|test|", "text/plain")
+        '--__X_PAW_BOUNDARY__\r\nContent-Disposition: form-data; name="distance"\r\n\r\n10\r\n--__X_PAW_BOUNDARY__\r\nContent-Disposition: form-data; name="image"; filename="C:\\fakepath\\purple.txt"\r\nContent-Type: text/plain\r\n\r\n|test|\r\n--__X_PAW_BOUNDARY__--\r\n\r\n'
+    local result = pipeline.multipart_body(
+        "__X_PAW_BOUNDARY__",
+        10,
+        "|test|",
+        "text/plain"
+    )
     luaunit.assertEquals(result, expected)
 end
 

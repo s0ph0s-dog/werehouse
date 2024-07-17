@@ -33,9 +33,13 @@ local SITE_TO_POST_URL_MAP = {
     Twitter = "https://twitter.com/status/%s",
 }
 
-local function multipart_body(boundary, image_data, content_type)
-    local result = '--%s\r\nContent-Disposition: form-data; name="image"; filename="C:\\fakepath\\purple%s"\r\nContent-Type: %s\r\n\r\n%s\r\n--%s--\r\n\r\n'
+local FUZZYSEARCH_DISTANCE = 3
+
+local function multipart_body(boundary, distance, image_data, content_type)
+    local result = '--%s\r\nContent-Disposition: form-data; name="distance"\r\n\r\n%d\r\n--%s\r\nContent-Disposition: form-data; name="image"; filename="C:\\fakepath\\purple%s"\r\nContent-Type: %s\r\n\r\n%s\r\n--%s--\r\n\r\n'
         % {
+            boundary,
+            distance,
             boundary,
             FsTools.MIME_TO_EXT[content_type],
             content_type,
@@ -49,7 +53,7 @@ local function transform_fuzzysearch_response(json)
     -- Log(kLogDebug, "FuzzySearch JSON response: %s" % { EncodeJson(json) })
     local result = table.filtermap(json, function(result)
         -- Log(kLogDebug, "Filter debug: %d, %s, %s" % {result.distance, result.site, SITE_TO_POST_URL_MAP[result.site]})
-        return result.distance < 3 and SITE_TO_POST_URL_MAP[result.site] ~= nil
+        return result.distance <= 3 and SITE_TO_POST_URL_MAP[result.site] ~= nil
     end, function(result)
         local post_url_template = SITE_TO_POST_URL_MAP[result.site]
         local result = post_url_template:format(result.site_id_str)
@@ -90,7 +94,8 @@ local function fuzzysearch_image(image_data, mime_type)
         path = "/v1/image",
     }
     local boundary = "__X_HELLO_SYFARO__"
-    local body = multipart_body(boundary, image_data, mime_type)
+    local body =
+        multipart_body(boundary, FUZZYSEARCH_DISTANCE, image_data, mime_type)
     local json, errmsg = Nu.FetchJson(api_url, {
         method = "POST",
         headers = {
