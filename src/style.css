@@ -402,3 +402,28 @@ table img {
   height: auto;
   max-width: 95vw;
 }
+
+.queue-record {
+  margin-bottom: 0.66em;
+  border: 3px solid GrayText;
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.25);
+  padding: 0.5em;
+  display: flex;
+  gap: 0.5em;
+}
+
+.queue-record img {
+  max-height: 10em;
+  width: auto;
+}
+
+.queue-record p {
+  margin-top: 0.5em;
+  margin-bottom: 0em;
+}
+
+.queue-record a,
+.queue-record p {
+  word-wrap: anywhere;
+}

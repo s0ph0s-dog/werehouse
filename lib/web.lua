@@ -2950,7 +2950,7 @@ local function setup()
         accept_change_password
     )
     -- API routes
-    Fm.setRoute(Fm.GET { "/api/queue-image/:id" }, render_queue_image)
+    Fm.setRoute("/queue-image/:id[%d]", render_queue_image)
     -- Fm.setRoute("/api/telegram-webhook")
     Fm.setRoute(Fm.POST { "/api/enqueue" }, accept_enqueue)
 end

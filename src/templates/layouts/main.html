@@ -1,9 +1,9 @@
 {% function block.status_text(queue_item) %}{% if queue_item.tombstone == 1 then
-%} Error {% elseif queue_item.tombstone == 2 then %} Archived {% elseif
-queue_item.tombstone == 3 then %} “Temporary” Error Wasn’t {% elseif
-queue_item.disambiguation_data then %} To Do (again) {% elseif
-queue_item.disambiguation_request then %} Help Needed {% else %} To Do {% end %}
-{% end %}{% function block.status_desc(queue_item) %} {% if
+%} ❌ Error {% elseif queue_item.tombstone == 2 then %} ✅ Archived {% elseif
+queue_item.tombstone == 3 then %} ❌ “Temporary” Error Wasn’t {% elseif
+queue_item.disambiguation_data then %} 📥 To Do (again) {% elseif
+queue_item.disambiguation_request then %} ⚠️ Help Needed {% else %} 📥 To Do {%
+end %} {% end %}{% function block.status_desc(queue_item) %} {% if
 queue_item.disambiguation_data then %} {%& queue_item.status %} {% elseif
 queue_item.disambiguation_request then %}
 <a href="/queue/{%& queue_item.qid %}/help">Provide Help</a>
