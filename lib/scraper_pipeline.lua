@@ -41,22 +41,22 @@ local function fuzzysearch_multipart_body(
     image_data,
     content_type
 )
+    local ext = FsTools.MIME_TO_EXT[content_type] or ""
     return Multipart.encode({
         distance = tostring(distance),
         image = {
-            filename = "C:\\fakepath\\purple%s"
-                % { FsTools.MIME_TO_EXT[content_type] },
+            filename = "C:\\fakepath\\purple" .. ext,
             data = image_data,
         },
     }, boundary)
 end
 
 local function fluffle_multipart_body(boundary, image_data, content_type)
+    local ext = FsTools.MIME_TO_EXT[content_type] or ""
     return Multipart.encode({
         includeNsfw = "true",
         file = {
-            filename = "C:\\fakepath\\fluffle%s"
-                % { FsTools.MIME_TO_EXT[content_type] },
+            filename = "C:\\fakepath\\fluffle" .. ext,
             exclude_asterisk = true,
             data = image_data,
         },
@@ -142,13 +142,13 @@ local function dimensions_not_smaller_than(target, in_width, in_height)
 end
 
 local function transform_fluffle_response(json)
-    Log(kLogDebug, "Fluffle API response: %s" % { EncodeJson(json) })
+    -- Log(kLogDebug, "Fluffle API response: %s" % { EncodeJson(json) })
     local result = table.filtermap(json, function(result)
         return result.score >= 0.95
     end, function(result)
         return result.location
     end)
-    Log(kLogDebug, "Processed Fluffle.xyz results: %s" % { EncodeJson(result) })
+    -- Log(kLogDebug, "Processed Fluffle.xyz results: %s" % { EncodeJson(result) })
     return result
 end
 
@@ -171,7 +171,6 @@ local function fluffle_image(image_data, mime_type)
     local thumbnail_png = thumbnail:savebufferpng()
     local boundary = "__X_HELLO_NOPPES_THE_FOLF__"
     local request_body = fluffle_multipart_body(boundary, image_data, mime_type)
-    print(request_body)
     local api_url = EncodeUrl {
         scheme = "https",
         host = "api.fluffle.xyz",
@@ -187,12 +186,15 @@ local function fluffle_image(image_data, mime_type)
         },
         body = request_body,
     })
-    if not json or errmsg then
+    if not json then
         return nil, errmsg
     end
     if not json.results then
         return nil,
-            "Error from Fluffle.xyz: %s (%s)" % { json.code, json.message }
+            "Error from Fluffle.xyz: %s (%s)" % {
+                tostring(json.code),
+                tostring(json.message),
+            }
     end
     return transform_fluffle_response(json.results)
 end
@@ -1084,7 +1086,8 @@ local function process_all_queues()
             -- Use pcall to isolate each user's queue processing. That way, if
             -- one user has something in their queue that causes a problem, it
             -- doesn't mean that everyone after them gets blocked too.
-            local q_ok, q_err = pcall(process_queue, model, queue_records)
+            local q_ok, q_err =
+                xpcall(process_queue, debug.traceback, model, queue_records)
             if not q_ok then
                 Log(
                     kLogWarn,
