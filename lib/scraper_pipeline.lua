@@ -839,11 +839,12 @@ local function task_for_answering_disambiguation_req(queue_entry)
             return NoopEntryTask
         end
         if not response.d then
-            return nil,
-                PermScraperError(
-                    "Unexpected response to request for help (wanted %s): %s"
-                        % { "{'d': something}", queue_entry.disambiguation_data }
-                )
+            Log(
+                kLogVerbose,
+                "There's a response to the disambiguation request for %d, but it doesn't answer the current question."
+                    % { queue_entry.qid }
+            )
+            return NoopEntryTask
         end
         if response.d == "discard" then
             return nil,
@@ -875,11 +876,12 @@ local function task_for_answering_disambiguation_req(queue_entry)
             return NoopEntryTask
         end
         if not response.h then
-            return nil,
-                PermScraperError(
-                    "Unexpected response to request for help (wanted %s): %s"
-                        % { "{'h': something}", queue_entry.disambiguation_data }
-                )
+            Log(
+                kLogVerbose,
+                "There's a response to the disambiguation request for %d, but it doesn't answer the current question."
+                    % { queue_entry.qid }
+            )
+            return NoopEntryTask
         end
         local new_task = FetchEntryTask(response.h, dr.discovered_sources)
         return new_task
