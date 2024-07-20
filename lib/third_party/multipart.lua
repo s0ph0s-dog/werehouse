@@ -21,10 +21,12 @@ local function section_header(r, k, extra)
     tprintf(r, "content-disposition: form-data; name=\"%s\"", k)
     if extra.filename then
         tprintf(r, "; filename=\"%s\"", extra.filename)
-        tprintf(
-            r, "; filename*=%s'%s'%s",
-            _M.CHARSET, _M.LANGUAGE, EscapePath(extra.filename)
-        )
+        if not extra.exclude_asterisk then
+          tprintf(
+              r, "; filename*=%s'%s'%s",
+              _M.CHARSET, _M.LANGUAGE, EscapePath(extra.filename)
+          )
+        end
     end
     if extra.content_type then
         tprintf(r, "\r\ncontent-type: %s", extra.content_type)
@@ -59,6 +61,7 @@ local function encode_header_to_table(r, k, v, boundary)
                 or "application/octet-stream",
             content_transfer_encoding = v.content_transfer_encoding
                 or "binary",
+            exclude_asterisk = v.exclude_asterisk or false
         }
         section_header(r, k, extra)
     else

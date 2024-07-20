@@ -35,18 +35,32 @@ local SITE_TO_POST_URL_MAP = {
 
 local FUZZYSEARCH_DISTANCE = 3
 
-local function multipart_body(boundary, distance, image_data, content_type)
-    local result = '--%s\r\nContent-Disposition: form-data; name="distance"\r\n\r\n%d\r\n--%s\r\nContent-Disposition: form-data; name="image"; filename="C:\\fakepath\\purple%s"\r\nContent-Type: %s\r\n\r\n%s\r\n--%s--\r\n\r\n'
-        % {
-            boundary,
-            distance,
-            boundary,
-            FsTools.MIME_TO_EXT[content_type],
-            content_type,
-            image_data,
-            boundary,
-        }
-    return result
+local function fuzzysearch_multipart_body(
+    boundary,
+    distance,
+    image_data,
+    content_type
+)
+    return Multipart.encode({
+        distance = tostring(distance),
+        image = {
+            filename = "C:\\fakepath\\purple%s"
+                % { FsTools.MIME_TO_EXT[content_type] },
+            data = image_data,
+        },
+    }, boundary)
+end
+
+local function fluffle_multipart_body(boundary, image_data, content_type)
+    return Multipart.encode({
+        includeNsfw = "true",
+        file = {
+            filename = "C:\\fakepath\\fluffle%s"
+                % { FsTools.MIME_TO_EXT[content_type] },
+            exclude_asterisk = true,
+            data = image_data,
+        },
+    }, boundary)
 end
 
 local function transform_fuzzysearch_response(json)
@@ -94,8 +108,12 @@ local function fuzzysearch_image(image_data, mime_type)
         path = "/v1/image",
     }
     local boundary = "__X_HELLO_SYFARO__"
-    local body =
-        multipart_body(boundary, FUZZYSEARCH_DISTANCE, image_data, mime_type)
+    local body = fuzzysearch_multipart_body(
+        boundary,
+        FUZZYSEARCH_DISTANCE,
+        image_data,
+        mime_type
+    )
     local json, errmsg = Nu.FetchJson(api_url, {
         method = "POST",
         headers = {
@@ -110,6 +128,73 @@ local function fuzzysearch_image(image_data, mime_type)
         return nil, errmsg
     end
     return transform_fuzzysearch_response(json)
+end
+
+local function dim_helper(d1, d2, d1_target)
+    return math.ceil(d1_target / d1 * d2)
+end
+
+local function dimensions_not_smaller_than(target, in_width, in_height)
+    if in_width > in_height then
+        return dim_helper(in_height, in_width, target), target
+    end
+    return target, dim_helper(in_width, in_height, target)
+end
+
+local function transform_fluffle_response(json)
+    Log(kLogDebug, "Fluffle API response: %s" % { EncodeJson(json) })
+    local result = table.filtermap(json, function(result)
+        return result.score >= 0.95
+    end, function(result)
+        return result.location
+    end)
+    Log(kLogDebug, "Processed Fluffle.xyz results: %s" % { EncodeJson(result) })
+    return result
+end
+
+local function fluffle_image(image_data, mime_type)
+    assert(image_data ~= nil)
+    if not img then
+        return nil,
+            "This Redbean wasn't compiled with the `img` library for image resizing and (en/de)coding."
+    end
+    local imageu8, i_err = img.loadbuffer(image_data)
+    if not imageu8 then
+        return nil, i_err
+    end
+    local thumbnail, t_err = imageu8:resize(
+        dimensions_not_smaller_than(256, imageu8:width(), imageu8:height())
+    )
+    if not thumbnail then
+        return nil, t_err
+    end
+    local thumbnail_png = thumbnail:savebufferpng()
+    local boundary = "__X_HELLO_NOPPES_THE_FOLF__"
+    local request_body = fluffle_multipart_body(boundary, image_data, mime_type)
+    print(request_body)
+    local api_url = EncodeUrl {
+        scheme = "https",
+        host = "api.fluffle.xyz",
+        path = "/v1/search",
+    }
+    local json, errmsg = Nu.FetchJson(api_url, {
+        method = "POST",
+        headers = {
+            ["Content-Type"] = "multipart/form-data; charset=utf-8; boundary=%s"
+                % { boundary },
+            ["Content-Length"] = tostring(#request_body),
+            ["User-Agent"] = "werehouse/0.1.0 (https://github.com/s0ph0s-2/werehouse)",
+        },
+        body = request_body,
+    })
+    if not json or errmsg then
+        return nil, errmsg
+    end
+    if not json.results then
+        return nil,
+            "Error from Fluffle.xyz: %s (%s)" % { json.code, json.message }
+    end
+    return transform_fluffle_response(json.results)
 end
 
 local function can_process_uri(uri)
@@ -219,10 +304,17 @@ local function get_sources_for_entry(queue_entry)
         end
         return nil, "should be unreachable"
     elseif queue_entry.image then
-        local maybe_source_links, errmsg2 =
+        local maybe_source_links, l_err =
             fuzzysearch_image(queue_entry.image, queue_entry.image_mime_type)
         if not maybe_source_links then
-            return nil, errmsg2
+            Log(kLogInfo, tostring(l_err))
+        end
+        if #maybe_source_links < 1 then
+            maybe_source_links, l_err =
+                fluffle_image(queue_entry.image, queue_entry.image_mime_type)
+            if not maybe_source_links then
+                return nil, l_err
+            end
         end
         return maybe_source_links
     else
@@ -809,7 +901,7 @@ local function task_for_scraping(queue_entry)
     if type(sources) == "table" and #sources < 1 then
         return nil,
             PermScraperError(
-                "No sources found for this image in the FuzzySearch database"
+                "No sources found for this image in the FuzzySearch or Fluffle.xyz databases"
             )
     end
     local task, scrape_err = scrape_sources(sources)
@@ -1017,6 +1109,6 @@ return {
     can_process_uri = can_process_uri,
     process_entry = process_entry,
     scrape_sources = scrape_sources,
-    multipart_body = multipart_body,
+    multipart_body = fuzzysearch_multipart_body,
     CANONICAL_DOMAINS_WITH_TAGS = CANONICAL_DOMAINS_WITH_TAGS,
 }
