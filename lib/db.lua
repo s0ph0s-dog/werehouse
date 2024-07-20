@@ -421,7 +421,7 @@ local queries = {
             FROM queue
             ORDER BY added_on ASC
             LIMIT 10;]],
-        get_all_active_queue_entries = [[SELECT
+        get_first_n_active_queue_entries = [[SELECT
                 qid,
                 link,
                 image,
@@ -437,7 +437,8 @@ local queries = {
             FROM queue
             WHERE tombstone = 0
             AND ( (disambiguation_request IS NULL) = (disambiguation_data IS NULL) )
-            ORDER BY added_on ASC;]],
+            ORDER BY added_on ASC
+            LIMIT ?;]],
         get_queue_entry_count = [[SELECT COUNT(*) AS count FROM "queue";]],
         get_queue_entries_paginated = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
             FROM queue
@@ -1023,7 +1024,10 @@ end
 ---@alias ActiveQueueEntry {qid: string, link: string, image: string, image_mime_type: string, tombstone: integer, added_on: string, status: string, disambiguation_request: string, disambiguation_data: string, retry_count: integer}
 ---@return ActiveQueueEntry[]
 function Model:getAllActiveQueueEntries()
-    return self.conn:fetchAll(queries.model.get_all_active_queue_entries)
+    return self.conn:fetchAll(
+        queries.model.get_first_n_active_queue_entries,
+        10
+    )
 end
 
 function Model:getQueueEntryCount()

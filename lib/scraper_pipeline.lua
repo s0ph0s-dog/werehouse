@@ -186,15 +186,12 @@ local function fluffle_image(image_data, mime_type)
         },
         body = request_body,
     })
-    if not json then
+    if not json or errmsg then
         return nil, errmsg
     end
     if not json.results then
         return nil,
-            "Error from Fluffle.xyz: %s (%s)" % {
-                tostring(json.code),
-                tostring(json.message),
-            }
+            "Error from Fluffle.xyz: %s (%s)" % { json.code, json.message }
     end
     return transform_fluffle_response(json.results)
 end
