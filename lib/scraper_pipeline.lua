@@ -141,6 +141,7 @@ local function quirks(link)
         parts.host == "twitter.com"
         or parts.host == "vxtwitter.com"
         or parts.host == "x.com"
+        or parts.host == "fixvx.com"
     then
         -- Twitter (for mystery reasons) makes Redbean go into an infinite loop while waiting for the response to my HEAD request below.
         return true, false
