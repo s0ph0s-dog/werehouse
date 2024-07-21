@@ -50,6 +50,7 @@ SRCS := src/.init.lua \
     src/templates/components/record_view.html \
     src/templates/components/thumbnail.html \
     src/templates/components/pagination_controls.html \
+    src/templates/components/queue_records.html \
     src/templates/components/group_box.html \
     src/templates/components/share_widget.html \
     src/templates/accept_invite.html \

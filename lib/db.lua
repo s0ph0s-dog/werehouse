@@ -453,7 +453,17 @@ local queries = {
             AND ( (disambiguation_request IS NULL) = (disambiguation_data IS NULL) )
             ORDER BY added_on ASC;]],
         get_queue_entry_count = [[SELECT COUNT(*) AS count FROM "queue";]],
-        get_queue_entries_paginated = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
+        get_queue_entries_paginated = [[SELECT
+                qid,
+                link,
+                (image IS NOT NULL) AS has_image,
+                image_width,
+                image_height,
+                tombstone,
+                added_on,
+                status,
+                disambiguation_request,
+                disambiguation_data
             FROM queue
             ORDER BY added_on DESC
             LIMIT ?

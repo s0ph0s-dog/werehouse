@@ -338,6 +338,26 @@ footer {
   .buttons {
     flex-wrap: wrap;
   }
+
+  .queue-container {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .queue-record {
+    flex: 1 1 100%;
+  }
+}
+
+@media (min-width: 640px) {
+  .queue-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .queue-record {
+    flex: 1 1 32%;
+  }
 }
 
 .input-cell {
@@ -403,11 +423,13 @@ table img {
   max-width: 95vw;
 }
 
+.queue-container {
+  display: flex;
+  gap: 0.5em;
+}
+
 .queue-record {
-  margin-bottom: 0.66em;
-  border: 3px solid GrayText;
-  border-radius: 4px;
-  background: rgba(127, 127, 127, 0.25);
+  border: 3px solid CanvasText;
   padding: 0.5em;
   display: flex;
   gap: 0.5em;
@@ -426,4 +448,8 @@ table img {
 .queue-record a,
 .queue-record p {
   word-wrap: anywhere;
+}
+
+.queue-record input {
+  margin: 0;
 }
