@@ -326,6 +326,8 @@ local user_setup = [[
         PRIMARY KEY("qid")
     );
 
+    CREATE INDEX IF NOT EXISTS queue_added_on ON queue (added_on);
+
     CREATE TABLE IF NOT EXISTS "queue_gradienthashes" (
         "qid" INTEGER NOT NULL UNIQUE,
         "h1" INTEGER NOT NULL,
