@@ -20,30 +20,23 @@
       name="merge"
       value="Merge"
   /></span>
-  <div class="overflow-container">
-    <table hx-boost="true">
-      <thead>
-        <tr>
-          <th class="num"></th>
-          <th class="num">ID</th>
-          <th class="txt">Name</th>
-          <th class="num">Record Count</th>
-        </tr>
-      </thead>
-      {% for _, item in ipairs(ig_records) do %}
-      <tr>
-        <td class="num">
-          <input type="checkbox" name="ig_ids[]" value="{%& item.ig_id %}" />
-        </td>
-        <td class="num">{%& item.ig_id %}</td>
-        <td class="txt">
-          <a href="/image-group/{%& item.ig_id %}">{%& item.name %}</a>
-        </td>
-        <td class="num">{%& item.image_count %}</td>
-      </tr>
-      {% end %}
-    </table>
-  </div>
+  <ul class="checkbox-bullets" hx-boost="true">
+    {% for i = 1, #ig_records do local item = ig_records[i] %}
+    <li>
+      <label class="checkbox-bullet">
+        <input type="checkbox" name="ig_ids[]" value="{%& item.ig_id %}" />
+        <div>
+          <strong
+            ><a href="/image-group/{%& item.ig_id %}"
+              >{%& item.name %}</a
+            ></strong
+          >
+          <p>🖼️: {%& item.image_count %}</p>
+        </div>
+      </label>
+    </li>
+    {% end %}
+  </ul>
   {% render("components/pagination_controls", { pages = pages, kind_plural =
   "groups" }) %}
 </form>

@@ -56,30 +56,28 @@
 {% end %}
 <h1>Sessions</h1>
 <form method="POST" action="/account/end-sessions">
-  <div class="overflow-container">
-    <table>
-      <thead>
-        <tr>
-          <th class="txt">Session ID</th>
-          <th class="txt">Created At</th>
-          <th class="txt">Last Seen</th>
-          <th class="txt">User Agent</th>
-          <th class="num">IP Address</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for i = 1, #sessions do local session = sessions[i] %}
-        <tr>
-          <td class="txt">{%& session.session_id %}</td>
-          <td class="txt">{%& session.created %}</td>
-          <td class="txt">{%& FormatHttpDateTime(session.last_seen) %}</td>
-          <td class="txt">{%& session.user_agent %}</td>
-          <td class="num"><code>{%& session.ip %}</code></td>
-        </tr>
-        {% end %}
-      </tbody>
-    </table>
-  </div>
+  <table>
+    <thead>
+      <tr>
+        <th class="txt">Session ID</th>
+        <th class="txt">Created At</th>
+        <th class="txt">Last Seen</th>
+        <th class="txt">User Agent</th>
+        <th class="num">IP Address</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for i = 1, #sessions do local session = sessions[i] %}
+      <tr>
+        <td class="txt">{%& session.session_id %}</td>
+        <td class="txt">{%& session.created %}</td>
+        <td class="txt">{%& FormatHttpDateTime(session.last_seen) %}</td>
+        <td class="txt">{%& session.user_agent %}</td>
+        <td class="num"><code>{%& session.ip %}</code></td>
+      </tr>
+      {% end %}
+    </tbody>
+  </table>
   <input type="submit" name="end_all_sessions" value="End All Sessions" />
 </form>
 <h1>Invite Links</h1>
@@ -102,32 +100,29 @@
     />
   </p>
 </form>
-<div class="overflow-container">
-  <table>
-    <thead>
-      <tr>
-        <th class="txt">Link</th>
-        <th class="num">Used</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for i = 1, #invites do local invite = invites[i] %}
-      <tr>
-        <td class="txt">
-          <a
-            href="https://werehouse.s0ph0s.dog/accept-invite/{%& invite.invite_id %}"
-            >https://werehouse.s0ph0s.dog/accept-invite/{%& invite.invite_id
-            %}</a
-          >
-        </td>
-        <td class="num">
-          {% if invite.used == 1 then %}Yes{% else %}Not Yet{% end %}
-        </td>
-      </tr>
-      {% end %}
-    </tbody>
-  </table>
-</div>
+<table>
+  <thead>
+    <tr>
+      <th class="txt">Link</th>
+      <th class="num">Used</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for i = 1, #invites do local invite = invites[i] %}
+    <tr>
+      <td class="txt">
+        <a
+          href="https://werehouse.s0ph0s.dog/accept-invite/{%& invite.invite_id %}"
+          >https://werehouse.s0ph0s.dog/accept-invite/{%& invite.invite_id %}</a
+        >
+      </td>
+      <td class="num">
+        {% if invite.used == 1 then %}Yes{% else %}Not Yet{% end %}
+      </td>
+    </tr>
+    {% end %}
+  </tbody>
+</table>
 <h1>Account Management</h1>
 <form
   class="vbox"

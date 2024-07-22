@@ -42,6 +42,9 @@ local function help()
     print(
         "- fix_0wh (-d): Fix database entries for images that have unrealistically small width or height."
     )
+    print(
+        "- calc_queue_wh (-d): Calculate width and height for images in the queue."
+    )
 end
 
 local function for_each_user(fn)
@@ -545,6 +548,41 @@ local function fix_0wh(other_args)
     end)
 end
 
+local function calc_queue_wh(other_args)
+    local dry_run = other_args[1] == "-d"
+    if not img then
+        Log(
+            kLogError,
+            "No img library, unable to fix queue entries with missing width/height"
+        )
+        return
+    end
+    for_each_user(function(_, _, model)
+        local query = "SELECT qid, image FROM queue WHERE image IS NOT NULL;"
+        local update =
+            "UPDATE queue SET image_width = ?, image_height = ? WHERE qid = ?;"
+        local qimgs, qi_err = model.conn:fetchAll(query)
+        if not qimgs then
+            Log(kLogError, qi_err)
+            return 0
+        end
+        for j = 1, #qimgs do
+            local qimg = qimgs[j]
+            local imageu8, i_err = img.loadbuffer(qimg.image)
+            if imageu8 and not dry_run then
+                local width, height = imageu8:width(), imageu8:height()
+                local wok, werr =
+                    model.conn:execute(update, width, height, qimg.qid)
+            else
+                Log(kLogInfo, "Would've updated dimensions for %d" % {
+                    qimg.qid,
+                })
+            end
+        end
+        return 0
+    end)
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
@@ -556,6 +594,7 @@ local commands = {
     find_hash_params = find_hash_params,
     clean_orphan_files = clean_orphan_files,
     fix_0wh = fix_0wh,
+    calc_queue_wh = calc_queue_wh,
 }
 
 local remaining_args = arg

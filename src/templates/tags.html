@@ -21,30 +21,24 @@
       name="merge"
       value="Merge"
   /></span>
-  <div class="overflow-container">
-    <table hx-boost="true">
-      <thead>
-        <tr>
-          <th class="num"></th>
-          <th class="txt">Name</th>
-          <th class="num">Description</th>
-          <th class="num">Records</th>
-        </tr>
-      </thead>
-      {% for i = 1, #tag_records do local item = tag_records[i] %}
-      <tr>
-        <td class="num">
-          <input type="checkbox" name="tag_ids[]" value="{%& item.tag_id %}" />
-        </td>
-        <td class="txt">
-          <a href="/tag/{%& item.tag_id %}">{%& item.name %}</a>
-        </td>
-        <td class="txt">{%& item.description %}</td>
-        <td class="num">{%& item.image_count %}</td>
-      </tr>
-      {% end %}
-    </table>
-  </div>
+  <ul class="checkbox-bullets" hx-boost="true">
+    {% for i = 1, #tag_records do local item = tag_records[i] %}
+    <li>
+      <label class="checkbox-bullet">
+        <input type="checkbox" name="tag_ids[]" value="{%& item.tag_id %}" />
+        <div>
+          <strong
+            ><a href="/tag/{%& item.tag_id %}">{%& item.name %}</a></strong
+          >
+          <p>
+            🖼️: {%& item.image_count %} {% if item.description and
+            #item.description > 0 then %}| {%& item.description %}{% end %}
+          </p>
+        </div>
+      </label>
+    </li>
+    {% end %}
+  </ul>
   {% render("components/pagination_controls", { pages = pages, kind_plural =
   "tags" }) %}
 </form>

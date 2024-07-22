@@ -3,37 +3,8 @@
 <p><a href="/enqueue">Add Something</a></p>
 {% if #queue_records == 0 then %}
 <p>Nothing queued</p>
-{% else %}
-<div class="overflow-container">
-  <table>
-    <thead>
-      <tr>
-        <th class="num">ID</th>
-        <th class="txt">Link</th>
-        <th class="txt">Image</th>
-        <th class="txt">Status</th>
-        <th class="txt">Description</th>
-      </tr>
-    </thead>
-    {% for _, item in ipairs(queue_records) do %}
-    <tr>
-      <td class="num">{%& item.qid %}</td>
-      <td class="txt">
-        {% if item.link then %}{%& item.link %}{% else %}N/A{% end %}
-      </td>
-      <td>
-        {% if not item.link then %}<img
-          width="200"
-          src="/api/queue-image/{%& item.qid %}"
-        />{% else %}N/A{% end %}
-      </td>
-      <td class="txt">{%& block.status_text(item) %}</td>
-      <td class="txt">{%& block.status_desc(item) %}</td>
-    </tr>
-    {% end %}
-  </table>
-</div>
-{% end %}
+{% else %}{% render("components/queue_records", {queue_records = queue_records,
+editable = false}) %}{% end %}
 <h1>Recently Archived Items</h1>
 {% render("components/image_gallery", {image_records = image_records, fn = fn,
 kind = kind }) %}{% end %}{% render("layouts/main", { title = "Home", user =

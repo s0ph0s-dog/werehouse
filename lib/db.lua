@@ -313,6 +313,8 @@ local user_setup = [[
         "link" TEXT UNIQUE,
         "image" BLOB,
         "image_mime_type" TEXT,
+        "image_width" INTEGER,
+        "image_height" INTEGER,
         "tombstone" INTEGER NOT NULL,
         "added_on" TEXT NOT NULL,
         "status" TEXT NOT NULL,
@@ -413,10 +415,22 @@ local queries = {
         delete_sessions_for_user = [[DELETE FROM "sessions" WHERE user_id = ?;]],
     },
     model = {
-        get_recent_queue_entries = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
+        get_recent_queue_entries = [[SELECT
+                qid,
+                link,
+                (image IS NOT NULL) AS has_image,
+                image_width,
+                image_height,
+                tombstone,
+                added_on,
+                status,
+                disambiguation_request,
+                disambiguation_data,
+                image_width AS width,
+                image_height AS height
             FROM queue
             ORDER BY added_on DESC
-            LIMIT 20;]],
+            LIMIT 21;]],
         get_all_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status, disambiguation_request, disambiguation_data
             FROM queue
             ORDER BY added_on ASC
@@ -440,7 +454,17 @@ local queries = {
             ORDER BY added_on ASC
             LIMIT ?;]],
         get_queue_entry_count = [[SELECT COUNT(*) AS count FROM "queue";]],
-        get_queue_entries_paginated = [[SELECT qid, link, tombstone, added_on, status, disambiguation_request, disambiguation_data
+        get_queue_entries_paginated = [[SELECT
+                qid,
+                link,
+                (image IS NOT NULL) AS has_image,
+                image_width,
+                image_height,
+                tombstone,
+                added_on,
+                status,
+                disambiguation_request,
+                disambiguation_data
             FROM queue
             ORDER BY added_on DESC
             LIMIT ?
