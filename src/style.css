@@ -437,6 +437,7 @@ table img {
 .queue-record img {
   max-height: 10em;
   width: auto;
+  max-width: 100%;
 }
 
 .queue-record p {

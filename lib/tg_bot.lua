@@ -163,11 +163,7 @@ local function handle_enqueue(message)
         -- work, but unsupported URLs won't.  If there's an image, that has a
         -- better shot at finding something, so prefer that.
         if score > 0 or not message.photo then
-            local queue_entry, err = model:enqueueLink(
-                best_link,
-                message.chat.id,
-                message.message_id
-            )
+            local queue_entry, err = model:enqueueLink(best_link)
             if not queue_entry then
                 Log(kLogInfo, "Error while enqueuing from bot: %s" % { err })
                 api.reply_to_message(
@@ -213,12 +209,8 @@ local function handle_enqueue(message)
             Log(kLogInfo, photo_err)
             return
         end
-        local queue_entry, err = model:enqueueImage(
-            photo_data.mime_type,
-            photo_data.data,
-            message.chat.id,
-            message.message_id
-        )
+        local queue_entry, err =
+            model:enqueueImage(photo_data.mime_type, photo_data.data)
         if not queue_entry then
             Log(kLogInfo, err)
             api.reply_to_message(

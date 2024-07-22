@@ -763,8 +763,17 @@ local queries = {
             VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '')
             RETURNING qid;]],
         insert_image_into_queue = [[INSERT INTO
-            "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
-            VALUES (NULL, ?, ?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '')
+            "queue" (
+                "link",
+                "image",
+                "image_mime_type",
+                "image_width",
+                "image_height",
+                "tombstone",
+                "added_on",
+                "status"
+            )
+            VALUES (NULL, ?, ?, ?, ?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '')
             RETURNING qid;]],
         insert_image_into_images = [[INSERT INTO
             "images" ("file", "mime_type", "width", "height", "kind", "rating", "file_size", "saved_at")
@@ -937,6 +946,7 @@ end
 ---@field user_id string
 local Model = {}
 
+---@return Model
 function Model:new(o, user_id)
     o = o or {}
     local filename = USER_DB_FILE_TEMPLATE % { user_id }
@@ -1162,10 +1172,23 @@ function Model:enqueueLink(link)
 end
 
 function Model:enqueueImage(mime_type, image_data)
+    local width, height = nil, nil
+    if img then
+        local imageu8, i_err = img.loadbuffer(image_data)
+        if imageu8 then
+            width = imageu8:width()
+            height = imageu8:height()
+            Log(kLogDebug, "Image dimensions: %d x %d" % { width, height })
+        else
+            Log(kLogWarn, "error while parsing image for enqueue:" .. i_err)
+        end
+    end
     return self.conn:fetchOne(
         queries.model.insert_image_into_queue,
         image_data,
-        mime_type
+        mime_type,
+        width,
+        height
     )
 end
 

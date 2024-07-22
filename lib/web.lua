@@ -404,16 +404,17 @@ local accept_enqueue = login_required(function(r)
         r.params.multipart.image
         and allowed_image_types[r.params.multipart.image.headers["content-type"]]
     then
+        local image_data = r.params.multipart.image.data
         local result, errmsg = Model:enqueueImage(
             r.params.multipart.image.headers["content-type"],
-            r.params.multipart.image.data
+            image_data
         )
         if not result then
             Log(kLogWarn, errmsg)
         end
         return Fm.serveRedirect("/home", 302)
     else
-        return Fm.serve400("Must provide link or PNG/JPEG image file.")
+        return Fm.serve400("Must provide link or PNG/JPEG/GIF image file.")
     end
     return Fm.serve500("This should have been unreachable")
 end)
