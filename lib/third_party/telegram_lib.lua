@@ -369,7 +369,7 @@ function api.run(limit, timeout, offset, allowed_updates)
             print(updates)
             for _, v in pairs(updates.result) do
                 if v then
-                    api.process_update(v)
+                    xpcall(api.process_update, debug.traceback, v)
                     offset = v.update_id + 1
                 end
             end
