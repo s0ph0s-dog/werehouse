@@ -21,38 +21,27 @@
       name="merge"
       value="Merge"
   /></span>
-  <div class="overflow-container">
-    <table hx-boost="true">
-      <thead>
-        <tr>
-          <th class="num"></th>
-          <th class="txt">Name</th>
-          <th class="num">Verified</th>
-          <th class="num">Known Handles</th>
-          <th class="num">Saved Records</th>
-        </tr>
-      </thead>
-      {% for _, item in ipairs(artist_records) do %}
-      <tr>
-        <td class="num">
-          <input
-            type="checkbox"
-            name="artist_ids[]"
-            value="{%& item.artist_id %}"
-          />
-        </td>
-        <td class="txt">
-          <a href="/artist/{%& item.artist_id %}">{%& item.name %}</a>
-        </td>
-        <td class="num">
-          {% render("components/artist_verified", { artist = item }) %}
-        </td>
-        <td class="num">{%& item.handle_count %}</td>
-        <td class="num">{%& item.image_count %}</td>
-      </tr>
-      {% end %}
-    </table>
-  </div>
+  <ul class="checkbox-bullets" hx-boost="true">
+    {% for i = 1, #artist_records do local item = artist_records[i] %}
+    <li>
+      <label class="checkbox-bullet">
+        <input
+          type="checkbox"
+          name="artist_ids[]"
+          value="{%& item.artist_id %}"
+        />
+        <div>
+          <strong
+            ><a href="/artist/{%& item.artist_id %}"
+              >{%& item.name %}</a
+            ></strong
+          >
+          <p>📇: {%& item.handle_count %}, 🖼️: {%& item.image_count %}</p>
+        </div>
+      </label>
+    </li>
+    {% end %}
+  </ul>
   {% render("components/pagination_controls", { pages = pages, kind_plural =
   "artists" }) %}
 </form>

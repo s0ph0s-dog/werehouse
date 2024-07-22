@@ -1,4 +1,5 @@
-{% function block.content() %}
+{% function block.add_breaks(text) return string.gsub(text, "([._])",
+function(m) return "<wbr />" .. m end) end %} {% function block.content() %}
 <h1>Tag Rules</h1>
 <p><a href="/tag-rule/add" hx-boost="true">Add Tag Rule…</a></p>
 {% if pages.current > 1 and #tag_rule_records == 0 then %}
@@ -18,37 +19,40 @@
       Select All</button
     ><input type="submit" name="delete" value="Delete"
   /></span>
-  <div class="overflow-container">
-    <table>
-      <thead>
-        <tr>
-          <th class="num"></th>
-          <th class="txt">When a tag named…</th>
-          <th class="txt">…comes in from…</th>
-          <th class="txt">…then use…</th>
-          <th></th>
-        </tr>
-      </thead>
-      {% for i = 1, #tag_rule_records do local item = tag_rule_records[i] %}
+  <table hx-boost="true">
+    <thead>
       <tr>
-        <td class="num">
-          <input
-            type="checkbox"
-            name="tag_rule_ids[]"
-            value="{%& item.tag_rule_id %}"
-          />
-        </td>
-        <td class="txt">{%& item.incoming_name %}</td>
-        <td class="txt">{%& item.incoming_domain %}</td>
-        <td class="txt">{%& item.tag_name %}</td>
-        <td class="txt" hx-boost="true">
-          <a href="/tag-rule/{%& item.tag_rule_id %}">View</a> or
-          <a href="/tag-rule/{%& item.tag_rule_id %}/edit">Edit…</a>
-        </td>
+        <th class="t-check"></th>
+        <th class="t-main">Incoming Tag</th>
+        <th class="t-main">Site</th>
+        <th class="t-main">Werehouse Tag</th>
+        <th class="t-btn"></th>
       </tr>
-      {% end %}
-    </table>
-  </div>
+    </thead>
+    {% for i = 1, #tag_rule_records do local item = tag_rule_records[i] %}
+    <tr>
+      <td class="t-check">
+        <input
+          type="checkbox"
+          name="tag_rule_ids[]"
+          value="{%& item.tag_rule_id %}"
+        />
+      </td>
+      <td class="t-main">
+        {%= block.add_breaks(escapeHtml(item.incoming_name)) %}
+      </td>
+      <td class="t-main">
+        {%= block.add_breaks(escapeHtml(item.incoming_domain)) %}
+      </td>
+      <td class="t-main">
+        <a href="/tag/{%& item.tag_id %}">{%& item.tag_name %}</a>
+      </td>
+      <td class="t-btn">
+        <a href="/tag-rule/{%& item.tag_rule_id %}/edit">✎</a>
+      </td>
+    </tr>
+    {% end %}
+  </table>
   {% render("components/pagination_controls", { pages = pages, kind_plural =
   "rules" }) %}
 </form>

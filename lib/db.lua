@@ -430,7 +430,7 @@ local queries = {
                 image_height AS height
             FROM queue
             ORDER BY added_on DESC
-            LIMIT 20;]],
+            LIMIT 21;]],
         get_all_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status, disambiguation_request, disambiguation_data
             FROM queue
             ORDER BY added_on ASC
