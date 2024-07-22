@@ -36,7 +36,10 @@
               >{%& item.name %}</a
             ></strong
           >
-          <p>📇: {%& item.handle_count %}, 🖼️: {%& item.image_count %}</p>
+          <p>
+            {% render("components/artist_verified", {artist = item}) %}, 📇: {%&
+            item.handle_count %}, 🖼️: {%& item.image_count %}
+          </p>
         </div>
       </label>
     </li>
