@@ -251,6 +251,32 @@ local function login_required(handler)
     end
 end
 
+local function login_optional(handler)
+    return function(r)
+        local token = get_login_cookie(r)
+        local user_record, user_err = nil, nil
+        Log(kLogInfo, "session token: %s" % { EncodeJson(token) })
+        if token then
+            local session, errmsg = Accounts:findSessionById(token)
+            if session then
+                local ip = get_client_ip(r)
+                local u_ok, u_err =
+                    Accounts:updateSessionLastSeenToNow(token, ip)
+                if not u_ok then
+                    Log(kLogInfo, u_err)
+                end
+                Model = DbUtil.Model:new(nil, session.user_id)
+                user_record, user_err = Accounts:findUserBySessionId(token)
+                if not user_record then
+                    Log(kLogDebug, user_err)
+                    return Fm.serve500()
+                end
+            end
+        end
+        return handler(r, user_record)
+    end
+end
+
 local function accept_login(r)
     r.session.error = nil
     local user_record, errmsg = Accounts:findUser(r.params.username)
@@ -1350,19 +1376,19 @@ local accept_queue = login_required(function(r)
     return Fm.serveRedirect(r.session.after_dialog_action, 302)
 end)
 
-local function render_about(r, user_record)
+local render_about = login_optional(function(r, user_record)
     set_after_dialog_action(r)
     return Fm.serveContent("about", {
         user = user_record,
     })
-end
+end)
 
-local function render_tos(r, user_record)
+local render_tos = login_optional(function(r, user_record)
     set_after_dialog_action(r)
     return Fm.serveContent("tos", {
         user = user_record,
     })
-end
+end)
 
 local render_queue_help = login_required(function(r, user_record)
     local queue_entry, _ = Model:getQueueEntryById(r.params.qid)
@@ -2852,6 +2878,13 @@ local render_share_ping_list = login_required(function(r, user_record)
     })
 end)
 
+local render_help = login_optional(function(r, user_record)
+    if r.params.page then
+        return Fm.serveContent("help/" .. r.params.page, { user = user_record })
+    end
+    return Fm.serveContent("help/index", { user = user_record })
+end)
+
 local function setup()
     Fm.setTemplate { "/templates/", html = "fmt" }
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
@@ -2950,6 +2983,7 @@ local function setup()
         Fm.POST { "/account/change-password", _ = change_password_validator },
         accept_change_password
     )
+    Fm.setRoute("/help(/:page)", render_help)
     -- API routes
     Fm.setRoute("/queue-image/:id[%d]", render_queue_image)
     -- Fm.setRoute("/api/telegram-webhook")

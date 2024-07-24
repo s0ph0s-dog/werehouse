@@ -1,0 +1,133 @@
+{% function block.content() %}
+<h1>How It Works: Queue</h1>
+<h2>Overview</h2>
+<p>
+  The queue is more complex than it may seem at first glance. Beneath the
+  unassuming list is a machine that integrates data from many sources and tries
+  its best to make archiving artwork easy and low-effort. No machine is perfect,
+  however, and understanding its mechanisms and design will make troubleshooting
+  easier.
+</p>
+<p>
+  To begin, the queue is a first-in, first-out list. The images and links you
+  add to it will be processed one by one in the order you added them.
+</p>
+
+<h2>Supported Sites</h2>
+<p>Werehouse is able to archive images from all of these websites:</p>
+<ul>
+  <li><a href="https://www.furaffinity.net/">FurAffinity</a></li>
+  <li><a href="https://e621.net/">e621</a> (and e926)</li>
+  <li><a href="https://itaku.ee/">Itaku</a></li>
+  <li><a href="https://bsky.app/">Bluesky</a></li>
+  <li>
+    <a href="https://twitter.com/">Twitter</a> (the new name is an unhinged
+    businessman’s pipe dream that I refuse to use)
+  </li>
+  <li>
+    <a href="https://joinmastodon.org/">Mastodon servers</a> (yes, specifically
+    just Mastodon)
+  </li>
+  <li><a href="https://cohost.org/">Cohost</a></li>
+</ul>
+<p>
+  Future development includes plans for the following websites and protocols:
+</p>
+<ul>
+  <li><a href="https://weasyl.com/">Weasyl</a></li>
+  <li><a href="https://inkbunny.net/">Inkbunny</a></li>
+  <li><a href="https://deviantart.com/">DeviantArt</a></li>
+  <li>
+    <a href="https://activitypub.rocks">ActivityPub</a> (this one is
+    complicated: it will require making implementing a large portion of an
+    ActivityPub server.)
+  </li>
+  <li>
+    <a href="https://telegram.org/">Telegram (public channels)</a> (this one is
+    also complicated: Werehouse would need to scrape the HTML web preview of the
+    channel, which Telegram may frown upon.)
+  </li>
+</ul>
+<p>
+  If there’s a place you’d like support for which isn't on either of these
+  lists, please
+  <a href="https://github.com/s0ph0s-2/werehouse/issues/new"
+    >open an issue on GitHub</a
+  >
+  to request that it be added!
+</p>
+
+<h2>Procedure</h2>
+<p>
+  Werehouse follows the same procedure each time it tries to process a queue
+  item:
+</p>
+<ol>
+  <li>
+    <strong>Find Sources</strong><br />If the queue item is an image (or a link
+    directly to an image), Werehouse first tries to find sources by asking
+    <a href="https://fuzzysearch.net/">FuzzySearch</a>. If there were no results
+    in the FuzzySearch database, it then tries asking
+    <a href="https://fluffle.xyz/">Fluffle.xyz</a>. If neither of them know
+    where the image comes from, Werehouse gives up. On the other paw, if the
+    queue item is a link to a webpage, Werehouse assumes that link <i>is</i> the
+    source, and proceeds onwards. This step accepts a queue item and produces a
+    list of links.
+  </li>
+  <li>
+    <strong>Scrape Sources</strong><br />Werehouse tries to download information
+    about each of the potential sources it found. This includes obvious things,
+    like the link to the image(s), but also many kinds of metadata, such as
+    maturity level, dimensions, tags, the artist’s profile, and more. This step
+    accepts a list of links and produces a list of scraped image data, one for
+    each link. If the link referred to a post with multiple images (such as on
+    Twitter or Weasyl), the scraped data includes information about all of the
+    images.
+  </li>
+  <li>
+    <strong>Fetch Images</strong><br />Werehouse downloads the full-resolution
+    images from the source that had the largest images (if they weren’t already
+    downloaded). This step accepts a list of scraped image data and produces the
+    same list, but with full-size images included.
+  </li>
+  <li>
+    <strong>Duplicate Check</strong><br />For each of the images, Werehouse
+    computes a content hash of the image to see if something similar has already
+    been archived. It also looks through all of the source links currently in
+    the archive to see if the link has been saved before. If it finds a similar
+    hash or a duplicate link, it stops and asks for help. This step accepts a
+    list of scraped image data and if there were no duplicates, passes it right
+    along through.
+  </li>
+  <li>
+    <strong>Add to Archive</strong><br />The full-size images and all of the
+    other information are saved to your archive. This step accepts a list of
+    scraped image data. (It produces nothing because it is the final step.)
+  </li>
+</ol>
+
+<h2>States</h2>
+<p>A queue item can be in one of these states:</p>
+<ul>
+  <li><strong>To Do:</strong> Newly added, ready to be processed.</li>
+  <li>
+    <strong>To Do (again):</strong> As if it was newly added (because you
+    clicked the “Try Again” button).
+  </li>
+  <li>
+    <strong>Needs Help:</strong> There are multiple ways to proceed, and your
+    input is needed to pick which one.
+  </li>
+  <li>
+    <strong>Error:</strong> The item is not archived, and Werehouse will not
+    automatically try again.
+  </li>
+  <li>
+    <strong>“Temporary” Error Wasn’t:</strong> A temporary error (such as a
+    server being overloaded) occurred more than three times in a row, and
+    Werehouse stopped trying (so as to not make the problem worse).
+  </li>
+  <li><strong>Archived:</strong> The item has been archived.</li>
+</ul>
+{% end %}{% render("layouts/main", { title = "How It Works: Queue", user = user
+}) %}

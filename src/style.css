@@ -485,3 +485,20 @@ table img {
 .t-btn {
   width: 7%;
 }
+
+summary h2 {
+  display: inline-block;
+  margin-bottom: 0;
+}
+
+dt {
+  font-weight: bold;
+}
+
+dt:target {
+  background: rgba(255, 255, 0, 0.5);
+}
+
+abbr {
+  font-variant-caps: all-small-caps;
+}

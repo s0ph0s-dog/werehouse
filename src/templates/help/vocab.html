@@ -1,0 +1,141 @@
+{% function block.content() %}
+<h1>What Do The Words Mean?</h1>
+<dl>
+  <dt id="d-animation">Animation</dt>
+  <dd>
+    A <a href="#d-video">Video</a> with no audio track. These can either be
+    literally video files (<abbr>MP4</abbr>, <abbr>WEBM</abbr>) with no audio
+    track, or animated <abbr>GIF</abbr> files.
+  </dd>
+
+  <dt id="d-archive">Archive</dt>
+  <dd>
+    The collection of <a href="#d-record">Records</a> that you have saved in
+    Werehouse.
+  </dd>
+
+  <dt id="d-artist">Artist</dt>
+  <dd>
+    Someone who makes art, obviously! But more technically, a name and a
+    collection of <a href="#d-handle">Handles</a> from various websites. This
+    collection makes it easy to correctly attribute and link to the artist
+    wherever they are online (and especially if they have different usernames on
+    different websites).
+  </dd>
+
+  <dt id="d-content-hash">Content Hash</dt>
+  <dd>
+    A mathematical ‘summary’ of an image of an image that can be efficiently
+    compared to other such summaries in order to determine if two images are
+    ‘similar.’ For Werehouse’s purpose, ‘similar’ means that the two images
+    contain pixels that are roughly the same brightness in roughly the same
+    places. It can match images even when they have been resized, compressed
+    (such as with <abbr>JPEG</abbr>), changed to grayscale, or
+    <i>slightly</i> cropped. For the nerds, the algorithm Werehouse uses to
+    determine this is variously called <i>Gradient Hash</i> or <i>dHash</i>. The
+    implementation is based on
+    <a
+      href="http://www.hackerfactor.com/blog/index.php?/archives/529-Kind-of-Like-That.html"
+      >Dr. Neal Krawetz’s description on <cite>The Hacker Factor</cite></a
+    >
+    and the code of the
+    <a href="https://github.com/abonander/img_hash"
+      >Austin Bonander’s img_hash library</a
+    >.
+  </dd>
+
+  <dt id="d-handle">Handle</dt>
+  <dd>
+    A username and a profile page link for an <a href="#d-artist">Artist</a>.
+  </dd>
+
+  <dt id="d-image">Image</dt>
+  <dd>An artwork that doesn’t move.</dd>
+
+  <dt id="d-incoming-tag">Incoming Tag</dt>
+  <dd>
+    A tag that was associated with an image on some website, as found by the
+    scraper. Incoming Tags are stored, but not displayed by default. If you
+    later define a <a href="#d-tag-rule">Tag Rule</a> for that Incoming Tag,
+    Werehouse will use the stored Incoming Tags to update every record with the
+    <a href="#d-tag">Tag</a> you specified in your new Tag Rule.
+  </dd>
+
+  <dt id="d-group">Group</dt>
+  <dd>
+    A collection of <a href="#d-record">Records</a> that are in a defined order.
+    Particularly useful for comics, but also nice for collecting together an
+    image and its alternate versions.
+  </dd>
+
+  <dt id="d-ping-list">Ping List</dt>
+  <dd>
+    A list of your friends’ usernames, along with what
+    <a href="#d-tag">Tags</a> in your <a href="#d-archive">Archive</a> they like
+    and don’t like. When you share a <a href="#d-record">Record</a> from your
+    archive using a <a href="#d-share-option">Share Option</a> that includes a
+    ping list, Werehouse will reply to the initial share message with another
+    message that pings/mentions the usernames who:
+    <ul>
+      <li>like <i>at least one</i> tag for that record, and</li>
+      <li>dislike <i>none</i> of the tags for that record.</li>
+    </ul>
+  </dd>
+
+  <dt id="d-queue">Queue</dt>
+  <dd>
+    The default way to archive something in Werehouse is to put it in the queue.
+    Periodically (currently once per minute), Werehouse will take up to 10 of
+    the oldest unprocessed items in your queue and attempt to archive them. It
+    does this by downloading the link you provided, or using
+    <a href="https://fuzzysearch.net">FuzzySearch</a> and
+    <a href="https://fluffle.xyz">Fluffle.xyz</a> to find matching images on
+    popular furry art websites.
+  </dd>
+
+  <dt id="d-record">Record</dt>
+  <dd>
+    Something you’ve saved in Werehouse. Currently, Werehouse supports
+    <a href="#d-image">Images</a>, <a href="#d-video">Videos</a>, and
+    <a href="#d-animation">Animations</a>.
+  </dd>
+
+  <dt id="d-share-option">Share Option</dt>
+  <dd>
+    A way to send something from your <a href="#d-archive">Archive</a> to your
+    friends, via another service. The only currently supported share option
+    currently is <a href="https://telegram.org">Telegram</a>, but
+    <a href="https://discord.com/safety/using-webhooks-and-embeds"
+      >Discord Webhooks</a
+    >
+    will be supported in the future. A Share Option can include a
+    <a href="#d-ping-list">Ping List</a>.
+  </dd>
+
+  <dt id="d-tag">Tag</dt>
+  <dd>
+    A label for something that is depicted in a <a href="#d-record">Record</a>.
+    You can apply as many tags as you like to a Record. However, trying to add
+    the same tag to a Record more than once has no effect. You can also include
+    a description for the tag, which helps distinguish between Portal (the video
+    game by Valve) and Portals (the generic concept of a wormhole-like
+    connection between two points in space). Or <cite>Dune</cite> (the book) and
+    dune (the geological feature).
+  </dd>
+
+  <dt id="d-tag-rule">Tag Rule</dt>
+  <dd>
+    A rule which describes how to convert
+    <a href="#d-incoming-tag">Incoming Tags</a> from other websites into
+    <a href="#d-tag">Tags</a> in your archive. This is particularly useful when
+    you find a site’s tagging conventions to be absurd or transphobic (<i
+      >ahem,</i
+    >
+    e621) and would prefer not to be stuck with those conventions in your own
+    archive.
+  </dd>
+
+  <dt id="d-video">Video</dt>
+  <dd>A moving <a href="#d-image">Image</a> with sound.</dd>
+</dl>
+{% end %}{% render("layouts/main", { title = "Help", user = user }) %}

@@ -1,0 +1,52 @@
+{% function block.content() %}
+<h1>Frequently Asked Questions</h1>
+<details>
+  <summary><h2>How do I invite someone?</h2></summary>
+  <p>
+    To invite someone to use this instance of Werehouse, follow these steps:
+  </p>
+  <ol>
+    <li>
+      Send a message to whoever runs this instance and ask them to “add an
+      invite link to your account.”
+    </li>
+    <li>
+      Go to your
+      <a href="/account#invite-links"
+        >account page and scroll down to the Invite Links section</a
+      >.
+    </li>
+    <li>
+      You should see that you have 1 invite link that doesn’t say “Used.” Copy
+      that link and send it to the person you’d like to invite.
+    </li>
+  </ol>
+</details>
+<details>
+  <summary>
+    <h2>
+      Why does Werehouse only support Mastodon servers, not other Fediverse
+      server software?
+    </h2>
+  </summary>
+  <p>
+    Mastodon offers a client API that is easy to integrate into Werehouse and
+    requires no authorization. However, if Werehouse wants to directly speak
+    ActivityPub, it basically needs to become an ActivityPub server! This is
+    because of features like
+    <a href="https://docs.joinmastodon.org/spec/security/"
+      >Secure Mode in Mastodon</a
+    >
+    and
+    <a href="https://docs.gotosocial.org/en/latest/federation/http_signatures/"
+      >the default configuration for GoToSocial</a
+    >. These features require that Werehouse provide a valid ActivityPub server
+    signature on its requests, which in turn requires creating an “instance
+    actor” to allow other ActivityPub servers to find its public key.
+  </p>
+  <p>
+    Werehouse will eventually support ActivityPub properly, after I’ve had
+    sufficient time to develop, test, and try out the ActivityPub code.
+  </p>
+</details>
+{% end %}{% render("layouts/main", { title = "FAQs", user = user }) %}

@@ -5,7 +5,7 @@
 <p>Nothing queued</p>
 {% else %}{% render("components/queue_records", {queue_records = queue_records,
 editable = false}) %}{% end %}
-<h1>Recently Archived Items</h1>
+<h1>Recently Archived Records</h1>
 {% render("components/image_gallery", {image_records = image_records, fn = fn,
 kind = kind }) %}{% end %}{% render("layouts/main", { title = "Home", user =
 user }) %}
