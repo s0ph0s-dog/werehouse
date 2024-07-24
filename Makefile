@@ -101,6 +101,7 @@ TEST_REDBEAN := test-$(REDBEAN)
 SRCS_OUT := $(patsubst src/%,$(SRV_DIR)/%,$(SRCS))
 LIBS_OUT := $(patsubst lib/%,$(SRV_DIR)/.lua/%,$(LIBS))
 TEST_LIBS_OUT := $(patsubst lib/%,$(SRV_DIR)/.lua/%,$(TEST_LIBS))
+CSSO_PATH := $(shell which csso)
 
 build: $(OUTPUT)
 
@@ -158,7 +159,11 @@ $(SRV_DIR)/manage.lua: src/manage.lua | $$(@D)/.
 	cp $< $@
 
 $(SRV_DIR)/%.css: src/%.css | $$(@D)/.
+ifeq (,$(CSSO_PATH))
 	cp $< $@
+else
+	csso $< -o $@
+endif
 
 $(SRV_DIR)/%.png: src/%.png | $$(@D)/.
 	cp $< $@
