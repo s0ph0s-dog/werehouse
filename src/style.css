@@ -486,17 +486,16 @@ table img {
   width: 7%;
 }
 
-summary h2 {
-  display: inline-block;
-  margin-bottom: 0;
-}
-
 dt {
   font-weight: bold;
 }
 
 dt:target {
   background: rgba(255, 255, 0, 0.5);
+}
+
+dd + dt {
+  margin-top: 1em;
 }
 
 abbr {
