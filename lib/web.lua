@@ -723,7 +723,7 @@ end
 
 local accept_edit_image = login_required(function(r, user_record)
     local redirect_url = "/image/" .. r.params.image_id
-    if r.params.cancel == "Cancel" then
+    if r.params.cancel then
         Log(kLogDebug, "Cancelling edit")
         return Fm.serveRedirect(redirect_url, 302)
     end
