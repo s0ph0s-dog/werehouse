@@ -1,7 +1,5 @@
 {% function help_dupes() %}
-<p>
-  This entry seems to be a duplicate of something that's already been saved.
-</p>
+<p>This entry might be a duplicate of something that's already been saved.</p>
 <table>
   <thead>
     <tr>
@@ -30,6 +28,14 @@
 <form method="POST" action="{%& makeUrl() %}" hx-boost="true">
   <p>What do you want to do?</p>
   <span class="buttons">
+    <input
+      type="submit"
+      name="cancel"
+      value="Cancel"
+      formnovalidate
+      hx-post="{%& makeUrl( { params = {} }) %}"
+      hx-swap="none"
+    />
     <input type="submit" name="discard" value="Discard" />
     <input type="submit" name="save" value="Save Anyway" />
   </span>
@@ -75,8 +81,13 @@
     </li>
     {% end %}
   </ol>
-  <span class="buttons"
-    ><input type="submit" name="cancel" value="Cancel" /><input
+  <span class="buttons">
+    <input
+      type="submit"
+      name="cancel"
+      value="Cancel"
+      formnovalidate
+      hx-post="{%& form_path %}" /><input
       type="submit"
       name="archive_selected"
       value="Archive Selected"
