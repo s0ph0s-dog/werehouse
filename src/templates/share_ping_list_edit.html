@@ -16,6 +16,8 @@
       type="submit"
       name="delete_{%& kind %}_{%& tag_type %}_tag"
       value="{%& handle_idx %},{%& tag_idx %}"
+      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-target="dialog"
     >
       Delete
     </button>
@@ -31,6 +33,8 @@
       type="submit"
       name="delete_{%& tag_type %}_tag"
       value="{%& entry_id %},{%& tag.tag_id %}"
+      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-target="dialog"
     >Delete</button>
 </li>
 {% end end end %}
@@ -50,6 +54,8 @@
       type="submit"
       name="delete_{%& kind %}_handle"
       value="{%& id %}"
+      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-target="dialog"
     >Delete</button>
   </div>
   <ul>
@@ -73,6 +79,8 @@
         type="submit"
         name="add_{%& kind %}_positive_tag"
         value="add_{%& kind %}_positive_tag"
+        hx-post="{%& makeUrl({ params = {} }) %}"
+        hx-target="dialog"
       >
         Add Another ‘Ping’ Tag…
       </button>
@@ -97,6 +105,8 @@
         type="submit"
         name="add_{%& kind %}_negative_tag"
         value="add_{%& kind %}_negative_tag"
+        hx-post="{%& makeUrl({ params = {} }) %}"
+        hx-target="dialog"
       >
         Add Another ‘Don’t Ping’ Tag…
       </button>
@@ -187,13 +197,25 @@
         />
       </li>
     </ul>
-    <button type="submit" name="add_handle" value="add_handle">
+    <button
+      type="submit"
+      name="add_handle"
+      value="add_handle"
+      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-target="dialog"
+    >
       Add Tags…
     </button>
   </details>
   <span class="buttons">
-    <input type="submit" name="cancel" value="Cancel" formnovalidate data-btn-cancel />
-    <input type="submit" name="add" value="Add" />
+    <input
+      type="submit"
+      name="cancel"
+      value="Cancel"
+      formnovalidate
+      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-swap="none" />
+    <input type="submit" name="add" value="Update" />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Edit Share Option: " .. spl.name, dialog_width

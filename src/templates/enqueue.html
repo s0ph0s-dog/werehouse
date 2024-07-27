@@ -16,7 +16,14 @@
       accept="*.png,*.jpg,*.jpeg,*.gif,image/png,image/jpeg,image/gif"
   /></label>
   <span class="buttons">
-    <input type="submit" name="cancel" value="Cancel" data-btn-cancel />
+    <input
+      type="submit"
+      name="cancel"
+      value="Cancel"
+      formnovalidate
+      hx-post="/enqueue"
+      hx-swap="none"
+    />
     <input type="submit" name="add" value="Add" />
   </span>
 </form>

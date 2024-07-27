@@ -46,7 +46,8 @@
       name="cancel"
       value="Cancel"
       formnovalidate
-      data-btn-cancel
+      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-swap="none"
     />
     <input type="submit" name="add" value="Add" />
   </span>

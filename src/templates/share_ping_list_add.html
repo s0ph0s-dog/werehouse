@@ -17,13 +17,15 @@
       type="submit"
       name="delete_pending_{%& tag_type %}_tag"
       value="{%& handle_idx %},{%& tag_idx %}"
+      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-target="dialog"
     >
       Delete
     </button>
   </div>
 </li>
 {% end end end %} {% function block.content() %}
-<form class="vbox" method="POST" action="{%& makeUrl() %}" hx-boost="true">
+<form class="vbox" method="POST" action="{%& makeUrl({ params = {} }) %}" hx-boost="true">
   <input type="submit" name="dummy_submit" value="dummy_submit" style="display:none" />
   <label
     >Name:
@@ -92,6 +94,8 @@
             type="submit"
             name="delete_pending_handle"
             value="{%& h_idx %}"
+            hx-post="{%& makeUrl({ params = {} }) %}"
+            hx-target="dialog"
           >
             Delete
           </button>
@@ -116,6 +120,8 @@
               type="submit"
               name="add_pending_positive_tag"
               value="add_handle"
+              hx-post="{%& makeUrl({ params = {} }) %}"
+              hx-target="dialog"
             >
               Add Another ‘Ping’ Tag…
             </button>
@@ -139,6 +145,8 @@
               type="submit"
               name="add_pending_negative_tag"
               value="add_handle"
+              hx-post="{%& makeUrl({ params = {} }) %}"
+              hx-target="dialog"
             >
               Add Another ‘Don’t Ping’ Tag…
             </button>
@@ -156,12 +164,24 @@
         />
       </li>
     </ul>
-    <button type="submit" name="add_handle" value="add_handle">
+    <button
+      type="submit"
+      name="add_handle"
+      value="add_handle"
+      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-target="dialog"
+    >
       Add Tags…
     </button>
   </details>
   <span class="buttons">
-    <input type="submit" name="cancel" value="Cancel" formnovalidate data-btn-cancel />
+    <input
+      type="submit"
+      name="cancel"
+      value="Cancel"
+      formnovalidate
+      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-swap="none" />
     <input type="submit" name="add" value="Add" />
   </span>
 </form>

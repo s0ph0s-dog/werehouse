@@ -18,3 +18,13 @@ async function registerServiceWorker() {
 }
 
 registerServiceWorker();
+
+htmx.onLoad(function (content) {
+  let cancelButtons = content.querySelectorAll('[name="cancel"]');
+  cancelButtons.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      console.log("cancelling");
+      btn.closest("dialog").close();
+    });
+  });
+});

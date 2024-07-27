@@ -33,7 +33,13 @@
   >
   {% end %}
   <span class="buttons">
-    <input type="submit" name="cancel" value="Cancel" data-btn-cancel />
+    <input
+      type="submit"
+      name="cancel"
+      value="Cancel"
+      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-swap="none"
+    />
     <input type="submit" name="share" value="Share" />
   </span>
 </form>
