@@ -3,6 +3,8 @@ local function get_post_dialog_redirect(r, default)
         or r.headers["HX-Current-URL"]
         or r.session.after_dialog_action
         or default
+    redirect_url = redirect_url:gsub("/edit$", "")
+    Log(kLogDebug, "Redirecting to %s after this dialog" % { redirect_url })
     return Fm.serveRedirect(redirect_url, 302)
 end
 

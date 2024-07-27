@@ -10,6 +10,8 @@
       type="submit"
       name="new_group"
       value="New Group With Selection"
+      hx-post="{%& form_path %}"
+      hx-target="dialog"
   /></span>
   {% end %}{% if pages and pages.current > 1 and #image_records == 0 then %}
   <p>You've fallen off the end of the page counter!</p>
