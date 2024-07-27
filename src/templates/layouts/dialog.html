@@ -1,3 +1,4 @@
+{% if not hx then %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -19,31 +20,33 @@
       content="#000"
       media="(prefers-color-scheme: dark)"
     />
-    <style>
-      body {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        margin: 0;
-      }
-    </style>
   </head>
   <body>
     <div class="content">
+      <style>
+        body {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 100vh;
+          margin: 0;
+        }
+      </style>
       <div
         class="dialog"
         style="margin: 2em 0; width: {% if dialog_width then %}{%& dialog_width %}{% else %}24em{% end %};max-width:95vw"
       >
+        {% end %}
         <h1>{%& title %}</h1>
         {% if type(error) == "string" then %}
         <p style="color: red">{%& error %}</p>
         {% end %} {% function block.content() %}This page was configured
         incorrectly and no page content was provided.{% end %}{% block.content()
-        %}
+        %}{% if not hx then %}
       </div>
     </div>
     <script src="/htmx.js"></script>
     <script src="/index.js"></script>
   </body>
 </html>
+{% end %}

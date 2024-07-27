@@ -27,7 +27,7 @@
     {% end %}
   </tbody>
 </table>
-<form method="POST">
+<form method="POST" action="{%& makeUrl() %}" hx-boost="true">
   <p>What do you want to do?</p>
   <span class="buttons">
     <input type="submit" name="discard" value="Discard" />
@@ -40,7 +40,7 @@
   can't guess what to do. Check the boxes of the records you'd like to save. All
   of them will be in a group together.
 </p>
-<form method="POST">
+<form method="POST" action="{%& makeUrl() %}" hx-boost="true">
   <ol>
     {% for source_idx, source in ipairs(disambiguation_data.h) do %}
     <li>
@@ -90,4 +90,4 @@ else %}
   a way that the web front-end doesn't know how to display.
 </p>
 {% end %}{% end %}{% render("layouts/dialog", { title = "Provide Help", user =
-user, dialog_width = "36em" }) %}
+user, dialog_width = "36em", hx = hx }) %}

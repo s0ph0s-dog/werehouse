@@ -3,7 +3,14 @@
   {%& artist.name %} {% render("components/artist_verified", { artist = artist
   }) %}
 </h1>
-<p><a href="/artist/{%& artist.artist_id %}/edit">Edit…</a></p>
+<p>
+  <a
+    href="/artist/{%& artist.artist_id %}/edit"
+    hx-get="/artist/{%& artist.artist_id %}/edit"
+    hx-target="dialog"
+    >Edit…</a
+  >
+</p>
 <p>Found online as:</p>
 {% if #handles == 0 then %}
 <p>(No handles added yet!)</p>

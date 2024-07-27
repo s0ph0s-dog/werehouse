@@ -1,6 +1,6 @@
 {% function block.content() %}
 <p>You have been invited to use Werehouse. Create your account:</p>
-<form method="POST" class="vbox">
+<form method="POST" class="vbox" hx-boost="true">
   <label
     >Username:
     <input
@@ -32,7 +32,7 @@
   /></label>
   <label class="inline">
     <input type="checkbox" name="tos" value="accepted" required />
-    I accept the <a href="/tos">Terms of Service</a>
+    I accept the <a href="/tos" target="_blank">Terms of Service</a>
   </label>
   <span class="buttons">
     <input type="reset" />
@@ -40,4 +40,4 @@
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Accept Invitation", user = user,
-error = error }) %}
+error = error, hx = hx }) %}

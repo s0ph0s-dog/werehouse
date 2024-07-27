@@ -15,7 +15,7 @@
     DbUtilK.ImageKind}) %}
   </div>
   <div class="sidebar">
-    <form method="POST" id="edit-form">
+    <form method="POST" id="edit-form" action="{%& makeUrl() %}" hx-boost="true">
       <input type="submit" id="dummy" name="dummy" value="Dummy Submit" style="display:none;" formnovalidate />
       <h1>Metadata</h1>
       <ul>
@@ -97,7 +97,7 @@
         </li>
         {% end %}
       </ul>
-      <button formnovalidate type="submit" name="make_rules" value="make_rules">Create Rules and Add Tags…</button>
+      <button formnovalidate type="submit" name="make_rules" value="make_rules" hx-post="{%& makeUrl() %}" hx-target="dialog">Create Rules and Add Tags…</button>
       </details>
       {% end %}
       <h1>Sources</h1>

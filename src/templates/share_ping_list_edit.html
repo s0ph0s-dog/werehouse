@@ -104,7 +104,7 @@
   </ul>
 </li>
 {% end %}{% function block.content() %}
-<form class="vbox" method="POST">
+<form class="vbox" method="POST" action="{%& makeUrl() %}" hx-boost="true">
   <input type="submit" name="dummy_submit" value="dummy_submit" style="display:none" />
   <label
     >Name:
@@ -192,9 +192,9 @@
     </button>
   </details>
   <span class="buttons">
-    <input type="reset" />
+    <input type="submit" name="cancel" value="Cancel" formnovalidate data-btn-cancel />
     <input type="submit" name="add" value="Add" />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Edit Share Option: " .. spl.name, dialog_width
-= "30em" }) %}
+= "30em", hx = hx }) %}

@@ -1,6 +1,11 @@
 {% function block.content() %}
 <h1>{%& tag_rule.incoming_name %} on {%& tag_rule.incoming_domain %}</h1>
-<a href="/tag-rule/{%& tag_rule.tag_rule_id %}/edit">Edit…</a>
+<a
+  href="/tag-rule/{%& tag_rule.tag_rule_id %}/edit"
+  hx-get="/tag-rule/{%& tag_rule.tag_rule_id %}/exit"
+  hx-target="dialog"
+  >Edit…</a
+>
 <p>
   When the scraper sees a tag named <b>{%& tag_rule.incoming_name %}</b> coming
   from <b>{%& tag_rule.incoming_domain %}</b>, it will add

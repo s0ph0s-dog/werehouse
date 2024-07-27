@@ -1,5 +1,5 @@
 {% function block.content() %}
-<form class="vbox" method="POST">
+<form class="vbox" method="POST" action="/tag/add" hx-boost="true">
   <label
     >Tag Name
     <input
@@ -16,8 +16,14 @@
     <textarea name="description" rows="5" cols="35"></textarea>
   </label>
   <span class="buttons">
-    <input type="reset" value="Clear" />
+    <input
+      type="submit"
+      name="cancel"
+      value="Cancel"
+      formnovalidate
+      data-btn-cancel
+    />
     <input type="submit" name="add" value="Add" />
   </span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Add Tag" }) %}
+{% end %}{% render("layouts/dialog", { title = "Add Tag", hx = hx }) %}

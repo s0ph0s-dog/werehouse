@@ -1,12 +1,26 @@
+local function get_post_dialog_redirect(r, default)
+    local redirect_url = r.headers["Referer"]
+        or r.headers["HX-Current-URL"]
+        or r.session.after_dialog_action
+        or default
+    return Fm.serveRedirect(redirect_url, 302)
+end
+
+local function add_htmx_param(r, params)
+    local hx_header = r.headers["HX-Request"]
+    if hx_header and hx_header == "true" then
+        params.hx = true
+    end
+end
+
 local function render_invite(r)
     local invite_record = Accounts:findInvite(r.params.invite_code)
     if not invite_record then
         return Fm.serve404()
     end
-    return Fm.render(
-        "accept_invite",
-        { error = r.session.error, invite_record = invite_record }
-    )
+    local params = { error = r.session.error, invite_record = invite_record }
+    add_htmx_param(r, params)
+    return Fm.render("accept_invite", params)
 end
 
 local function serve_error_page(code)
@@ -412,20 +426,24 @@ local allowed_image_types = {
     ["image/gif"] = true,
 }
 
-local render_enqueue = login_required(function(_, user_record)
-    return Fm.serveContent("enqueue", {
-        user = user_record,
-    })
+local render_enqueue = login_required(function(r, user_record)
+    local params = { user = user_record }
+    add_htmx_param(r, params)
+    return Fm.serveContent("enqueue", params)
 end)
 
 local accept_enqueue = login_required(function(r)
-    if r.params.link then
+    local redirect = get_post_dialog_redirect(r, "/home")
+    if r.params.cancel then
+        return redirect
+    end
+    if r.params.link and #r.params.link > 0 then
         local result, errmsg = Model:enqueueLink(r.params.link)
         if not result then
             Log(kLogWarn, errmsg)
         end
         -- TODO: check errors
-        return Fm.serveRedirect("/home", 302)
+        return redirect
     elseif
         r.params.multipart.image
         and allowed_image_types[r.params.multipart.image.headers["content-type"]]
@@ -438,9 +456,11 @@ local accept_enqueue = login_required(function(r)
         if not result then
             Log(kLogWarn, errmsg)
         end
-        return Fm.serveRedirect("/home", 302)
+        return redirect
     else
-        return Fm.serve400("Must provide link or PNG/JPEG/GIF image file.")
+        return Fm.serve400(
+            "Must provide either link or PNG/JPEG/GIF image file."
+        )
     end
     return Fm.serve500("This should have been unreachable")
 end)
@@ -1020,7 +1040,7 @@ local render_image_share = login_required(function(r, user_record)
     end
     local form_sources_text = r.params.sources_text or sources_text
     local form_ping_text = r.params.ping_text or ping_text
-    return Fm.serveContent("image_share", {
+    local params = {
         user = user_record,
         image = image,
         share_ping_list = spl,
@@ -1030,7 +1050,9 @@ local render_image_share = login_required(function(r, user_record)
         ping_text_size = form_ping_text:linecount(),
         share_id = r.params.t,
         fn = image_functions,
-    })
+    }
+    add_htmx_param(r, params)
+    return Fm.serveContent("image_share", params)
 end)
 
 local render_image_group_share = login_required(function(r, user_record)
@@ -1075,7 +1097,17 @@ local render_image_group_share = login_required(function(r, user_record)
         local _, file_path = FsTools.make_image_path_from_filename(image.file)
         image.file_path = file_path
     end
-    if r.params.share then
+    if r.params.cancel then
+        if not r.params.share_id then
+            return Fm.serveError(400, "Must include share_id in request")
+        end
+        local d_ok, d_err = Model:deleteShareRecords { r.params.share_id }
+        if not d_ok then
+            Log(kLogInfo, d_err)
+            return Fm.serveError(500)
+        end
+        return Fm.serveRedirect("/image-group/" .. ig_id, 302)
+    elseif r.params.share then
         local token_ok, token_err =
             Model:updatePendingShareRecordWithDateNow(r.params.share_id)
         if not token_ok then
@@ -1140,7 +1172,7 @@ local render_image_group_share = login_required(function(r, user_record)
     end
     -- local form_sources_text = r.params.sources_text or sources_text
     local form_ping_text = r.params.ping_text or ping_text
-    return Fm.serveContent("image_share", {
+    local params = {
         user = user_record,
         ig_id = r.params.ig_id,
         images = images,
@@ -1151,7 +1183,9 @@ local render_image_group_share = login_required(function(r, user_record)
         fn = image_functions,
         print = print,
         EncodeJson = EncodeJson,
-    })
+    }
+    add_htmx_param(r, params)
+    return Fm.serveContent("image_share", params)
 end)
 
 local lowerList = {
@@ -1240,23 +1274,16 @@ local render_add_tag_rule_bulk = login_required(function(r, user_record)
             return Fm.serve500()
         end
         if #changes < 1 then
-            local redirect_url = r.session.after_dialog_action
-            if not redirect_url then
-                redirect_url = "/tag-rule"
-            end
-            return Fm.serveRedirect(302, redirect_url)
+            return get_post_dialog_redirect(r, "/tag-rule")
         end
-        return Fm.serveContent("tag_rule_changelist", {
-            changes = changes,
-        })
+        local params = { changes = changes }
+        add_htmx_param(r, params)
+        return Fm.serveContent("tag_rule_changelist", params)
     elseif r.params.ok then
-        local redirect_url = r.session.after_dialog_action
-        if not redirect_url then
-            redirect_url = "/tag-rule"
-        end
-        return Fm.serveRedirect(302, redirect_url)
+        return get_post_dialog_redirect(r, "/tag-rule")
     else
-        r.session.after_dialog_action = r.headers.Referer
+        r.session.after_dialog_action = r.headers["HX-Current-URL"]
+            or r.headers.Referer
     end
     local itids = r.params.itids
     if not itids then
@@ -1275,11 +1302,13 @@ local render_add_tag_rule_bulk = login_required(function(r, user_record)
         Log(kLogInfo, at_err)
         return Fm.serve500()
     end
-    return Fm.serveContent("tag_rule_bulk_add", {
+    local params = {
         incoming_tags = incoming_tags,
         alltags = alltags,
         canonicalize_tag_name = canonicalize_tag_name,
-    })
+    }
+    add_htmx_param(r, params)
+    return Fm.serveContent("tag_rule_bulk_add", params)
 end)
 
 local function pagination_data(
@@ -1341,6 +1370,7 @@ local render_queue = login_required(function(r, user_record)
 end)
 
 local accept_queue = login_required(function(r)
+    local redirect = get_post_dialog_redirect(r, "/queue")
     if r.params.cleanup then
         local ok, err = Model:cleanUpQueue()
         if not ok then
@@ -1373,7 +1403,7 @@ local accept_queue = login_required(function(r)
             return Fm.serve400()
         end
     end
-    return Fm.serveRedirect(r.session.after_dialog_action, 302)
+    return redirect
 end)
 
 local render_about = login_optional(function(r, user_record)
@@ -1408,11 +1438,13 @@ local render_queue_help = login_required(function(r, user_record)
         )
         return Fm.serve500()
     end
-    return Fm.serveContent("queue_help", {
+    local params = {
         user = user_record,
         queue_entry = queue_entry,
         disambiguation_data = dd,
-    })
+    }
+    add_htmx_param(r, params)
+    return Fm.serveContent("queue_help", params)
 end)
 
 local function queue_help_dupes(r)
@@ -1486,11 +1518,7 @@ local accept_queue_help = login_required(function(r)
         Log(kLogInfo, "Database error: %s" % { err })
         return Fm.serve500()
     end
-    local last_page = r.session.after_dialog_action
-    if not last_page then
-        last_page = "/home"
-    end
-    return Fm.serveRedirect(last_page, 302)
+    return get_post_dialog_redirect(r, "/home")
 end)
 
 local render_images = login_required(function(r, user_record)
@@ -1525,7 +1553,7 @@ local render_images = login_required(function(r, user_record)
 end)
 
 local accept_images = login_required(function(r, _)
-    local redirect_path = r.session.after_dialog_action
+    local redirect = get_post_dialog_redirect(r, "/image")
     if r.params.delete then
         local ok, errmsg = Model:deleteImages(r.params.image_ids)
         if not ok then
@@ -1540,7 +1568,7 @@ local accept_images = login_required(function(r, _)
         if #image_ids < 1 then
             r.session.error =
                 "You must select at least one record to add to the group!"
-            return Fm.serveRedirect(redirect_path, 302)
+            return redirect
         end
         local ig_id, g_err =
             Model:createImageGroupWithImages("Untitled group", image_ids)
@@ -1550,7 +1578,7 @@ local accept_images = login_required(function(r, _)
         end
         return Fm.serveRedirect("/image-group/%d/edit" % { ig_id }, 302)
     end
-    return Fm.serveRedirect(redirect_path, 302)
+    return redirect
 end)
 
 local render_artists = login_required(function(r, user_record)
@@ -1584,21 +1612,21 @@ local render_artists = login_required(function(r, user_record)
 end)
 
 local accept_artists = login_required(function(r)
-    local redirect_path = r.session.after_dialog_action
+    local redirect = get_post_dialog_redirect(r, "/artist")
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteArtists(r.params.artist_ids)
         if not ok then
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
-        return Fm.serveRedirect(r.headers.Referer, 302)
+        return redirect
     elseif r.params.merge == "Merge" then
         local artist_ids = r.params.artist_ids
         artist_ids = table.map(artist_ids, tonumber)
         table.sort(artist_ids)
         if #artist_ids < 2 then
             r.session.error = "You must select at least two artists to merge!"
-            return Fm.serveRedirect(redirect_path, 302)
+            return redirect
         end
         -- Yes, this is slower because it moves everything down, but it preserves
         -- earlier artist IDs, which makes me happier.
@@ -1608,9 +1636,9 @@ local accept_artists = login_required(function(r)
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
-        return Fm.serveRedirect(redirect_path, 302)
+        return redirect
     end
-    return Fm.serveRedirect(redirect_path, 302)
+    return redirect
 end)
 
 local render_artist = login_required(function(r, user_record)
@@ -1643,8 +1671,10 @@ local render_artist = login_required(function(r, user_record)
     })
 end)
 
-local render_add_artist = login_required(function(_)
-    return Fm.serveContent("artist_add")
+local render_add_artist = login_required(function(r)
+    local params = {}
+    add_htmx_param(r, params)
+    return Fm.serveContent("artist_add", params)
 end)
 
 local function render_edit_artist_internal(r)
@@ -1675,20 +1705,26 @@ local function render_edit_artist_internal(r)
     if pending_profile_urls then
         pending_profile_urls = table.filter(pending_profile_urls, not_emptystr)
     end
-    return Fm.serveContent("artist_edit", {
+    local params = {
         artist = artist,
         handles = handles,
         pending_usernames = pending_usernames,
         pending_profile_urls = pending_profile_urls,
         name = r.params.name or artist.name,
         manually_confirmed = r.params.confirmed or artist.manually_confirmed,
-    })
+    }
+    add_htmx_param(r, params)
+    return Fm.serveContent("artist_edit", params)
 end
 
 local render_edit_artist = login_required(render_edit_artist_internal)
 
 local accept_edit_artist = login_required(function(r)
-    local redirect_url = "/artist/" .. r.params.artist_id
+    local redirect =
+        get_post_dialog_redirect(r, "/artist/" .. r.params.artist_id)
+    if r.params.cancel then
+        return redirect
+    end
     local pending_usernames = r.params.pending_usernames
     local pending_profile_urls = r.params.pending_profile_urls
     local pending_handles = {}
@@ -1785,11 +1821,15 @@ local accept_edit_artist = login_required(function(r)
             end
             Model:release_savepoint(SP)
         end
-        return Fm.serveRedirect(redirect_url, 302)
+        return redirect
     end
 end)
 
 local accept_add_artist = login_required(function(r)
+    local redirect = get_post_dialog_redirect(r, "/artist")
+    if r.params.cancel then
+        return redirect
+    end
     local usernames = r.params.usernames
     local profile_urls = r.params.profile_urls
     if not r.params.name then
@@ -1856,21 +1896,21 @@ local render_image_groups = login_required(function(r, user_record)
 end)
 
 local accept_image_groups = login_required(function(r)
-    local redirect_path = r.session.after_dialog_action
+    local redirect = get_post_dialog_redirect(r, "/image-group")
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteImageGroups(r.params.ig_ids)
         if not ok then
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
-        return Fm.serveRedirect(r.headers.Referer, 302)
+        return redirect
     elseif r.params.merge == "Merge" then
         local ig_ids = r.params.ig_ids
         ig_ids = table.map(ig_ids, tonumber)
         table.sort(ig_ids)
         if #ig_ids < 2 then
             r.session.error = "You must select at least two groups to merge!"
-            return Fm.serveRedirect(redirect_path, 302)
+            return redirect
         end
         local merge_into_id = table.remove(ig_ids, 1)
         local ok, errmsg = Model:mergeImageGroups(merge_into_id, ig_ids)
@@ -1878,9 +1918,9 @@ local accept_image_groups = login_required(function(r)
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
-        return Fm.serveRedirect(redirect_path, 302)
+        return redirect
     end
-    return Fm.serveRedirect(redirect_path, 302)
+    return redirect
 end)
 
 local render_image_group = login_required(function(r, user_record)
@@ -1998,16 +2038,21 @@ local render_edit_image_group = login_required(function(r, user_record)
     if not images then
         Log(kLogInfo, image_errmsg)
     end
-    return Fm.serveContent("image_group_edit", {
+    local params = {
         user = user_record,
         ig = ig,
         images = images,
         fn = image_functions,
-    })
+    }
+    add_htmx_param(r, params)
+    return Fm.serveContent("image_group_edit", params)
 end)
 
 local accept_edit_image_group = login_required(function(r)
-    local redirect_url = r.session.after_dialog_action
+    local redirect = get_post_dialog_redirect(r, "/image-group")
+    if r.params.cancel then
+        return redirect
+    end
     local ig_id = r.params.ig_id
     local image_ids = r.params.image_ids
     local new_orders = r.params.new_orders
@@ -2039,8 +2084,7 @@ local accept_edit_image_group = login_required(function(r)
         end
     end
     Model:release_savepoint(SP)
-    Log(kLogDebug, "Redirecting to " .. redirect_url)
-    return Fm.serveRedirect(redirect_url, 302)
+    return redirect
 end)
 
 local render_telegram_link = login_required(function(r, user_record)
@@ -2060,10 +2104,12 @@ local render_telegram_link = login_required(function(r, user_record)
     if tg.created_at - now > (30 * 60) then
         return Fm.serve404()
     end
-    return Fm.serveContent("link_telegram", {
+    local params = {
         user = user_record,
         tg = tg,
-    })
+    }
+    add_htmx_param(r, params)
+    return Fm.serveContent("link_telegram", params)
 end)
 
 local accept_telegram_link = login_required(function(r, user_record)
@@ -2136,21 +2182,21 @@ local render_tags = login_required(function(r, user_record)
 end)
 
 local accept_tags = login_required(function(r)
-    local redirect_path = r.session.after_dialog_action
+    local redirect = get_post_dialog_redirect(r, "/tag")
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteTags(r.params.tag_ids)
         if not ok then
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
-        return Fm.serveRedirect(r.headers.Referer, 302)
+        return redirect
     elseif r.params.merge == "Merge" then
         local tag_ids = r.params.tag_ids
         tag_ids = table.map(tag_ids, tonumber)
         table.sort(tag_ids)
         if #tag_ids < 2 then
             r.session.error = "You must select at least two tags to merge!"
-            return Fm.serveRedirect(redirect_path, 302)
+            return redirect
         end
         -- Yes, this is slower because it moves everything down, but it preserves
         -- earlier tag IDs, which makes me happier.
@@ -2160,9 +2206,9 @@ local accept_tags = login_required(function(r)
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
-        return Fm.serveRedirect(redirect_path, 302)
+        return redirect
     end
-    return Fm.serveRedirect(redirect_path, 302)
+    return redirect
 end)
 
 local render_tag = login_required(function(r, user_record)
@@ -2198,33 +2244,46 @@ local render_edit_tag = login_required(function(r, user_record)
         Log(kLogInfo, tag_errmsg)
         return Fm.serve404()
     end
-    return Fm.serveContent("tag_edit", {
+    local params = {
         user = user_record,
         tag = tag,
-    })
+    }
+    add_htmx_param(r, params)
+    return Fm.serveContent("tag_edit", params)
 end)
 
 local accept_edit_tag = login_required(function(r)
-    local redirect_url = r.session.after_dialog_action
+    local redirect = get_post_dialog_redirect(r, "/tag")
+    if r.params.cancel then
+        return redirect
+    end
     local tag_id = r.params.tag_id
     local new_name = r.params.name
     local new_desc = r.params.description
     if not tag_id or not new_name or not new_desc then
         return Fm.serve400()
     end
-    local update_ok, update_err = Model:updateTag(tag_id, new_name, new_desc)
-    if not update_ok then
-        Log(kLogInfo, update_err)
-        return Fm.serve500()
+    if r.params.update then
+        local update_ok, update_err =
+            Model:updateTag(tag_id, new_name, new_desc)
+        if not update_ok then
+            Log(kLogInfo, update_err)
+            return Fm.serve500()
+        end
     end
-    return Fm.serveRedirect(redirect_url, 302)
+    return redirect
 end)
 
-local render_add_tag = login_required(function(_)
-    return Fm.serveContent("tag_add")
+local render_add_tag = login_required(function(r)
+    local params = {}
+    add_htmx_param(r, params)
+    return Fm.serveContent("tag_add", params)
 end)
 
 local accept_add_tag = login_required(function(r)
+    if r.params.cancel then
+        return Fm.serveRedirect("/tag", 302)
+    end
     if not r.params.name then
         return Fm.serveError(400, "Tag name is required")
     end
@@ -2382,16 +2441,16 @@ local render_tag_rules = login_required(function(r, user_record)
 end)
 
 local accept_tag_rules = login_required(function(r)
-    local redirect_path = r.session.after_dialog_action
+    local redirect = get_post_dialog_redirect(r, "/tag-rule")
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteTagRules(r.params.tag_rule_ids)
         if not ok then
             Log(kLogInfo, errmsg)
             return Fm.serve500()
         end
-        return Fm.serveRedirect(r.headers.Referer, 302)
+        return redirect
     end
-    return Fm.serveRedirect(redirect_path, 302)
+    return redirect
 end)
 
 local render_tag_rule = login_required(function(r, user_record)
@@ -2424,16 +2483,21 @@ local render_edit_tag_rule = login_required(function(r, user_record)
     if not alltags then
         Log(kLogInfo, alltags_err)
     end
-    return Fm.serveContent("tag_rule_edit", {
+    local params = {
         user = user_record,
         tag_rule = tag_rule,
         alltags = alltags,
         alldomains = ScraperPipeline.CANONICAL_DOMAINS_WITH_TAGS,
-    })
+    }
+    add_htmx_param(r, params)
+    return Fm.serveContent("tag_rule_edit", params)
 end)
 
 local accept_edit_tag_rule = login_required(function(r)
-    local redirect_url = r.session.after_dialog_action
+    local redirect = get_post_dialog_redirect(r, "/tag-rule")
+    if r.params.cancel then
+        return redirect
+    end
     local tag_rule_id = r.params.tag_rule_id
     local new_incoming_name = r.params.incoming_name
     local new_incoming_domain = r.params.incoming_domain
@@ -2456,20 +2520,25 @@ local accept_edit_tag_rule = login_required(function(r)
         Log(kLogInfo, update_err)
         return Fm.serve500()
     end
-    return Fm.serveRedirect(redirect_url, 302)
+    return redirect
 end)
 
-local render_add_tag_rule = login_required(function(_)
+local render_add_tag_rule = login_required(function(r)
     local alltags, alltags_err = Model:getAllTags()
     if not alltags then
         Log(kLogInfo, alltags_err)
     end
-    return Fm.serveContent("tag_rule_add", {
+    local params = {
         alltags = alltags,
-    })
+    }
+    add_htmx_param(r, params)
+    return Fm.serveContent("tag_rule_add", params)
 end)
 
 local accept_add_tag_rule = login_required(function(r)
+    if r.params.cancel then
+        return Fm.serveRedirect("/tag-rule", 302)
+    end
     if not r.params.incoming_name then
         return Fm.serveError(400, "Incoming tag name is required")
     end
@@ -2561,6 +2630,10 @@ local function accept_add_share_ping_list(
 end
 
 local render_add_share_ping_list = login_required(function(r, user_record)
+    local redirect = get_post_dialog_redirect(r, "/account")
+    if r.params.cancel then
+        return redirect
+    end
     local alltags, alltags_err = Model:getAllTags()
     if not alltags then
         Log(kLogInfo, alltags_err)
@@ -2604,7 +2677,7 @@ local render_add_share_ping_list = login_required(function(r, user_record)
             pending_neg
         )
     end
-    return Fm.serveContent("share_ping_list_add", {
+    local params = {
         user = user_record,
         alltags = alltags,
         share_services = { "Telegram" },
@@ -2614,7 +2687,9 @@ local render_add_share_ping_list = login_required(function(r, user_record)
         pending_handles = pending_handles,
         pending_positive_tags = pending_pos,
         pending_negative_tags = pending_neg,
-    })
+    }
+    add_htmx_param(r, params)
+    return Fm.serveContent("share_ping_list_add", params)
 end)
 
 local function filter_deleted_tags(delete_coords_list, tags_by_entryid_map)
@@ -2730,6 +2805,11 @@ local function accept_edit_share_ping_list(
 end
 
 local render_edit_share_ping_list = login_required(function(r, user_record)
+    local redirect =
+        get_post_dialog_redirect(r, "/share-ping-list/" .. r.params.spl_id)
+    if r.params.cancel then
+        return redirect
+    end
     local spl, spl_err = Model:getSharePingListById(r.params.spl_id)
     if not spl then
         Log(kLogInfo, spl_err)
@@ -2837,7 +2917,7 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
     negative_tags =
         filter_deleted_tags(delete_entry_negative_tags, negative_tags)
     -- Render page.
-    return Fm.serveContent("share_ping_list_edit", {
+    local params = {
         user = user_record,
         alltags = alltags,
         spl = spl,
@@ -2856,7 +2936,9 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         delete_entry_ids = delete_entry_ids,
         delete_entry_positive_tags = delete_entry_positive_tags,
         delete_entry_negative_tags = delete_entry_negative_tags,
-    })
+    }
+    add_htmx_param(r, params)
+    return Fm.serveContent("share_ping_list_edit", params)
 end)
 
 local render_share_ping_list = login_required(function(r, user_record)
@@ -2987,7 +3069,6 @@ local function setup()
     -- API routes
     Fm.setRoute("/queue-image/:id[%d]", render_queue_image)
     -- Fm.setRoute("/api/telegram-webhook")
-    Fm.setRoute(Fm.POST { "/api/enqueue" }, accept_enqueue)
 end
 
 local function run()

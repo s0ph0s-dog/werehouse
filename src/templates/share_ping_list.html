@@ -3,7 +3,12 @@
 <li><a href="/tag/{%& tag.tag_id %}">{%& tag.name %}</a></li>
 {% end end %} {% function block.content() %}
 <h1>{%& share_ping_list.name %} ({%& share_ping_list.share_data.type %})</h1>
-<a href="/share-ping-list/{%& share_ping_list.spl_id %}/edit">Edit…</a>
+<a
+  href="/share-ping-list/{%& share_ping_list.spl_id %}/edit"
+  hx-get="/share-ping-list/{%& share_ping_list.spl_id %}/edit"
+  hx-target="dialog"
+  >Edit…</a
+>
 {% if share_ping_list.share_data.type == "Telegram" then %}
 <p>Chat ID: {%& share_ping_list.share_data.chat_id %}</p>
 {% else %}

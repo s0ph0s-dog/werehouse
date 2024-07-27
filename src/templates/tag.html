@@ -1,6 +1,11 @@
 {% function block.content() %}
 <h1>{%& tag.name %}</h1>
-<a href="/tag/{%& tag.tag_id %}/edit">Edit…</a>
+<a
+  href="/tag/{%& tag.tag_id %}/edit"
+  hx-get="/tag/{%& tag.tag_id %}/edit"
+  hx-target="dialog"
+  >Edit…</a
+>
 <p>
   {% if tag.description and #tag.description > 0 then %}{%& tag.description %}{%
   else %}(No description yet){% end %}

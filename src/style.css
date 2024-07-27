@@ -8,6 +8,9 @@ html {
   /* font: -apple-system-body; */
   font-family: serif;
 }
+body {
+  margin: 0;
+}
 .dialog {
   max-width: 40em;
   border: 1px solid CanvasText;
@@ -500,4 +503,8 @@ dd + dt {
 
 abbr {
   font-variant-caps: all-small-caps;
+}
+
+#dialog {
+  max-width: 30em;
 }

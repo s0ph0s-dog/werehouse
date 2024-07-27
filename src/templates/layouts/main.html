@@ -69,6 +69,10 @@ queue_item.disambiguation_request then %}
       was provided.{% end %}{% block.content() %}{% if not hide_footer then %}{%
       block.footer() %}{% end %}
     </div>
+    <dialog
+      id="dialog"
+      hx-on::after-swap="if (event.target == this) {this.showModal()}"
+    ></dialog>
     <script src="/htmx.js"></script>
     <script src="/index.js"></script>
   </body>

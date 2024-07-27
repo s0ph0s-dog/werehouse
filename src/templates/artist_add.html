@@ -1,5 +1,5 @@
 {% function block.content() %}
-<form class="vbox" method="POST">
+<form class="vbox" method="POST" action="/artist/add" hx-boost="true">
   <label
     >Artist Name
     <input type="text" name="name" autocapitalize="words" required />
@@ -23,9 +23,15 @@
     </tbody>
   </table>
   <span class="buttons">
-    <input type="reset" value="Clear" />
+    <input
+      type="submit"
+      name="cancel"
+      value="Cancel"
+      formnovalidate
+      data-btn-cancel
+    />
     <input type="submit" name="add" value="Add" />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Add Artist", dialog_width =
-"30em" }) %}
+"30em", hx = hx }) %}

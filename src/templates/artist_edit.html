@@ -1,5 +1,5 @@
 {% function block.content() %}
-<form class="vbox" method="POST">
+<form class="vbox" method="POST" action="{%& makeUrl() %}" hx-boost="true">
   <label
     >Artist Name
     <input
@@ -111,9 +111,15 @@
     </tfoot>
   </table>
   <span class="buttons">
-    <input type="reset" />
+    <input
+      type="submit"
+      name="cancel"
+      value="Cancel"
+      formnovalidate
+      data-btn-cancel
+    />
     <input type="submit" name="update" value="Update" />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Edit Artist: " .. artist.name,
-dialog_width = "30em" }) %}
+dialog_width = "30em", hx = hx }) %}

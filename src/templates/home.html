@@ -1,6 +1,6 @@
 {% function block.content() %}
 <h1>Recently Queued Items</h1>
-<p><a href="/enqueue">Add Something</a></p>
+<p><a href="/enqueue" hx-get="/enqueue" hx-target="dialog">Add Something</a></p>
 {% if #queue_records == 0 then %}
 <p>Nothing queued</p>
 {% else %}{% render("components/queue_records", {queue_records = queue_records,

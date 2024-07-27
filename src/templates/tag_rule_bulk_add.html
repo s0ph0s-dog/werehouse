@@ -9,7 +9,7 @@
   <option>{%& alltags[i].name %}</option>
   {% end %}
 </datalist>
-<form class="vbox" method="POST">
+<form class="vbox" method="POST" action="{%& makeUrl() %}" hx-boost="true">
   {% for i = 1, #incoming_tags do local it = incoming_tags[i] %}
   <div class="rule-box">
     <label
@@ -49,8 +49,15 @@
   </div>
   {% end %}
   <span class="buttons">
-    <input type="reset" value="Reset" />
-    <input type="submit" name="add" value="Add" />
+    <input type="submit" name="cancel" value="Cancel" data-btn-cancel />
+    <input
+      type="submit"
+      name="add"
+      value="Add"
+      hx-post="{%& makeUrl() %}"
+      hx-target="dialog"
+    />
   </span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Bulk Add Tag Rules" }) %}
+{% end %}{% render("layouts/dialog", { title = "Bulk Add Tag Rules", hx = hx })
+%}

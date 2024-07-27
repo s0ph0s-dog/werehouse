@@ -1,13 +1,14 @@
 {% function block.content() %}
-<p>Choose either:</p>
-<form class="vbox" method="POST">
+<form
+  class="vbox"
+  method="POST"
+  action="/enqueue"
+  enctype="multipart/form-data"
+  hx-boost="true"
+>
+  <p>Choose either:</p>
   <label>Link: <input type="text" name="link" /></label>
-  <span class="buttons">
-    <input type="submit" />
-  </span>
-</form>
-<p>Or:</p>
-<form class="vbox" method="POST" enctype="multipart/form-data">
+  <p>Or:</p>
   <label
     >File:<input
       type="file"
@@ -15,7 +16,9 @@
       accept="*.png,*.jpg,*.jpeg,*.gif,image/png,image/jpeg,image/gif"
   /></label>
   <span class="buttons">
-    <input type="submit" />
+    <input type="submit" name="cancel" value="Cancel" data-btn-cancel />
+    <input type="submit" name="add" value="Add" />
   </span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Add to Queue", user = user }) %}
+{% end %}{% render("layouts/dialog", { title = "Add to Queue", user = user, hx =
+hx }) %}

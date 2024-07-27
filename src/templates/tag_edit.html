@@ -1,5 +1,5 @@
 {% function block.content() %}
-<form method="POST">
+<form method="POST" action="{%& makeUrl() %}" hx-boost="true">
   <label>
     Tag Name:
     <input
@@ -17,8 +17,15 @@
     >
   </label>
   <span class="buttons">
-    <input type="reset" />
+    <input
+      type="submit"
+      name="cancel"
+      value="Cancel"
+      formnovalidate
+      data-btn-cancel
+    />
     <input type="submit" name="update" value="Update" />
   </span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Edit Tag: " .. tag.name }) %}
+{% end %}{% render("layouts/dialog", { title = "Edit Tag: " .. tag.name, hx = hx
+}) %}

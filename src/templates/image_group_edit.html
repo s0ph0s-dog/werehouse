@@ -1,5 +1,5 @@
 {% function block.content() %}
-<form method="POST">
+<form method="POST" action="{%& makeUrl() %}" hx-boost="true">
   <label>
     Record Group Name:
     <input
@@ -48,9 +48,9 @@
     </tbody>
   </table>
   <span class="buttons">
-    <input type="reset" />
+    <input type="submit" name="cancel" value="Cancel" data-btn-cancel />
     <input type="submit" name="update" value="Update" />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Edit Record Group", dialog_width
-= "30em" }) %}
+= "30em", hx = hx }) %}

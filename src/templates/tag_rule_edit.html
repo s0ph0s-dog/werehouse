@@ -4,7 +4,7 @@
   from <b>{%& tag_rule.incoming_domain %}</b>, it will add
   <b>{%& tag_rule.tag_name %}</b> to the record in your archive.
 </p>
-<form class="vbox" method="POST">
+<form class="vbox" method="POST" action="{%& makeUrl() %}" hx-boost="true">
   <label
     >Incoming Tag Name
     <input
@@ -43,8 +43,8 @@
     />
   </label>
   <span class="buttons">
-    <input type="reset" value="Clear" />
+    <input type="submit" name="cancel" value="Cancel" formnovalidate data-btn-cancel />
     <input type="submit" name="Update" value="Update" />
   </span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Edit Tag Rule: %s on %s" % {tag_rule.incoming_name, tag_rule.incoming_domain} }) %}
+{% end %}{% render("layouts/dialog", { title = "Edit Tag Rule: %s on %s" % {tag_rule.incoming_name, tag_rule.incoming_domain}, hx = hx }) %}
