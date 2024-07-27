@@ -1055,6 +1055,8 @@ local render_image_share = login_required(function(r, user_record)
         ping_text = form_ping_text,
         ping_text_size = form_ping_text:linecount(),
         share_id = r.params.t,
+        to = spl_id,
+        to_user = tg_userid,
         fn = image_functions,
     }
     add_htmx_param(r, params)
@@ -1187,6 +1189,8 @@ local render_image_group_share = login_required(function(r, user_record)
         ping_text = form_ping_text,
         ping_text_size = form_ping_text:linecount(),
         share_id = r.params.t,
+        to = spl_id,
+        to_user = tg_userid,
         fn = image_functions,
         print = print,
         EncodeJson = EncodeJson,

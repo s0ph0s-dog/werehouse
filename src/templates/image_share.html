@@ -23,11 +23,16 @@
   data-once
 >
   <input type="hidden" name="share_id" value="{%& share_id %}" />
-  {% if images then %}{% for i = 1, #images do local image = images[i] %}{%
-  block.record_view(image, image.sources_text, image.sources_text_size, true)
-  %}{% end %}{% elseif image then %}{% block.record_view(image, sources_text,
-  sources_text_size, false) %}{% else %}There's a bug{% end %}{% if ping_text
-  then %}
+  {% if to then %}<input type="hidden" name="to" value="{%& to %}" />{% end %}
+  {% if to_user then %}<input
+    type="hidden"
+    name="to_user"
+    value="{%& to_user %}"
+  />{% end %} {% if images then %}{% for i = 1, #images do local image =
+  images[i] %}{% block.record_view(image, image.sources_text,
+  image.sources_text_size, true) %}{% end %}{% elseif image then %}{%
+  block.record_view(image, sources_text, sources_text_size, false) %}{% else
+  %}There's a bug{% end %}{% if ping_text then %}
   <textarea name="ping_text" rows="{%& ping_text_size %}">
 {%& ping_text %}</textarea
   >
