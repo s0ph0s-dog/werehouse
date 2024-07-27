@@ -16,7 +16,7 @@
       type="submit"
       name="delete_{%& kind %}_{%& tag_type %}_tag"
       value="{%& handle_idx %},{%& tag_idx %}"
-      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-target="dialog"
     >
       Delete
@@ -33,7 +33,7 @@
       type="submit"
       name="delete_{%& tag_type %}_tag"
       value="{%& entry_id %},{%& tag.tag_id %}"
-      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-target="dialog"
     >Delete</button>
 </li>
@@ -54,7 +54,7 @@
       type="submit"
       name="delete_{%& kind %}_handle"
       value="{%& id %}"
-      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-target="dialog"
     >Delete</button>
   </div>
@@ -79,7 +79,7 @@
         type="submit"
         name="add_{%& kind %}_positive_tag"
         value="add_{%& kind %}_positive_tag"
-        hx-post="{%& makeUrl({ params = {} }) %}"
+        hx-post="{%& form_path %}"
         hx-target="dialog"
       >
         Add Another ‘Ping’ Tag…
@@ -105,7 +105,7 @@
         type="submit"
         name="add_{%& kind %}_negative_tag"
         value="add_{%& kind %}_negative_tag"
-        hx-post="{%& makeUrl({ params = {} }) %}"
+        hx-post="{%& form_path %}"
         hx-target="dialog"
       >
         Add Another ‘Don’t Ping’ Tag…
@@ -114,7 +114,7 @@
   </ul>
 </li>
 {% end %}{% function block.content() %}
-<form class="vbox" method="POST" action="{%& makeUrl() %}" hx-boost="true">
+<form class="vbox" method="POST" action="{%& form_path %}" hx-boost="true">
   <input type="submit" name="dummy_submit" value="dummy_submit" style="display:none" />
   <label
     >Name:
@@ -201,7 +201,7 @@
       type="submit"
       name="add_handle"
       value="add_handle"
-      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-target="dialog"
     >
       Add Tags…
@@ -213,7 +213,7 @@
       name="cancel"
       value="Cancel"
       formnovalidate
-      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-swap="none" />
     <input type="submit" name="add" value="Update" />
   </span>

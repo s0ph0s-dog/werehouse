@@ -17,7 +17,7 @@
       type="submit"
       name="delete_pending_{%& tag_type %}_tag"
       value="{%& handle_idx %},{%& tag_idx %}"
-      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-target="dialog"
     >
       Delete
@@ -25,7 +25,7 @@
   </div>
 </li>
 {% end end end %} {% function block.content() %}
-<form class="vbox" method="POST" action="{%& makeUrl({ params = {} }) %}" hx-boost="true">
+<form class="vbox" method="POST" action="{%& form_path %}" hx-boost="true">
   <input type="submit" name="dummy_submit" value="dummy_submit" style="display:none" />
   <label
     >Name:
@@ -94,7 +94,7 @@
             type="submit"
             name="delete_pending_handle"
             value="{%& h_idx %}"
-            hx-post="{%& makeUrl({ params = {} }) %}"
+            hx-post="{%& form_path %}"
             hx-target="dialog"
           >
             Delete
@@ -120,7 +120,7 @@
               type="submit"
               name="add_pending_positive_tag"
               value="add_handle"
-              hx-post="{%& makeUrl({ params = {} }) %}"
+              hx-post="{%& form_path %}"
               hx-target="dialog"
             >
               Add Another ‘Ping’ Tag…
@@ -145,7 +145,7 @@
               type="submit"
               name="add_pending_negative_tag"
               value="add_handle"
-              hx-post="{%& makeUrl({ params = {} }) %}"
+              hx-post="{%& form_path %}"
               hx-target="dialog"
             >
               Add Another ‘Don’t Ping’ Tag…
@@ -168,7 +168,7 @@
       type="submit"
       name="add_handle"
       value="add_handle"
-      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-target="dialog"
     >
       Add Tags…
@@ -180,7 +180,7 @@
       name="cancel"
       value="Cancel"
       formnovalidate
-      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-swap="none" />
     <input type="submit" name="add" value="Add" />
   </span>

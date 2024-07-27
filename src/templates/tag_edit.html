@@ -1,5 +1,5 @@
 {% function block.content() %}
-<form method="POST" action="{%& makeUrl() %}" hx-boost="true">
+<form method="POST" action="{%& form_path %}" hx-boost="true">
   <label>
     Tag Name:
     <input
@@ -22,7 +22,7 @@
       name="cancel"
       value="Cancel"
       formnovalidate
-      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-swap="none"
     />
     <input type="submit" name="update" value="Update" />

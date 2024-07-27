@@ -1,10 +1,5 @@
 {% function block.content() %}
-<form
-  class="vbox"
-  method="POST"
-  action="{%& makeUrl({ params = {} }) %}"
-  hx-boost="true"
->
+<form class="vbox" method="POST" action="{%& form_path %}" hx-boost="true">
   <label
     >Artist Name
     <input
@@ -48,7 +43,7 @@
             type="submit"
             name="delete_handle"
             value="{%& handle.handle_id %}"
-            hx-post="{%& makeUrl({ params = {} }) %}"
+            hx-post="{%& form_path %}"
             hx-target="dialog"
           >
             Delete
@@ -81,7 +76,7 @@
             type="submit"
             name="delete_pending_handle"
             value="{%& i %}"
-            hx-post="{%& makeUrl() %}"
+            hx-post="{%& form_path %}"
             hx-target="dialog"
           >
             Delete
@@ -119,7 +114,7 @@
             type="submit"
             name="add_handle"
             value="add_handle"
-            hx-post="{%& makeUrl({ params = {} }) %}"
+            hx-post="{%& form_path %}"
             hx-target="dialog"
           >
             Add Another Handle…
@@ -135,7 +130,7 @@
       name="cancel"
       value="Cancel"
       formnovalidate
-      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-swap="none"
     />
     <input type="submit" name="update" value="Update" />

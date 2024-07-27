@@ -9,7 +9,7 @@
   <option>{%& alltags[i].name %}</option>
   {% end %}
 </datalist>
-<form class="vbox" method="POST" action="{%& makeUrl() %}" hx-boost="true">
+<form class="vbox" method="POST" action="{%& form_path %}" hx-boost="true">
   {% for i = 1, #incoming_tags do local it = incoming_tags[i] %}
   <div class="rule-box">
     <label
@@ -54,14 +54,14 @@
       name="cancel"
       value="Cancel"
       formnovalidate
-      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-swap="none"
     />
     <input
       type="submit"
       name="add"
       value="Add"
-      hx-post="{%& makeUrl() %}"
+      hx-post="{%& form_path %}"
       hx-target="dialog"
     />
   </span>

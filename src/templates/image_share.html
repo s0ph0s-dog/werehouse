@@ -18,7 +18,7 @@
 <form
   class="vbox"
   method="POST"
-  action="{%& makeUrl() %}"
+  action="{%& form_path %}"
   hx-boost="true"
   data-once
 >
@@ -37,7 +37,7 @@
       type="submit"
       name="cancel"
       value="Cancel"
-      hx-post="{%& makeUrl({ params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-swap="none"
     />
     <input type="submit" name="share" value="Share" />

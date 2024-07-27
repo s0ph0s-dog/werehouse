@@ -6,6 +6,10 @@ local function get_post_dialog_redirect(r, default)
     return Fm.serveRedirect(redirect_url, 302)
 end
 
+local function add_form_path(r, params)
+    params.form_path = r.path
+end
+
 local function add_htmx_param(r, params)
     local hx_header = r.headers["HX-Request"]
     if hx_header and hx_header == "true" then
@@ -20,6 +24,7 @@ local function render_invite(r)
     end
     local params = { error = r.session.error, invite_record = invite_record }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.render("accept_invite", params)
 end
 
@@ -429,6 +434,7 @@ local allowed_image_types = {
 local render_enqueue = login_required(function(r, user_record)
     local params = { user = user_record }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("enqueue", params)
 end)
 
@@ -1052,6 +1058,7 @@ local render_image_share = login_required(function(r, user_record)
         fn = image_functions,
     }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("image_share", params)
 end)
 
@@ -1185,6 +1192,7 @@ local render_image_group_share = login_required(function(r, user_record)
         EncodeJson = EncodeJson,
     }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("image_share", params)
 end)
 
@@ -1278,6 +1286,7 @@ local render_add_tag_rule_bulk = login_required(function(r, user_record)
         end
         local params = { changes = changes }
         add_htmx_param(r, params)
+        add_form_path(r, params)
         return Fm.serveContent("tag_rule_changelist", params)
     elseif r.params.ok then
         return get_post_dialog_redirect(r, "/tag-rule")
@@ -1308,6 +1317,7 @@ local render_add_tag_rule_bulk = login_required(function(r, user_record)
         canonicalize_tag_name = canonicalize_tag_name,
     }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("tag_rule_bulk_add", params)
 end)
 
@@ -1444,6 +1454,7 @@ local render_queue_help = login_required(function(r, user_record)
         disambiguation_data = dd,
     }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("queue_help", params)
 end)
 
@@ -1674,6 +1685,7 @@ end)
 local render_add_artist = login_required(function(r)
     local params = {}
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("artist_add", params)
 end)
 
@@ -1715,6 +1727,7 @@ local function render_edit_artist_internal(r)
         manually_confirmed = r.params.confirmed or artist.manually_confirmed,
     }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("artist_edit", params)
 end
 
@@ -2046,6 +2059,7 @@ local render_edit_image_group = login_required(function(r, user_record)
         fn = image_functions,
     }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("image_group_edit", params)
 end)
 
@@ -2110,6 +2124,7 @@ local render_telegram_link = login_required(function(r, user_record)
         tg = tg,
     }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("link_telegram", params)
 end)
 
@@ -2250,6 +2265,7 @@ local render_edit_tag = login_required(function(r, user_record)
         tag = tag,
     }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("tag_edit", params)
 end)
 
@@ -2278,6 +2294,7 @@ end)
 local render_add_tag = login_required(function(r)
     local params = {}
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("tag_add", params)
 end)
 
@@ -2491,6 +2508,7 @@ local render_edit_tag_rule = login_required(function(r, user_record)
         alldomains = ScraperPipeline.CANONICAL_DOMAINS_WITH_TAGS,
     }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("tag_rule_edit", params)
 end)
 
@@ -2533,6 +2551,7 @@ local render_add_tag_rule = login_required(function(r)
         alltags = alltags,
     }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("tag_rule_add", params)
 end)
 
@@ -2690,6 +2709,7 @@ local render_add_share_ping_list = login_required(function(r, user_record)
         pending_negative_tags = pending_neg,
     }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("share_ping_list_add", params)
 end)
 
@@ -2939,6 +2959,7 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         delete_entry_negative_tags = delete_entry_negative_tags,
     }
     add_htmx_param(r, params)
+    add_form_path(r, params)
     return Fm.serveContent("share_ping_list_edit", params)
 end)
 

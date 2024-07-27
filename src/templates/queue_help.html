@@ -25,7 +25,7 @@
     {% end %}
   </tbody>
 </table>
-<form method="POST" action="{%& makeUrl() %}" hx-boost="true">
+<form method="POST" action="{%& form_path %}" hx-boost="true">
   <p>What do you want to do?</p>
   <span class="buttons">
     <input
@@ -33,7 +33,7 @@
       name="cancel"
       value="Cancel"
       formnovalidate
-      hx-post="{%& makeUrl( { params = {} }) %}"
+      hx-post="{%& form_path %}"
       hx-swap="none"
     />
     <input type="submit" name="discard" value="Discard" />
@@ -46,7 +46,7 @@
   can't guess what to do. Check the boxes of the records you'd like to save. All
   of them will be in a group together.
 </p>
-<form method="POST" action="{%& makeUrl() %}" hx-boost="true">
+<form method="POST" action="{%& form_path %}" hx-boost="true">
   <ol>
     {% for source_idx, source in ipairs(disambiguation_data.h) do %}
     <li>
