@@ -1740,7 +1740,7 @@ end
 
 function Model:deleteHandlesForArtistById(artist_id, handle_ids)
     return self:_delete_by_two_ids(
-        queries.model.delete_artist_handle_by_id,
+        queries.model.delete_handle_for_artist_by_id,
         artist_id,
         handle_ids
     )

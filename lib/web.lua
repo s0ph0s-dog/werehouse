@@ -1694,7 +1694,7 @@ local function render_edit_artist_internal(r)
     local delete_handles = r.params.delete_handles
     if delete_handles then
         handles = table.filter(handles, function(h)
-            return table.find(delete_handles, h.handle_id) ~= nil
+            return table.find(delete_handles, tostring(h.handle_id)) == nil
         end)
     end
     local pending_usernames = r.params.pending_usernames
@@ -1709,6 +1709,7 @@ local function render_edit_artist_internal(r)
         artist = artist,
         handles = handles,
         pending_usernames = pending_usernames,
+        delete_handles = delete_handles,
         pending_profile_urls = pending_profile_urls,
         name = r.params.name or artist.name,
         manually_confirmed = r.params.confirmed or artist.manually_confirmed,
