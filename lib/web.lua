@@ -248,7 +248,7 @@ local function login_required(handler)
         local token = get_login_cookie(r)
         Log(kLogInfo, "session token: %s" % { EncodeJson(token) })
         if not token then
-            r.session.after_login_url = r.url
+            r.session.after_login_url = r.path
             return Fm.serveRedirect("/login", 302)
         end
         local session, errmsg = Accounts:findSessionById(token)
