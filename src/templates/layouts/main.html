@@ -64,6 +64,8 @@ queue_item.disambiguation_request then %}<a
       content="#000"
       media="(prefers-color-scheme: dark)"
     />
+    <script src="/htmx.js"></script>
+    <script src="/index.js"></script>
   </head>
   <body>
     <div class="content">
@@ -76,7 +78,5 @@ queue_item.disambiguation_request then %}<a
       id="dialog"
       hx-on::after-swap="if (event.target == this) {this.showModal()}"
     ></dialog>
-    <script src="/htmx.js"></script>
-    <script src="/index.js"></script>
   </body>
 </html>

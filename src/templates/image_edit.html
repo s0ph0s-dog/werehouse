@@ -1,8 +1,8 @@
 {% function input_cell(type, name, value, list, button_verb, button_value) %}
 <li>
   <div class="input-cell">
-    <input data-1p-ignore type="{%& type %}" name="pending_{%& name %}s[]" value="{%& value %}"{% if list then %} list="{%& list %}"{% end %} autocomplete="off" />
-    <button type="submit" name="delete_pending_{%& name %}" data-kind="{%& name %}" value="{%& button_value %}" formnovalidate=>{%& button_verb %}</button>
+    <input data-1p-ignore type="{%& type %}" name="pending_{%& name %}s[]" value="{%& value %}"{% if list then %} list="{%& list %}"{% end %} autocomplete="off" data-tagger-field="pending" />
+    <button type="submit" name="delete_pending_{%& name %}" data-tagger-btn="pending" value="{%& button_value %}" formnovalidate>{%& button_verb %}</button>
   </div>
 </li>
 {% end %}
@@ -47,43 +47,47 @@
         <option>{%& allartists[i].name %}</option>
         {% end %}
       </datalist>
-      <div id="deleted_artist_container">
-      {% if delete_artists then for i = 1, #delete_artists do %}
-      <input type="hidden" name="delete_artists[]" value="{%& delete_artists[i] %}" />
-      {% end end %}
-      </div>
-      <ul>
-        {% for i = 1, #artists do local artist = artists[i] %}
-        <li>
-          {%& artist.name %} <button type="submit" name="delete_artist" data-kind="artist" value="{%& artist.artist_id %}">Unlink</button>
-        </li>
-        {% end %}
-        {% if pending_artists then for i = 1, #pending_artists do local artist = pending_artists[i] %}
-          {% input_cell("text", "artist", artist, "all-artists", "Unlink", i) %}
+      <div data-tagger-name="artist" data-tagger-button-verb="Unlink" data-tagger-input-list="all-artists">
+        <div data-tagger-e="delete">
+        {% if delete_artists then for i = 1, #delete_artists do %}
+        <input type="hidden" name="delete_artists[]" value="{%& delete_artists[i] %}" />
         {% end end %}
-        <li id="artist_insert_mark"><input data-1p-ignore type="text" id="add_artist_field" name="pending_artists[]" list="all-artists" data-kind="artist" autocomplete="off" placeholder="Add Artist" /></li>
-      </ul>
-      <button type="submit" name="add_artist" value="add_artist" data-kind="artist" formnovalidate>Add Another Artist…</button>
+        </div>
+        <ul>
+          {% for i = 1, #artists do local artist = artists[i] %}
+          <li>
+            {%& artist.name %} <button type="submit" name="delete_artist" data-tagger-btn="delete" value="{%& artist.artist_id %}">Unlink</button>
+          </li>
+          {% end %}
+          {% if pending_artists then for i = 1, #pending_artists do local artist = pending_artists[i] %}
+            {% input_cell("text", "artist", artist, "all-artists", "Unlink", i) %}
+          {% end end %}
+          <li data-tagger-e="insert"><input data-1p-ignore type="text" id="add_artist_field" name="pending_artists[]" data-tagger-field="add" list="all-artists" autocomplete="off" placeholder="Add Artist" /><input type="text" data-tagger-field="add-wkhack" class="focushack" /></li>
+        </ul>
+        <button type="submit" name="add_artist" value="add_artist" data-tagger-btn="add" formnovalidate>Add Another Artist…</button>
+      </div>
       <h1>Tags</h1>
       <datalist id="all-tags">
         {% for i = 1, #alltags do %}
         <option>{%& alltags[i].name %}</option>
         {% end %}
       </datalist>
-      <div id="deleted_tag_container">
-      {% if delete_tags then for i = 1, #delete_tags do %}
-      <input type="hidden" name="delete_tags[]" value="{%& delete_tags[i] %}" />
-      {% end end %}
-      </div>
-      <ul>
-        {% for i = 1, #tags do %}
-        <li>{%& tags[i].name %} <button type="submit" name="delete_tag" data-kind="tag" value="{%& tags[i].tag_id %}">Unlink</button></li>
-        {% end %}
-        {% if pending_tags then for i = 1, #pending_tags do local tag = pending_tags[i] %}
-          {% input_cell("text", "tag", tag, "all-tags", "Unlink", i) %}
+      <div data-tagger-name="tag" data-tagger-button-verb="Unlink" data-tagger-input-list="all-tags">
+        <div data-tagger-e="delete">
+        {% if delete_tags then for i = 1, #delete_tags do %}
+        <input type="hidden" name="delete_tags[]" value="{%& delete_tags[i] %}" />
         {% end end %}
-        <li id="tag_insert_mark"><input data-1p-ignore type="text" name="pending_tags[]" id="add_tag_field" data-kind="tag" placeholder="Add Tag" autocomplete="off" list="all-tags" autocapitalize="words"/></li> </ul>
-      <button type="submit" name="add_tag" value="add_tag" data-kind="tag" formnovalidate>Add Another Tag…</button>
+        </div>
+        <ul>
+          {% for i = 1, #tags do %}
+          <li>{%& tags[i].name %} <button type="submit" name="delete_tag" data-tagger-btn="delete" value="{%& tags[i].tag_id %}">Unlink</button></li>
+          {% end %}
+          {% if pending_tags then for i = 1, #pending_tags do local tag = pending_tags[i] %}
+            {% input_cell("text", "tag", tag, "all-tags", "Unlink", i) %}
+          {% end end %}
+          <li data-tagger-e="insert"><input data-1p-ignore type="text" name="pending_tags[]" id="add_tag_field" data-tagger-field="add" placeholder="Add Tag" autocomplete="off" list="all-tags" autocapitalize="words"/><input type="text" data-tagger-field="add-wkhack" class="focushack" /></li> </ul>
+        <button type="submit" name="add_tag" value="add_tag" data-kind="tag" data-tagger-btn="add" formnovalidate>Add Another Tag…</button>
+      </div>
       {% if incoming_tags and #incoming_tags > 0 then %}
       <h2>Tags found by the scraper</h2>
       <details open><summary>Hide/Show</summary>
@@ -101,36 +105,41 @@
       </details>
       {% end %}
       <h1>Sources</h1>
-      <div id="deleted_source_container">
-      {% if delete_sources then for i = 1, #delete_sources do %}
-      <input type="hidden" name="delete_sources[]" value="{%& delete_sources[i] %}" />
-      {% end end %}
-      </div>
-      <ul>
-        {% for i = 1, #sources do local source = sources[i] %}
-<li>
-  <div class="input-cell">
-    <input type="hidden" name="source_ids[]" value="{%& source.source_id %}" />
-    <input data-1p-ignore type="url" name="sources[]" value="{%& source.link %}" autocomplete="off" disabled />
-    <button type="submit" name="delete_source" data-kind="source" value="{%& source.source_id %}" formnovalidate>Delete</button>
-  </div>
-</li>
-        {% end %}
-        {% if pending_sources then for i = 1, #pending_sources do local source = pending_sources[i] %}
-          {% input_cell("url", "source", source, nil, "Delete", i) %}
+      <div data-tagger-name="source" data-tagger-button-verb="Delete">
+        <div data-tagger-e="delete">
+        {% if delete_sources then for i = 1, #delete_sources do %}
+        <input type="hidden" name="delete_sources[]" value="{%& delete_sources[i] %}" />
         {% end end %}
-        <li id="source_insert_mark">
-          <input
-            type="url"
-            id="add_source_field"
-            name="pending_sources[]"
-            value=""
-            autocomplete="off"
-            data-kind="source"
-            placeholder="Add Source"/>
-        </li>
-      </ul>
-      <button type="submit" name="add_source" value="add_source" data-kind="source" formnovalidate>Add Another Source…</button>
+        </div>
+        <ul>
+          {% for i = 1, #sources do local source = sources[i] %}
+  <li>
+    <div class="input-cell">
+      <input type="hidden" name="source_ids[]" value="{%& source.source_id %}" />
+      <input data-1p-ignore type="url" name="sources[]" value="{%& source.link %}" autocomplete="off" disabled />
+      <button type="submit" name="delete_source" data-tagger-btn="delete" value="{%& source.source_id %}" formnovalidate>Delete</button>
+    </div>
+  </li>
+          {% end %}
+          {% if pending_sources then for i = 1, #pending_sources do local source = pending_sources[i] %}
+            {% input_cell("url", "source", source, nil, "Delete", i) %}
+          {% end end %}
+          <li data-tagger-e="insert">
+            <input
+              type="url"
+              id="add_source_field"
+              name="pending_sources[]"
+              value=""
+              autocomplete="off"
+              data-tagger-field="add"
+              placeholder="Add Source"/><input
+              type="url"
+              data-tagger-field="add-wkhack"
+              class="focushack" />
+          </li>
+        </ul>
+        <button type="submit" name="add_source" value="add_source" data-tagger-btn="add" formnovalidate>Add Another Source…</button>
+      </div>
       <span class="buttons">
         <input type="submit" name="cancel" value="Cancel" formnovalidate /><input
           type="submit"
@@ -141,136 +150,5 @@
     </form>
   </div>
 </div>
-<script type="text/javascript">
-  "use strict";
-  const form = document.querySelector("#edit-form");
-  const dummy = document.querySelector("#dummy");
-  const action = {
-    add: 1,
-    delete: 2,
-    unknown: 0,
-  }
-  function build_map(kinds) {
-    let result = {};
-    for (const k of kinds) {
-      result[k] = {
-        insert_mark: document.querySelector("#" + k + "_insert_mark"),
-        add_field: document.querySelector("#add_" + k + "_field"),
-        add_button: document.querySelector("#add_" + k + "_button"),
-        deleted_item_container: document.querySelector("#deleted_" + k + "_container"),
-        button_verb: k == "source" ? "Delete" : "Unlink",
-        field_type: k == "source" ? "url" : "text",
-        list: k == "source" ? null : ("all-" + k + "s"),
-      };
-    }
-    return result;
-  }
-  const kind_map = build_map(["tag", "artist", "source"]);
-  var pending_counters = {
-    tag: 0,
-    artist: 0,
-    source: 0,
-  };
-
-  function make_row(type, name, value, list, button_verb, button_value) {
-    const li = document.createElement("li");
-    const div = document.createElement("div");
-    div.setAttribute("class", "input-cell");
-    const input = document.createElement("input");
-    input.setAttribute("type", type);
-    input.setAttribute("name", "pending_" + name + "s[]");
-    input.setAttribute("value", value);
-    input.setAttribute("autocomplete", "off");
-    if (list) {
-      input.setAttribute("list", list);
-    }
-    const button = document.createElement("button");
-    button.setAttribute("type", "submit");
-    button.setAttribute("name", "delete_pending_" + name);
-    button.setAttribute("value", button_value);
-    const button_label = document.createTextNode(button_verb);
-    li.appendChild(div);
-    div.appendChild(input);
-    div.appendChild(button);
-    button.appendChild(button_label);
-    return li;
-  }
-
-  function make_delete(kind, value) {
-    const input = document.createElement("input")
-    input.setAttribute("type", "hidden");
-    input.setAttribute("name", "delete_" + kind + "s[]");
-    input.setAttribute("value", value);
-    return input;
-  }
-
-  function add_pending_row(kind) {
-    pending_counters[kind] += 1;
-    const options = kind_map[kind];
-    const row = make_row(options.field_type, kind, options.add_field.value, options.list, options.button_verb, pending_counters[kind]);
-    options.insert_mark.parentNode.insertBefore(row, options.insert_mark);
-    options.add_field.value = "";
-  }
-
-  function what_happened(submitter, active) {
-    let answer = {
-      action: action.unknown,
-      kind: null,
-    };
-    let initiatingElement = submitter;
-    // Pressing enter while in a form field causes this.
-    if (submitter == dummy) {
-      initiatingElement = active;
-      return null;
-    }
-    if (initiatingElement.name.startsWith("add_") || initiatingElement.id.startsWith("add_")) {
-      answer.action = action.add;
-      answer.kind = initiatingElement.attributes["data-kind"].value;
-    } else if (initiatingElement.name.startsWith("delete_")) {
-      answer.action = action.delete;
-      answer.kind = initiatingElement.attributes["data-kind"].value;
-    }
-    return answer;
-  }
-
-  function handle_delete(event, kind) {
-    if (event.submitter.name.startsWith("delete_pending")) {
-      document.removeChild(event.submitter.parentNode.parentNode);
-    } else if (event.submitter.name.startsWith("delete_")) {
-      const options = kind_map[kind];
-      event.submitter.parentNode.parentNode.removeChild(event.submitter.parentNode);
-      const deleted_record = make_delete(kind, event.submitter.value)
-      options.deleted_item_container.appendChild(deleted_record);
-    } else {
-      console.log("Unhandled delete!");
-    }
-  }
-
-  function handle_submit(event) {
-    console.log(event);
-    const active = document.activeElement;
-    const submitter = event.submitter == null ? event.srcElement : event.submitter;
-    const answer = what_happened(submitter, active);
-    if (answer === null) {
-      event.preventDefault();
-      return;
-    } else if (answer.action == action.add) {
-      event.preventDefault();
-      add_pending_row(answer.kind);
-    } else if (answer.action == action.delete) {
-      event.preventDefault();
-      handle_delete(event, answer.kind);
-    }
-  }
-
-  form.addEventListener("submit", handle_submit);
-  for (const [key, value] of Object.entries(kind_map)) {
-    value.add_field.addEventListener("keyup", (event) => {
-      if (event.which === 13) {
-        handle_submit(event);
-      }
-    });
-  }
-</script>
 {% end %}{% render("layouts/main", { title = "Editing Record " ..
 tostring(image.image_id), user = user }) %}

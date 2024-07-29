@@ -54,6 +54,13 @@ textarea {
   padding: 0.5em;
 }
 
+.focushack {
+  width: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
 textarea {
   max-width: 100%;
 }
