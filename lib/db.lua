@@ -1645,7 +1645,7 @@ function Model:addTagsForImageByName(image_id, tag_names)
         local tag_id, errmsg = self:getOrCreateTagIdByName(tag_name)
         if not tag_id then
             self:rollback(SP)
-            Log(kLogDebug, errmsg)
+            Log(kLogDebug, tostring(errmsg))
             return nil, errmsg
         end
         print("ids: ", image_id, tag_id)
@@ -2291,7 +2291,7 @@ local function post_filter_ham(search_hash, max_distance, rows)
 end
 
 function Model:insertImageHash(image_id, hash)
-    h1, h2, h3, h4 = split_hash(hash)
+    local h1, h2, h3, h4 = split_hash(hash)
     return self.conn:execute(
         queries.model.insert_image_hash,
         image_id,
@@ -2303,7 +2303,7 @@ function Model:insertImageHash(image_id, hash)
 end
 
 function Model:insertQueueHash(qid, hash)
-    h1, h2, h3, h4 = split_hash(hash)
+    local h1, h2, h3, h4 = split_hash(hash)
     return self.conn:execute(
         queries.model.insert_queue_hash,
         qid,
@@ -2661,17 +2661,14 @@ function Accounts:getAllUserIds()
     return self.conn:fetchAll(queries.accounts.get_all_user_ids)
 end
 
-function Accounts:addTelegramLinkRequest(
-    request_id,
-    display_name,
-    username,
-    tg_userid
-)
+function Accounts:addTelegramLinkRequest(display_name, username, tg_userid)
+    local request_id =
+        NanoID.simple_with_prefix(IdPrefixes.telegram_link_request)
     local now, clock_err = unix.clock_gettime()
     if not now then
         return nil, clock_err
     end
-    return self.conn:execute(
+    local ok, i_err = self.conn:execute(
         queries.accounts.insert_telegram_link_request,
         request_id,
         display_name,
@@ -2679,6 +2676,10 @@ function Accounts:addTelegramLinkRequest(
         tg_userid,
         now
     )
+    if not ok then
+        return nil, i_err
+    end
+    return request_id
 end
 
 function Accounts:setTelegramUserIDForUserAndDeleteLinkRequest(

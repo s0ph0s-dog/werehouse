@@ -292,6 +292,8 @@ local function login_optional(handler)
                     Log(kLogDebug, user_err)
                     return Fm.serve500()
                 end
+            else
+                Log(kLogInfo, tostring(errmsg))
             end
         end
         return handler(r, user_record)
@@ -304,7 +306,7 @@ local function accept_login(r)
     if not user_record then
         Log(kLogDebug, errmsg)
         -- Resist timing-based oracle attack for username discovery.
-        argon2.verify("foobar", r.params.password)
+        local _ = argon2.verify("foobar", r.params.password)
         r.session.error = "Invalid credentials"
         return Fm.serveRedirect("/login", 302)
     end

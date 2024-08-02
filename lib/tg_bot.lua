@@ -13,19 +13,16 @@ local function handle_start(message)
         bot.notify_account_linked(message, user_record.username)
         return
     end
-    local request_id =
-        NanoID.simple_with_prefix(IdPrefixes.telegram_link_request)
     local display_name = message.from.first_name
     if message.from.last_name then
         display_name = "%s %s" % { display_name, message.from.last_name }
     end
-    local insert_ok, insert_err = Accounts:addTelegramLinkRequest(
-        request_id,
+    local request_id, insert_err = Accounts:addTelegramLinkRequest(
         display_name,
         message.from.username,
         message.from.id
     )
-    if not insert_ok then
+    if not request_id then
         Log(kLogInfo, insert_err)
         api.send_message(
             message,
