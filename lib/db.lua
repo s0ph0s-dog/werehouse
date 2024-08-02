@@ -1285,29 +1285,29 @@ function Model:setQueueItemDisambiguationResponse(queue_id, disambiguation_data)
     )
 end
 
-function Model:insertImage(
-    image_file,
-    mime_type,
-    width,
-    height,
-    kind,
-    rating,
-    file_size
-)
+function Model:insertImage(image_data, mime_type, width, height, kind, rating)
     if not rating then
         rating = DbUtil.k.Rating.General
     end
+    local kind_override = kind
+    if mime_type == "image/gif" then
+        local is_gif, is_animated = GifTools.is_gif(image_data)
+        if is_gif and is_animated then
+            kind_override = DbUtil.k.ImageKind.Animation
+        end
+    end
+    local filename = FsTools.save_image(image_data, mime_type)
     local ok, image, i_err = pcall(
         self.conn.fetchOne,
         self.conn,
         queries.model.insert_image_into_images,
-        image_file,
+        filename,
         mime_type,
         width,
         height,
-        kind,
+        kind_override,
         rating,
-        file_size
+        #image_data
     )
     if not ok then
         return nil, "Duplicate record file hash"

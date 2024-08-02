@@ -639,25 +639,14 @@ local function save_sources(model, queue_entry, scraped_data, sources_list)
             end
         end
         local this_item_sources = table.uniq(sources_with_dupes)
-        local kind_override = data.kind
-        if data.mime_type == "image/gif" then
-            local is_gif, is_animated = GifTools.is_gif(data.image_data)
-            if is_gif and is_animated then
-                kind_override = DbUtil.k.ImageKind.Animation
-            end
-        end
-        -- 2. Save image file to disk.
-        local filename = FsTools.save_image(data.image_data, data.mime_type)
-        Log(kLogInfo, "Saved image to disk")
-        -- 3. Add image, sources, etc. to database.
+        -- Add image, sources, etc. to database and save to disk.
         local image, errmsg2 = model:insertImage(
-            filename,
+            data.image_data,
             data.mime_type,
             data.width,
             data.height,
-            kind_override,
-            data.rating,
-            #data.image_data
+            data.kind,
+            data.rating
         )
         if not image then
             Log(kLogInfo, "Database error 1: %s" % { errmsg2 })

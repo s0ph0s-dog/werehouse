@@ -37,12 +37,15 @@
         style="margin: 2em 0; width: {% if dialog_width then %}{%& dialog_width %}{% else %}24em{% end %};max-width:95vw"
       >
         {% end %}
-        <h1>{%& title %}</h1>
-        {% if type(error) == "string" then %}
-        <p style="color: red">{%& error %}</p>
-        {% end %} {% function block.content() %}This page was configured
-        incorrectly and no page content was provided.{% end %}{% block.content()
-        %}{% if not hx then %}
+        <div id="dialog-contents">
+          <h1>{%& title %}</h1>
+          {% if type(error) == "string" then %}
+          <p class="error">{%& error %}</p>
+          {% end %} {% function block.content() %}This page was configured
+          incorrectly and no page content was provided.{% end %}{%
+          block.content() %}
+        </div>
+        {% if not hx then %}
       </div>
     </div>
     <script src="/htmx.js"></script>

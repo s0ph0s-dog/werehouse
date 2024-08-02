@@ -56,6 +56,7 @@ SRCS := src/.init.lua \
     src/templates/accept_invite.html \
     src/templates/link_telegram.html \
     src/templates/login.html \
+    src/templates/archive.html \
     src/templates/artist_add.html \
     src/templates/artist_edit.html \
     src/templates/artist.html \

@@ -7,6 +7,15 @@ local MIME_TO_EXT = {
     ["video/mp4"] = ".mp4",
 }
 
+local MIME_TO_KIND = {
+    ["image/jpeg"] = DbUtil.k.ImageKind.Image,
+    ["image/png"] = DbUtil.k.ImageKind.Image,
+    ["image/webp"] = DbUtil.k.ImageKind.Image,
+    ["image/gif"] = DbUtil.k.ImageKind.Image,
+    ["video/webm"] = DbUtil.k.ImageKind.Video,
+    ["video/mp4"] = DbUtil.k.ImageKind.Video,
+}
+
 local function make_image_path_from_filename(filename)
     local parent_dir = "./images/%s/%s/"
         % {
@@ -69,4 +78,5 @@ return {
     make_image_path_from_filename = make_image_path_from_filename,
     list_all_image_files = list_all_image_files,
     MIME_TO_EXT = MIME_TO_EXT,
+    MIME_TO_KIND = MIME_TO_KIND,
 }

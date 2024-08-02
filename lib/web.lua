@@ -2995,6 +2995,126 @@ local render_help = login_optional(function(r, user_record)
     return Fm.serveContent("help/index", { user = user_record })
 end)
 
+local render_archive = login_required(function(r, user_record)
+    if not img then
+        return Fm.serveError(
+            500,
+            "This server does not support image processing. Please ask the administrator to recompile Redbean with s0ph0s' img extension."
+        )
+    end
+    local redirect = get_post_dialog_redirect(r, "/home")
+    if r.params.cancel then
+        return redirect
+    end
+    if r.params.archive then
+        if
+            r.params.multipart.image
+            and allowed_image_types[r.params.multipart.image.headers["content-type"]]
+        then
+            local mime_type = r.params.multipart.image.headers["content-type"]
+            local image_data = r.params.multipart.image.data
+            local imageu8, img_err = img.loadbuffer(image_data)
+            if not imageu8 then
+                Log(kLogInfo, tostring(img_err))
+                r.session.error = "The file you uploaded seems to be corrupt."
+                return Fm.serveRedirect(302, r.path)
+            end
+            local width, height = imageu8:width(), imageu8:height()
+            local kind = FsTools.MIME_TO_KIND[mime_type]
+            local SP = "manual_archive"
+            Model:create_savepoint(SP)
+            local gradient_hash = nil
+            if r.params.check_duplicates then
+                gradient_hash = imageu8:gradienthash()
+                local hash_matches, hm_err =
+                    Model:findSimilarImageHashes(gradient_hash, 0)
+                if not hash_matches then
+                    Log(kLogInfo, tostring(hm_err))
+                    Model:rollback(SP)
+                    r.session.error = "Database error: %s" % { hm_err }
+                    return Fm.serveRedirect(302, r.path)
+                end
+                if #hash_matches > 0 then
+                    Model:rollback(SP)
+                    local links_list = table.map(hash_matches, function(item)
+                        return '<a href="/image/%d">Record %d</a>'
+                            % { item.image_id, item.image_id }
+                    end)
+                    local links = table.concat(links_list, ", ")
+                    r.session.error = "This image has the same content hash as %s. Deselect ‘Check for duplicates’ and upload it again if you would like to save it anyway."
+                        % { links }
+                    return Fm.serveRedirect(302, r.path)
+                end
+            end
+            local result, errmsg =
+                Model:insertImage(image_data, mime_type, width, height, kind, 0)
+            if not result then
+                Model:rollback(SP)
+                Log(kLogWarn, tostring(errmsg))
+                r.session.error = "Database error: %s" % { errmsg }
+                return Fm.serveRedirect(302, r.path)
+            end
+            if gradient_hash then
+                local h_ok, h_err =
+                    Model:insertImageHash(result.image_id, gradient_hash)
+                if not h_ok then
+                    Model:rollback(SP)
+                    Log(kLogInfo, tostring(h_err))
+                    r.session.error = "Database error: %s" % { h_err }
+                    return Fm.serveRedirect(302, r.path)
+                end
+            end
+            local thumbnail, t_err = imageu8:resize(192)
+            if not thumbnail then
+                Log(kLogInfo, tostring(t_err))
+            else
+                local thumbnail_webp, tw_err = thumbnail:savebufferwebp()
+                if thumbnail_webp then
+                    local ti_ok, ti_err = Model:insertThumbnailForImage(
+                        result.image_id,
+                        thumbnail_webp,
+                        thumbnail:width(),
+                        thumbnail:height(),
+                        1,
+                        "image/png"
+                    )
+                    if not ti_ok then
+                        Log(kLogInfo, tostring(ti_err))
+                    end
+                else
+                    Log(kLogInfo, tostring(tw_err))
+                end
+            end
+            Model:release_savepoint(SP)
+            local redirect_url = "/image/%d/edit" % { result.image_id }
+            r.headers["HX-Push-Url"] = redirect_url
+            return Fm.serveRedirect(302, redirect_url)
+        elseif not r.params.multipart.image then
+            r.session.error = "You must select an image to upload."
+            return Fm.serveRedirect(302, r.path)
+        else
+            r.session.error = "Only PNG, GIF, and JPEG are supported."
+            return Fm.serveRedirect(302, r.path)
+        end
+    end
+    local error = r.session.error
+    if error then
+        Log(kLogDebug, "Error: %s" % { error })
+        r.headers["HX-Retarget"] = "dialog"
+        r.headers["HX-Reselect"] = "#dialog-contents"
+    end
+    r.session.error = nil
+    local params = { error_str = error }
+    add_htmx_param(r, params)
+    -- Error conditions:
+    -- - Exact file already in archive -> error on form
+    -- - Duplicate dHash -> confirm dialog that displays both
+    -- - Unable to read file -> error on form
+    -- - Unsupported file type -> error on form
+    -- - No file uploaded -> error on form
+    return Fm.serveContent("archive", params)
+end)
+
 local function setup()
     Fm.setTemplate { "/templates/", html = "fmt" }
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
@@ -3006,7 +3126,7 @@ local function setup()
     Fm.setRoute("/icon-512-maskable.png", Fm.serveAsset)
     Fm.setRoute("/manifest.webmanifest", Fm.serveAsset)
     Fm.setRoute("/style.css", Fm.serveAsset)
-    Fm.setRoute("/htmx.js", function(r)
+    Fm.setRoute("/htmx.js", function(_)
         return Fm.serveAsset("/htmx@2.0.1.min.js")
     end)
     Fm.setRoute("/index.js", Fm.serveAsset)
@@ -3028,6 +3148,7 @@ local function setup()
     Fm.setRoute(Fm.POST { "/queue" }, accept_queue)
     Fm.setRoute(Fm.GET { "/queue/:qid[%d]/help" }, render_queue_help)
     Fm.setRoute(Fm.POST { "/queue/:qid[%d]/help" }, accept_queue_help)
+    Fm.setRoute("/queue-image/:id[%d]", render_queue_image)
     Fm.setRoute("/home", render_home)
     Fm.setRoute("/image-file/:filename", render_image_file)
     Fm.setRoute("/thumbnail-file/:thumbnail_id[%d]", render_thumbnail_file)
@@ -3087,6 +3208,7 @@ local function setup()
         "/share-ping-list/:spl_id[%d]/edit",
         render_edit_share_ping_list
     )
+    Fm.setRoute("/archive", render_archive)
     Fm.setRoute("/account", render_account)
     Fm.setRoute("/account/end-sessions", accept_end_sessions)
     Fm.setRoute(
@@ -3094,9 +3216,6 @@ local function setup()
         accept_change_password
     )
     Fm.setRoute("/help(/:page)", render_help)
-    -- API routes
-    Fm.setRoute("/queue-image/:id[%d]", render_queue_image)
-    -- Fm.setRoute("/api/telegram-webhook")
 end
 
 local function run()

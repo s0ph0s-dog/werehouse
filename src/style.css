@@ -516,3 +516,7 @@ abbr {
 #dialog {
   max-width: 30em;
 }
+
+.error {
+  color: red;
+}
