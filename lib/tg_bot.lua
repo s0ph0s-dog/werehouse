@@ -125,6 +125,33 @@ local function update_queue_with_tg_ids(result, tg_err, model, queue_entry)
     end
 end
 
+local function message_is_saveable(message)
+    if message.text or message.caption then
+        return true
+    elseif message.photo then
+        return true
+    elseif message.document then
+        local mime_type = message.document.mime_type
+        if not mime_type then
+            return false,
+                "This file was sent without information to tell me what kind of file it is, so I can’t tell if I can save it."
+        elseif not ScraperPipeline.REVERSE_SEARCHABLE_MIME_TYPES[mime_type] then
+            return false,
+                "This file is %s, which I can’t automatically find sources for."
+                    % { mime_type }
+        end
+        return true
+    elseif message.video then
+        return false,
+            "I can’t find sources for a video, so I can’t save this."
+    elseif message.animation then
+        return false,
+            "I can’t find sources for a video-pretending-to-be-a-GIF, so I can’t save this."
+    else
+        return false, "I can’t find anything to save in this message."
+    end
+end
+
 local function handle_enqueue(message)
     local user_record, user_err =
         Accounts:findUserByTelegramUserID(message.from.id)
@@ -139,15 +166,9 @@ local function handle_enqueue(message)
     if not user_record or not user_record.username then
         return
     end
-    if not message.text and not message.photo then
-        if message.video then
-            api.reply_to_message(message, "I can’t save videos yet, sorry :(")
-        else
-            api.reply_to_message(
-                message,
-                "I can’t find anything to save in this message."
-            )
-        end
+    local is_saveable, why_not = message_is_saveable(message)
+    if not is_saveable then
+        api.reply_to_message(message, why_not)
         return
     end
     local links = bot.get_all_links_from_message(message)
@@ -184,26 +205,32 @@ local function handle_enqueue(message)
             return
         end
     end
-    if message.photo then
-        local max_width = 0
-        local max_height = 0
-        local largest_photo = nil
-        for i = 1, #message.photo do
-            local photo = message.photo[i]
-            print("Found", EncodeJson(photo))
-            if photo.width > max_width and photo.height > max_height then
-                max_width = photo.width
-                max_height = photo.height
-                largest_photo = photo
+    if message.photo or message.document then
+        local file_id = nil
+        if message.photo then
+            local max_width = 0
+            local max_height = 0
+            local largest_photo = nil
+            for i = 1, #message.photo do
+                local photo = message.photo[i]
+                print("Found", EncodeJson(photo))
+                if photo.width > max_width and photo.height > max_height then
+                    max_width = photo.width
+                    max_height = photo.height
+                    largest_photo = photo
+                end
             end
+            if not largest_photo then
+                Log(kLogDebug, "No photos in list")
+                return
+            end
+            file_id = largest_photo.file_id
+        else
+            file_id = message.document.file_id
         end
-        if not largest_photo then
-            Log(kLogDebug, "No photos in list")
-            return
-        end
-        local photo_data, photo_err = api.download_file(largest_photo.file_id)
+        local photo_data, photo_err = api.download_file(file_id)
         if not photo_data then
-            Log(kLogInfo, photo_err)
+            Log(kLogInfo, tostring(photo_err))
             return
         end
         local queue_entry, err =

@@ -33,6 +33,12 @@ local SITE_TO_POST_URL_MAP = {
     Twitter = "https://twitter.com/status/%s",
 }
 
+local REVERSE_SEARCHABLE_MIME_TYPES = {
+    ["image/png"] = true,
+    ["image/jpeg"] = true,
+    ["image/gif"] = true,
+}
+
 local FUZZYSEARCH_DISTANCE = 3
 
 local function fuzzysearch_multipart_body(
@@ -1100,4 +1106,5 @@ return {
     scrape_sources = scrape_sources,
     multipart_body = fuzzysearch_multipart_body,
     CANONICAL_DOMAINS_WITH_TAGS = CANONICAL_DOMAINS_WITH_TAGS,
+    REVERSE_SEARCHABLE_MIME_TYPES = REVERSE_SEARCHABLE_MIME_TYPES,
 }
