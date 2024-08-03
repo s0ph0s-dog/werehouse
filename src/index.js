@@ -152,3 +152,11 @@ htmx.onLoad((content) => {
     tagger_setup(tagger);
   });
 });
+
+// Remove dialogs from the page before saving history, so that they don't end
+// up in the bfcache
+htmx.on("htmx:beforeHistorySave", () => {
+  document.querySelectorAll("dialog").forEach((elt) => {
+    elt.innerHtml = "";
+  });
+});
