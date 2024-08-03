@@ -176,7 +176,8 @@ local function fluffle_image(image_data, mime_type)
     end
     local thumbnail_png = thumbnail:savebufferpng()
     local boundary = "__X_HELLO_NOPPES_THE_FOLF__"
-    local request_body = fluffle_multipart_body(boundary, image_data, mime_type)
+    local request_body =
+        fluffle_multipart_body(boundary, thumbnail_png, mime_type)
     local api_url = EncodeUrl {
         scheme = "https",
         host = "api.fluffle.xyz",
