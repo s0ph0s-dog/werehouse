@@ -1,6 +1,6 @@
 local TWITTER_URI_EXP = assert(
     re.compile(
-        [[^https?://(twitter\.com|vxtwitter\.com|fxtwitter\.com|x\.com|fixupx\.com|fixvx\.com|nitter\.privacydev\.net)/([A-z0-9_]+/)?status/([A-z0-9]+)]]
+        [[^https?://(twitter\.com|vxtwitter\.com|fxtwitter\.com|x\.com|fixupx\.com|fixvx\.com|nitter\.privacydev\.net|twittervx\.com)/([A-z0-9_]+/)?status/([A-z0-9]+)]]
     )
 )
 local TYPE_TO_KIND_MAP = {
