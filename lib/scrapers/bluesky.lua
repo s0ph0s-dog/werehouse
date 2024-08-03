@@ -1,6 +1,6 @@
 local BSKY_URI_EXP = assert(
     re.compile(
-        [[^https?://[bp]sky\.app/profile/([A-z0-9\.:]+)/post/([a-z0-9]+)]]
+        [[^(https?://)?[bp]sky\.app/profile/([A-z0-9\.:]+)/post/([a-z0-9]+)]]
     )
 )
 local BSKY_DID_EXP = assert(re.compile([[^at://([A-z0-9:]+)/]]))
@@ -10,7 +10,7 @@ local CANONICAL_DOMAIN = "bsky.app"
 ---@return string?
 ---@return string|re.Errno
 local function parse_bsky_uri(uri)
-    local match, handle_or_did, post_id = BSKY_URI_EXP:search(uri)
+    local match, _, handle_or_did, post_id = BSKY_URI_EXP:search(uri)
     if not match or type(handle_or_did) == "re.Errno" then
         return nil, handle_or_did
     end

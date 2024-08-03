@@ -1,6 +1,6 @@
 local FA_URI_EXP = assert(
     re.compile(
-        [[^https?://(www\.)?(fx|x|vx)?f(u|x)raffinity\.net/(view|full)/([0-9]+)]]
+        [[^(https?://)?(www\.)?(fx|x|vx)?f(u|x)raffinity\.net/(view|full)/([0-9]+)]]
     )
 )
 local RATING_MAP = {
@@ -13,7 +13,7 @@ local FA_AUTH_COOKIES = os.getenv("FA_AUTH_COOKIES")
 local CANONICAL_DOMAIN = "www.furaffinity.net"
 
 local function normalize_fa_uri(uri)
-    local match, _, _, _, _, id = FA_URI_EXP:search(uri)
+    local match, _, _, _, _, _, id = FA_URI_EXP:search(uri)
     if not match or not id then
         return nil
     end

@@ -1,9 +1,9 @@
 local CHOST_URI_EXP =
-    assert(re.compile([[^https?://cohost.org/([A-z0-9_-]+)/post/([0-9]+)]]))
+    assert(re.compile([[^(https?://)?cohost.org/([A-z0-9_-]+)/post/([0-9]+)]]))
 local CANONICAL_DOMAIN = "cohost.org"
 
 local function match_cohost_uri(uri)
-    local match, project, post_id = CHOST_URI_EXP:search(uri)
+    local match, _, project, post_id = CHOST_URI_EXP:search(uri)
     if not match then
         return nil
     end
