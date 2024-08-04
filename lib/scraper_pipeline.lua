@@ -16,6 +16,7 @@ local scrapers = {
     require_only("scrapers.e621"),
     require_only("scrapers.cohost"),
     require_only("scrapers.itakuee"),
+    require_only("scrapers.inkbunny"),
     require_only("scrapers.mastodon"),
     require_only("scrapers.deviantart"),
     require_only("scrapers.weasyl"),
@@ -27,6 +28,9 @@ local CANONICAL_DOMAINS_WITH_TAGS = {
     "e621.net",
     "cohost.org",
     "itaku.ee",
+    "www.deviantart.com",
+    "www.weasyl.com",
+    "inkbunny.net",
 }
 
 local SITE_TO_POST_URL_MAP = {

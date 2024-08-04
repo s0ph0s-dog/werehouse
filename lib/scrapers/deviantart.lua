@@ -140,6 +140,13 @@ local function first(list)
 end
 
 local function process_uri(uri)
+    if not DA_CLIENT_ID or not DA_CLIENT_SECRET then
+        return Err(
+            PermScraperError(
+                "This instance has no DeviantArt credentials. Ask your administrator to provide the DA_CLIENT_ID and DA_CLIENT_SECRET environment variables."
+            )
+        )
+    end
     local status, headers, body = FetchAndCheck(Fetch, uri)
     if not status then
         return headers

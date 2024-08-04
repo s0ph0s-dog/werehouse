@@ -2095,7 +2095,7 @@ function TestScraperPipeline:testDeviantArt()
             thenReturn = { 200, {}, Slurp("test/da_deviation.html") },
         },
         {
-            whenCalledWith = "https://www.deviantart.com/oauth2/token?grant_type=client_credentials&client_id&client_secret",
+            whenCalledWith = "https://www.deviantart.com/oauth2/token?grant_type=client_credentials&client_id=1&client_secret=1",
             thenReturn = { 200, {}, Slurp("test/da_token.json") },
         },
         {
@@ -2195,6 +2195,89 @@ function TestScraperPipeline:testWeasyl()
     }
     process_entry_framework(tests, mocks)
 end
+
+function TestScraperPipeline:testInkbunny()
+    local input = "https://inkbunny.net/s/3388744-p2-#pictop"
+    local tests = {
+        {
+            input = { input },
+            expected = {
+                {
+                    fetch = {
+                        {
+                            authors = {
+                                {
+                                    display_name = "planetkind",
+                                    handle = "planetkind",
+                                    profile_url = "https://inkbunny.net/planetkind",
+                                },
+                            },
+                            canonical_domain = "inkbunny.net",
+                            height = "2000",
+                            incoming_tags = {
+                                "anthro",
+                                "anthroart",
+                                "anthrofurry",
+                                "furry",
+                                "furryanthro",
+                                "furryart",
+                                "fursona",
+                                "horse",
+                                "referencesheet",
+                            },
+                            kind = 1,
+                            mime_type = "image/png",
+                            raw_image_uri = "https://qc.ib.metapix.net/files/full/5149/5149270_planetkind_smittyrefc.png",
+                            this_source = "https://inkbunny.net/s/3388744",
+                            width = "2000",
+                        },
+                        {
+                            authors = {
+                                {
+                                    display_name = "planetkind",
+                                    handle = "planetkind",
+                                    profile_url = "https://inkbunny.net/planetkind",
+                                },
+                            },
+                            canonical_domain = "inkbunny.net",
+                            height = "2000",
+                            incoming_tags = {
+                                "anthro",
+                                "anthroart",
+                                "anthrofurry",
+                                "furry",
+                                "furryanthro",
+                                "furryart",
+                                "fursona",
+                                "horse",
+                                "referencesheet",
+                            },
+                            kind = 1,
+                            mime_type = "image/png",
+                            raw_image_uri = "https://qc.ib.metapix.net/files/full/5149/5149271_planetkind_smittyrefnc.png",
+                            this_source = "https://inkbunny.net/s/3388744",
+                            width = "2000",
+                        },
+                    },
+                },
+                nil,
+            },
+        },
+    }
+    local mocks = {
+        fetch_mock_head_html_200(input),
+        {
+            whenCalledWith = "https://inkbunny.net/api_login.php?username=1&password=1",
+            thenReturn = { 200, {}, '{"sid":"garbage"}' },
+        },
+        {
+            whenCalledWith = "https://inkbunny.net/api_submissions.php?submission_ids=3388744&sid=garbage",
+            thenReturn = { 200, {}, Slurp("test/inkbunny_submission.json") },
+        },
+    }
+    process_entry_framework(tests, mocks)
+end
+
 --[[
 TestMultipart = {}
 function TestMultipart:testEncode()

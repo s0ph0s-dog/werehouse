@@ -20,6 +20,7 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/scrapers/twitter.lua \
 	lib/scrapers/cohost.lua \
 	lib/scrapers/itakuee.lua \
+	lib/scrapers/inkbunny.lua \
 	lib/scrapers/mastodon.lua \
 	lib/scrapers/furaffinity.lua \
 	lib/scrapers/weasyl.lua \
@@ -114,7 +115,7 @@ clean:
 	rm -f $(OUTPUT) $(TEST_REDBEAN)
 
 check: $(TEST_REDBEAN)
-	./$< -i test/test.lua
+	DA_CLIENT_ID=1 DA_CLIENT_SECRET=1 IB_USERNAME=1 IB_PASSWORD=1 ./$< -i test/test.lua
 
 test: check
 
