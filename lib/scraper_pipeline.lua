@@ -540,8 +540,8 @@ local function fetch_record_file(uri)
     if status ~= 200 then
         return nil,
             TempScraperError(
-                "I got a %d (%s) error when trying to download the image from '%s'."
-                    % { status, headers, uri }
+                "I got a %s (%s) error when trying to download the image from '%s'."
+                    % { tostring(status), EncodeJson(headers), uri }
             )
     end
     Log(kLogVerbose, "Successfully fetched record file")
@@ -584,7 +584,7 @@ local function fetch_files(model, queue_entry, task)
             Log(kLogVerbose, "Downloading %s…" % { record.raw_image_uri })
             local body, content_type = fetch_record_file(record.raw_image_uri)
             if not body then
-                return nil, PermScraperError(content_type)
+                return nil, content_type
             end
             record.image_data = body
             record.mime_type = content_type

@@ -93,7 +93,8 @@ SRCS := src/.init.lua \
     src/templates/tag_rule_edit.html \
     src/templates/tos.html \
 	src/style.css \
-	src/templates/home.html
+	src/templates/home.html \
+    src/usr/share/ssl/root/usertrust.pem
 TEST_LIBS := lib/third_party/luaunit.lua
 
 # Infrastructure variables here
@@ -152,6 +153,9 @@ $(SRV_DIR)/.lua/%.lua: lib/%.lua | $$(@D)/.
 	cp $< $@
 
 $(SRV_DIR)/%.html: src/%.html | $$(@D)/.
+	cp $< $@
+
+$(SRV_DIR)/usr/share/ssl/root/%.pem: src/usr/share/ssl/root/%.pem | $$(@D)/.
 	cp $< $@
 
 $(SRV_DIR)/.init.lua: src/.init.lua | $$(@D)/.

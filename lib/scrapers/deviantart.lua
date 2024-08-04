@@ -171,6 +171,9 @@ local function process_uri(uri)
     local download_url =
         encode_da_url("/deviation/download" .. post_id_with_slash)
     local dl_status, dl_headers, dl_json = FetchAndCheck(DAFetch, download_url)
+    if not dl_status then
+        return dl_headers
+    end
     local phase2 = process_download(dl_json, phase1)
     local post_id = post_id_with_slash:sub(2)
     local metadata_url = encode_da_url("/deviation/metadata", {
@@ -180,6 +183,9 @@ local function process_uri(uri)
     })
     local meta_status, meta_headers, meta_json =
         FetchAndCheck(DAFetch, metadata_url)
+    if not meta_status then
+        return meta_headers
+    end
     local phase3 = process_metadata(meta_json, phase2)
     return Ok { phase3 }
 end
