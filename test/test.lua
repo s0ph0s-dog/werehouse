@@ -2046,6 +2046,74 @@ function TestScraperPipeline:testValidMastodonLinks()
     process_entry_framework(tests, mocks)
 end
 
+function TestScraperPipeline:testDeviantArt()
+    local case1 =
+        "https://www.deviantart.com/teonocturnal/art/Game-day-1062228118"
+    local tests = {
+        {
+            input = { case1 },
+            expected = {
+                {
+                    fetch = {
+                        {
+                            authors = {
+                                {
+                                    display_name = "TeoNocturnal",
+                                    handle = "TeoNocturnal",
+                                    profile_url = "https://www.deviantart.com/TeoNocturnal",
+                                },
+                            },
+                            canonical_domain = "www.deviantart.com",
+                            height = 1074,
+                            incoming_tags = {
+                                "digitalart",
+                                "digitalpainting",
+                                "dragonanthro",
+                                "dragonwings",
+                                "fireplace",
+                                "naga",
+                                "sunlight",
+                                "threeheaded",
+                                "cobraanthro",
+                                "cozyillustration",
+                            },
+                            kind = 1,
+                            rating = 1,
+                            raw_image_uri = "https://wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/80db4200-0dd8-41af-b0c2-e317a8864c8c/dhkf8gm-4b6dfb0a-4b73-4efa-8b88-dcbb3c07f761.png",
+                            this_source = case1,
+                            width = 1600,
+                        },
+                    },
+                },
+                nil,
+            },
+        },
+    }
+    local mocks = {
+        {
+            whenCalledWith = case1,
+            thenReturn = { 200, {}, Slurp("test/da_deviation.html") },
+        },
+        {
+            whenCalledWith = "https://www.deviantart.com/oauth2/token?grant_type=client_credentials&client_id&client_secret",
+            thenReturn = { 200, {}, Slurp("test/da_token.json") },
+        },
+        {
+            whenCalledWith = "https://www.deviantart.com/api/v1/oauth2/deviation/A8E4E11D-7B04-37B0-1455-70BD21C6AE1A?with_session=0",
+            thenReturn = { 200, {}, Slurp("test/da_deviation.json") },
+        },
+        {
+            whenCalledWith = "https://www.deviantart.com/api/v1/oauth2/deviation/download/A8E4E11D-7B04-37B0-1455-70BD21C6AE1A",
+            thenReturn = { 200, {}, Slurp("test/da_download.json") },
+        },
+        {
+            whenCalledWith = "https://www.deviantart.com/api/v1/oauth2/deviation/metadata?deviationids=A8E4E11D-7B04-37B0-1455-70BD21C6AE1A&ext_submission=1&with_session=0",
+            thenReturn = { 200, {}, Slurp("test/da_metadata.json") },
+        },
+    }
+    process_entry_framework(tests, mocks)
+end
+
 --[[
 TestMultipart = {}
 function TestMultipart:testEncode()

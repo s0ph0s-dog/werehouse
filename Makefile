@@ -16,6 +16,7 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/scraper_pipeline.lua \
 	lib/scraper_types.lua \
 	lib/scrapers/bluesky.lua \
+	lib/scrapers/deviantart.lua \
 	lib/scrapers/twitter.lua \
 	lib/scrapers/cohost.lua \
 	lib/scrapers/itakuee.lua \
