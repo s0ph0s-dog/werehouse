@@ -18,6 +18,7 @@ local scrapers = {
     require_only("scrapers.itakuee"),
     require_only("scrapers.mastodon"),
     require_only("scrapers.deviantart"),
+    require_only("scrapers.weasyl"),
     require_only("scrapers.test"),
 }
 
@@ -32,6 +33,7 @@ local SITE_TO_POST_URL_MAP = {
     FurAffinity = "https://www.furaffinity.net/full/%s",
     e621 = "https://e621.net/posts/%s",
     Twitter = "https://twitter.com/status/%s",
+    Weasyl = "https://www.weasyl.com/submissions/%s",
 }
 
 local REVERSE_SEARCHABLE_MIME_TYPES = {

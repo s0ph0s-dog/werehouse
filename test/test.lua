@@ -2114,6 +2114,87 @@ function TestScraperPipeline:testDeviantArt()
     process_entry_framework(tests, mocks)
 end
 
+function TestScraperPipeline:testWeasyl()
+    local case1 =
+        "https://www.weasyl.com/~koorivlf/submissions/1912485/koor-dress-me"
+    local case2 = "https://www.weasyl.com/submission/1912485"
+    local expected = {
+        fetch = {
+            {
+                authors = {
+                    {
+                        display_name = "Koorivlf",
+                        handle = "koorivlf",
+                        profile_url = "https://www.weasyl.com/~koorivlf",
+                    },
+                },
+                canonical_domain = "www.weasyl.com",
+                height = 5100,
+                image_data = "elided",
+                incoming_tags = {
+                    "2020",
+                    "alts",
+                    "art",
+                    "artwork",
+                    "body",
+                    "clothes",
+                    "clothing",
+                    "drawing",
+                    "dress",
+                    "dressme",
+                    "fanshion",
+                    "fluff",
+                    "full",
+                    "horn",
+                    "koor",
+                    "koor_tycoon",
+                    "koorivlf",
+                    "male",
+                    "meme",
+                    "paw",
+                    "shirt",
+                    "tired",
+                    "tycoon",
+                },
+                kind = DbUtil.k.ImageKind.Image,
+                mime_type = "image/jpeg",
+                rating = DbUtil.k.Rating.Adult,
+                raw_image_uri = "https://cdn.weasyl.com/~koorivlf/submissions/1912485/7b4e954f2caa0dcc0354bd521f4f2ed7e805b543a88462820642f00cd84f6b27/koorivlf-koor-dress-me.png",
+                this_source = case2 .. "/koor-dress-me",
+                width = 3300,
+            },
+        },
+    }
+    local tests = {
+        {
+            input = { case1 },
+            expected = { expected, nil },
+        },
+        {
+            input = { case2 },
+            expected = { expected, nil },
+        },
+    }
+    local mocks = {
+        fetch_mock_head_html_200(case1),
+        fetch_mock_head_html_200(case2),
+        {
+            whenCalledWith = "https://www.weasyl.com/api/submissions/1912485/view",
+            thenReturn = { 200, {}, Slurp("test/weasyl_submission.json") },
+        },
+        {
+            whenCalledWith = "https://cdn.weasyl.com/~koorivlf/submissions/1912485/7b4e954f2caa0dcc0354bd521f4f2ed7e805b543a88462820642f00cd84f6b27/koorivlf-koor-dress-me.png",
+            thenReturn = {
+                200,
+                {
+                    ["Content-Type"] = "image/jpeg",
+                },
+                Slurp("test/itakuee_nsfw.jpg"),
+            },
+        },
+    }
+    process_entry_framework(tests, mocks)
+end
 --[[
 TestMultipart = {}
 function TestMultipart:testEncode()
