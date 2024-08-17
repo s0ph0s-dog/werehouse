@@ -43,6 +43,15 @@ to disk, then inserts the metadata into the database.  If the user has
 chosen to merge one or entries, this stage preserves whichever entry is
 higher-resolution and additively merges the other metadata.
 
+I've chosen to enforce that there are at most 3 attempts as a safety
+invariant (avoid infinitely re-scraping something), and that the system
+always ends in the Error or Archived status as a liveness property (require
+it to either make progress or fail).  I don't think there are any other
+things I need to require in order to confirm the system is working as
+intended.
+
+I don't love all the gotos, but I'm not sure there's a better way to model
+the system.
 
 -------------------------- MODULE ScraperPipeline --------------------------
 EXTENDS Integers, Sequences, TLC
@@ -63,42 +72,53 @@ variables
     \* sources \in 0..4;
     status = ToDo;
     help_requested = NO;
+    attempts = 0;
     
 define
     TypeInvariant ==
         /\ status \in States
         /\ help_requested \in {NO, YES, ANSWERED}
+        
+    AtMostThreeAttempts ==
+        attempts < 4
+        
+    \* Add this as an invariant.
+    SafetyInvariants == AtMostThreeAttempts
 end define;
 
 fair process pipeline = "pipeline"
 begin
     Deserialize:
-        if help_requested /= NO then
+        if attempts >= 3 then
+            status := Error;
+            goto Repeat;
+        elsif help_requested /= NO then
             goto Decide;
         end if;
     Scrape:
+        attempts := attempts + 1;
         either
             status := Error;
         or
-            skip;
+            goto Deserialize;
         end either;
     Decode:
         either
             status := Error;
         or
-            skip;
+            goto Deserialize;
         end either;
     Decide:
         if help_requested = NO then
             either
                 help_requested := YES;
             or
-                skip;
+                goto Deserialize;
             end either;
         elsif help_requested = YES then
             goto Deserialize;
         else
-            skip;
+            goto Deserialize;
         end if;
     Archive:
         either
@@ -107,7 +127,9 @@ begin
             status := Error;
         end either;
     Repeat:
-        goto Deserialize;
+        if ~(status \in {Archived, Error}) then
+            goto Deserialize;
+        end if;
 end process;
 
 process user = "user"
@@ -120,67 +142,80 @@ begin
         or skip end either;
 end process;
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "b2ec6e39" /\ chksum(tla) = "4f82fa78")
-VARIABLES status, help_requested, pc
+\* BEGIN TRANSLATION (chksum(pcal) = "a4289cc6" /\ chksum(tla) = "61350b8a")
+VARIABLES status, help_requested, attempts, pc
 
 (* define statement *)
 TypeInvariant ==
     /\ status \in States
     /\ help_requested \in {NO, YES, ANSWERED}
 
+AtMostThreeAttempts ==
+    attempts < 4
 
-vars == << status, help_requested, pc >>
+
+SafetyInvariants == AtMostThreeAttempts
+
+
+vars == << status, help_requested, attempts, pc >>
 
 ProcSet == {"pipeline"} \cup {"user"}
 
 Init == (* Global variables *)
         /\ status = ToDo
         /\ help_requested = NO
+        /\ attempts = 0
         /\ pc = [self \in ProcSet |-> CASE self = "pipeline" -> "Deserialize"
                                         [] self = "user" -> "AnswerHelp"]
 
 Deserialize == /\ pc["pipeline"] = "Deserialize"
-               /\ IF help_requested /= NO
-                     THEN /\ pc' = [pc EXCEPT !["pipeline"] = "Decide"]
-                     ELSE /\ pc' = [pc EXCEPT !["pipeline"] = "Scrape"]
-               /\ UNCHANGED << status, help_requested >>
+               /\ IF attempts >= 3
+                     THEN /\ status' = Error
+                          /\ pc' = [pc EXCEPT !["pipeline"] = "Repeat"]
+                     ELSE /\ IF help_requested /= NO
+                                THEN /\ pc' = [pc EXCEPT !["pipeline"] = "Decide"]
+                                ELSE /\ pc' = [pc EXCEPT !["pipeline"] = "Scrape"]
+                          /\ UNCHANGED status
+               /\ UNCHANGED << help_requested, attempts >>
 
 Scrape == /\ pc["pipeline"] = "Scrape"
+          /\ attempts' = attempts + 1
           /\ \/ /\ status' = Error
-             \/ /\ TRUE
+                /\ pc' = [pc EXCEPT !["pipeline"] = "Decode"]
+             \/ /\ pc' = [pc EXCEPT !["pipeline"] = "Deserialize"]
                 /\ UNCHANGED status
-          /\ pc' = [pc EXCEPT !["pipeline"] = "Decode"]
           /\ UNCHANGED help_requested
 
 Decode == /\ pc["pipeline"] = "Decode"
           /\ \/ /\ status' = Error
-             \/ /\ TRUE
+                /\ pc' = [pc EXCEPT !["pipeline"] = "Decide"]
+             \/ /\ pc' = [pc EXCEPT !["pipeline"] = "Deserialize"]
                 /\ UNCHANGED status
-          /\ pc' = [pc EXCEPT !["pipeline"] = "Decide"]
-          /\ UNCHANGED help_requested
+          /\ UNCHANGED << help_requested, attempts >>
 
 Decide == /\ pc["pipeline"] = "Decide"
           /\ IF help_requested = NO
                 THEN /\ \/ /\ help_requested' = YES
-                        \/ /\ TRUE
+                           /\ pc' = [pc EXCEPT !["pipeline"] = "Archive"]
+                        \/ /\ pc' = [pc EXCEPT !["pipeline"] = "Deserialize"]
                            /\ UNCHANGED help_requested
-                     /\ pc' = [pc EXCEPT !["pipeline"] = "Archive"]
                 ELSE /\ IF help_requested = YES
                            THEN /\ pc' = [pc EXCEPT !["pipeline"] = "Deserialize"]
-                           ELSE /\ TRUE
-                                /\ pc' = [pc EXCEPT !["pipeline"] = "Archive"]
+                           ELSE /\ pc' = [pc EXCEPT !["pipeline"] = "Deserialize"]
                      /\ UNCHANGED help_requested
-          /\ UNCHANGED status
+          /\ UNCHANGED << status, attempts >>
 
 Archive == /\ pc["pipeline"] = "Archive"
            /\ \/ /\ status' = Archived
               \/ /\ status' = Error
            /\ pc' = [pc EXCEPT !["pipeline"] = "Repeat"]
-           /\ UNCHANGED help_requested
+           /\ UNCHANGED << help_requested, attempts >>
 
 Repeat == /\ pc["pipeline"] = "Repeat"
-          /\ pc' = [pc EXCEPT !["pipeline"] = "Deserialize"]
-          /\ UNCHANGED << status, help_requested >>
+          /\ IF ~(status \in {Archived, Error})
+                THEN /\ pc' = [pc EXCEPT !["pipeline"] = "Deserialize"]
+                ELSE /\ pc' = [pc EXCEPT !["pipeline"] = "Done"]
+          /\ UNCHANGED << status, help_requested, attempts >>
 
 pipeline == Deserialize \/ Scrape \/ Decode \/ Decide \/ Archive \/ Repeat
 
@@ -192,7 +227,7 @@ AnswerHelp == /\ pc["user"] = "AnswerHelp"
                  \/ /\ TRUE
                     /\ UNCHANGED help_requested
               /\ pc' = [pc EXCEPT !["user"] = "Done"]
-              /\ UNCHANGED status
+              /\ UNCHANGED << status, attempts >>
 
 user == AnswerHelp
 
@@ -210,7 +245,10 @@ Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
 \* END TRANSLATION 
 
+\* Add this as a temporal property.
+Liveness == <>[](status \in {Error, Archived})
+
 =============================================================================
 \* Modification History
-\* Last modified Fri Aug 16 02:08:14 EDT 2024 by s0ph0s
+\* Last modified Fri Aug 16 21:51:31 EDT 2024 by s0ph0s
 \* Created Fri Aug 09 20:40:37 EDT 2024 by s0ph0s
