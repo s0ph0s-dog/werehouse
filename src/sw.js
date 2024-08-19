@@ -65,14 +65,14 @@ self.addEventListener("install", (event) => {
   event.waitUntil(precache());
 });
 
-self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
-  if (
-    precachedResources.includes(url.pathname) ||
-    url.pathname.includes("/queue-image/") ||
-    url.pathname.includes("/image-file/") ||
-    url.pathname.includes("/thumbnail-file/")
-  ) {
-    event.respondWith(cacheFirstWithRefresh(event.request));
-  }
-});
+// self.addEventListener("fetch", (event) => {
+//   const url = new URL(event.request.url);
+//   if (
+//     precachedResources.includes(url.pathname) ||
+//     url.pathname.includes("/queue-image/") ||
+//     url.pathname.includes("/image-file/") ||
+//     url.pathname.includes("/thumbnail-file/")
+//   ) {
+//     event.respondWith(cacheFirstWithRefresh(event.request));
+//   }
+// });
