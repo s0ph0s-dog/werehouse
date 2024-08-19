@@ -33,6 +33,23 @@ local function is_success_status(status)
     return (status >= 200 and status <= 299)
 end
 
+---@param uri string
+---@param options table<string, string>?
+---@return string, table
+---@overload fun(uri: string, options: table): nil, PipelineError
+local function FetchMedia(uri, options)
+    local status, headers, body = Fetch(uri, options)
+    if not status then
+        return nil, PipelineErrorTemporary(headers)
+    elseif is_temporary_failure_status(status) then
+        return nil, PipelineErrorTemporary(status)
+    elseif is_permanent_failure_status(status) then
+        return nil, PipelineErrorPermanent(status)
+    else
+        return body, headers
+    end
+end
+
 local ext_to_mime = {
     jpg = "image/jpeg",
     jpeg = "image/jpeg",
@@ -57,6 +74,7 @@ end
 
 return {
     FetchJson = FetchJson,
+    FetchMedia = FetchMedia,
     is_temporary_failure_status = is_temporary_failure_status,
     is_permanent_failure_status = is_permanent_failure_status,
     is_success_status = is_success_status,

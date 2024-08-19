@@ -1,8 +1,8 @@
 Sqlite3 = require("lsqlite3")
 NanoID = require("nanoid")
 Fm = require("third_party.fullmoon")
+DbUtil = require("db")
 FsTools = require("fstools")
-local DbUtil = require("db")
 local _ = require("functools")
 
 local function help()
@@ -583,6 +583,71 @@ local function calc_queue_wh(other_args)
     end)
 end
 
+local function queue2_migrate(other_args)
+    local dry_run = other_args[1] == "-d"
+    for_each_user(function(_, _, model)
+        local SP = "migrate_queue_to_queue2"
+        model:create_savepoint(SP)
+        local queue2_query =
+            "INSERT INTO queue2 (qid, link, added_on, status, description, retry_count, tg_chat_id, tg_message_id)SELECT qid, link, added_on, tombstone, status, retry_count, tg_chat_id, tg_message_id FROM queue;"
+        local queue_image_fetch =
+            "SELECT qid, image, image_mime_type, image_width, image_height FROM queue WHERE image IS NOT NULL;"
+        local queue_image_insert =
+            "INSERT INTO queue_images (qid, image, image_mime_type, image_width, image_height) VALUES (?, ?, ?, ?, ?);"
+        local SP_Q2 = "migrate_queue_to_queue2_table_copy"
+        model:create_savepoint(SP_Q2)
+        local q2_ok, q2_err = model.conn:execute(queue2_query)
+        if dry_run then
+            model:rollback(SP_Q2)
+        else
+            model:release_savepoint(SP_Q2)
+        end
+        if not q2_ok then
+            Log(kLogError, q2_err)
+            model:rollback(SP)
+            return 0
+        end
+        Log(kLogInfo, "Migrated %d records to the queue2 table" % { q2_ok })
+        local queue_images, qimg_err = model.conn:fetchAll(queue_image_fetch)
+        if not queue_images then
+            Log(kLogError, qimg_err)
+            model:rollback(SP)
+            return 0
+        end
+        for j = 1, #queue_images do
+            local qimg = queue_images[j]
+            Log(kLogVerbose, EncodeJson(qimg))
+            if not dry_run then
+                local filename = FsTools.save_queue(
+                    qimg.image,
+                    qimg.image_mime_type,
+                    model.user_id
+                )
+                local insert_ok, insert_err = model.conn:execute(
+                    queue_image_insert,
+                    qimg.qid,
+                    filename,
+                    qimg.image_mime_type,
+                    qimg.image_width,
+                    qimg.image_height
+                )
+                if not insert_ok then
+                    Log(kLogError, insert_err)
+                    model:rollback(SP)
+                end
+            else
+                Log(
+                    kLogInfo,
+                    "Would have saved image to disk for qid "
+                        .. tostring(qimg.qid)
+                )
+            end
+        end
+        model:release_savepoint(SP)
+        return 0
+    end)
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
@@ -595,6 +660,7 @@ local commands = {
     clean_orphan_files = clean_orphan_files,
     fix_0wh = fix_0wh,
     calc_queue_wh = calc_queue_wh,
+    queue2_migrate = queue2_migrate,
 }
 
 local remaining_args = arg

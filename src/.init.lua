@@ -10,6 +10,7 @@ local about = require("about")
 local web = require("web")
 local _ = require("functools")
 ScraperPipeline = require("scraper_pipeline")
+Ris = require("reverse_image_search")
 Bot = require("tg_bot")
 GifTools = require("giftools")
 

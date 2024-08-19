@@ -15,6 +15,7 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/giftools.lua \
 	lib/scraper_pipeline.lua \
 	lib/scraper_types.lua \
+    lib/reverse_image_search.lua \
 	lib/scrapers/bluesky.lua \
 	lib/scrapers/deviantart.lua \
 	lib/scrapers/twitter.lua \

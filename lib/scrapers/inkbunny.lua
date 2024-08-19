@@ -118,12 +118,12 @@ local function process_json(json)
         display_name = json.username,
         profile_url = "https://inkbunny.net/" .. json.username,
     }
-    return table.map(json.files, function(file)
+    return table.maperr(json.files, function(file)
         return {
             kind = DbUtil.k.ImageKind.Image,
-            raw_image_uri = file.file_url_full,
-            width = file.full_size_x,
-            height = file.full_size_y,
+            media_url = file.file_url_full,
+            width = tonumber(file.full_size_x) or 0,
+            height = tonumber(file.full_size_y) or 0,
             rating = rating,
             authors = { artist },
             incoming_tags = incoming_tags,
@@ -135,12 +135,11 @@ local function process_json(json)
     end)
 end
 
+---@type ScraperProcess
 local function process_uri(uri)
     if not IB_USERNAME or not IB_PASSWORD then
-        return Err(
-            PermScraperError(
-                "This instance has no Inkbunny credentials. Ask your administrator to provide the IB_USERNAME and IB_PASSWORD environment variables."
-            )
+        return PipelineErrorPermanent(
+            "This instance has no Inkbunny credentials. Ask your administrator to provide the IB_USERNAME and IB_PASSWORD environment variables."
         )
     end
     local submission_id = extract_submission_id(uri)
@@ -154,20 +153,18 @@ local function process_uri(uri)
     }
     local json, err = IBFetchJson(api_url_parts, { method = "POST" })
     if not json then
-        return Err(PermScraperError(err))
+        return nil, PipelineErrorPermanent(err)
     end
     if not json.submissions or #json.submissions ~= 1 then
-        return Err(
-            PermScraperError(
-                "This Inkbunny submission is not visible to you. It may have been deleted."
-            )
+        return PipelineErrorPermanent(
+            "This Inkbunny submission is not visible to you. It may have been deleted."
         )
     end
     local result, p_err = process_json(json.submissions[1])
     if result then
-        return Ok(result)
+        return result
     else
-        return Err(p_err)
+        return nil, PipelineErrorPermanent(p_err)
     end
 end
 

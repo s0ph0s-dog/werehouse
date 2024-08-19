@@ -328,6 +328,33 @@ local user_setup = [[
 
     CREATE INDEX IF NOT EXISTS queue_added_on ON queue (added_on);
 
+    CREATE TABLE IF NOT EXISTS "queue2" (
+        "qid" INTEGER NOT NULL UNIQUE,
+        "link" TEXT UNIQUE,
+        "added_on" TEXT NOT NULL,
+        "status" INTEGER NOT NULL,
+        "description" TEXT NOT NULL,
+        "retry_count" INTEGER NOT NULL DEFAULT 0,
+        "help_ask" TEXT,
+        "help_answer" TEXT,
+        "tg_chat_id" INTEGER,
+        "tg_message_id" INTEGER,
+        PRIMARY KEY ("qid")
+    );
+
+    CREATE INDEX IF NOT EXISTS queue2_added_on ON queue2 (added_on);
+
+    -- Stored as a separate table to ensure that if one value is present, they all are.
+    CREATE TABLE IF NOT EXISTS "queue_images" (
+        "qid" INTEGER NOT NULL UNIQUE,
+        "image" TEXT NOT NULL UNIQUE,
+        "image_mime_type" TEXT NOT NULL,
+        "image_width" INTEGER NOT NULL,
+        "image_height" INTEGER NOT NULL,
+        FOREIGN KEY ("qid") REFERENCES "queue2"("qid")
+        ON UPDATE CASCADE ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS "queue_gradienthashes" (
         "qid" INTEGER NOT NULL UNIQUE,
         "h1" INTEGER NOT NULL,
@@ -335,7 +362,7 @@ local user_setup = [[
         "h3" INTEGER NOT NULL,
         "h4" INTEGER NOT NULL,
         PRIMARY KEY ("qid", "h1", "h2", "h3", "h4"),
-        FOREIGN KEY ("qid") REFERENCES "queue"("qid")
+        FOREIGN KEY ("qid") REFERENCES "queue2"("qid")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
 
@@ -418,64 +445,87 @@ local queries = {
     },
     model = {
         get_recent_queue_entries = [[SELECT
-                qid,
-                link,
-                (image IS NOT NULL) AS has_image,
-                image_width,
-                image_height,
-                tombstone,
-                added_on,
-                status,
-                disambiguation_request,
-                disambiguation_data,
-                image_width AS width,
-                image_height AS height
-            FROM queue
+                queue2.qid,
+                queue2.link,
+                queue_images.image,
+                queue_images.image_width,
+                queue_images.image_height,
+                queue2.status,
+                queue2.added_on,
+                queue2.description,
+                queue2.help_ask,
+                queue2.help_answer
+            FROM queue2
+            LEFT NATURAL JOIN queue_images
             ORDER BY added_on DESC
             LIMIT 21;]],
-        get_all_queue_entries = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status, disambiguation_request, disambiguation_data
-            FROM queue
+        get_all_queue_entries = [[SELECT
+                queue2.qid,
+                queue2.link,
+                queue_images.image,
+                queue_images.image_mime_type,
+                queue2.status,
+                queue2.added_on,
+                queue2.description,
+                queue2.help_ask,
+                queue2.help_answer
+            FROM queue2
+            LEFT NATURAL JOIN queue_images
             ORDER BY added_on ASC
             LIMIT 10;]],
         get_first_n_active_queue_entries = [[SELECT
-                qid,
-                link,
-                image,
-                image_mime_type,
-                tombstone,
-                added_on,
-                status,
-                disambiguation_request,
-                disambiguation_data,
-                tg_chat_id,
-                tg_message_id,
-                retry_count
-            FROM queue
-            WHERE tombstone = 0
-            AND ( (disambiguation_request IS NULL) = (disambiguation_data IS NULL) )
-            ORDER BY added_on ASC
+                queue2.qid,
+                queue2.link,
+                queue_images.image,
+                queue_images.image_mime_type,
+                queue2.status,
+                queue2.added_on,
+                queue2.description,
+                queue2.help_ask,
+                queue2.help_answer,
+                queue2.tg_chat_id,
+                queue2.tg_message_id,
+                queue2.retry_count
+            FROM queue2
+            LEFT NATURAL JOIN queue_images
+            WHERE status = 0
+            AND ( (help_ask IS NULL) = (help_answer IS NULL) )
+            ORDER BY queue2.added_on ASC
             LIMIT ?;]],
-        get_queue_entry_count = [[SELECT COUNT(*) AS count FROM "queue";]],
+        get_queue_entry_count = [[SELECT COUNT(*) AS count FROM "queue2";]],
         get_queue_entries_paginated = [[SELECT
-                qid,
-                link,
-                (image IS NOT NULL) AS has_image,
-                image_width,
-                image_height,
-                tombstone,
-                added_on,
-                status,
-                disambiguation_request,
-                disambiguation_data
-            FROM queue
-            ORDER BY added_on DESC
+                queue2.qid,
+                queue2.link,
+                queue_images.image,
+                queue_images.image_width,
+                queue_images.image_height,
+                queue2.status,
+                queue2.added_on,
+                queue2.description,
+                queue2.help_ask,
+                queue2.help_answer
+            FROM queue2
+            LEFT NATURAL JOIN queue_images
+            ORDER BY queue2.added_on DESC
             LIMIT ?
             OFFSET ?;]],
-        get_queue_entry_by_id = [[SELECT qid, link, image, image_mime_type, tombstone, added_on, status, disambiguation_request, disambiguation_data
-            FROM queue
+        get_queue_entry_by_id = [[SELECT
+                queue2.qid,
+                queue2.link,
+                queue_images.image,
+                queue_images.image_mime_type,
+                queue2.status,
+                queue2.added_on,
+                queue2.description,
+                queue2.help_ask,
+                queue2.help_answer
+            FROM queue2
+            LEFT NATURAL JOIN queue_images
+            WHERE queue2.qid = ?;]],
+        get_queue_image_by_id = [[SELECT image, image_mime_type FROM queue_images
             WHERE qid = ?;]],
-        get_queue_image_by_id = [[SELECT image, image_mime_type FROM queue
-            WHERE qid = ?;]],
+        get_queue_image_by_filename = [[SELECT image, image_mime_type FROM
+            queue_images WHERE image = ?;]],
         get_image_entry_count = [[SELECT COUNT(*) as count FROM images;]],
         get_recent_image_entries = [[SELECT image_id, file, kind, mime_type, artists, first_thumbnail_id, first_thumbnail_width, first_thumbnail_height
             FROM images_for_gallery
@@ -761,22 +811,24 @@ local queries = {
         get_share_records_for_image_group = [[SELECT "share_id", "shared_to", "shared_at"
             FROM "share_records" WHERE "ig_id" = ?;]],
         insert_link_into_queue = [[INSERT INTO
-            "queue" ("link", "image", "image_mime_type", "tombstone", "added_on", "status")
-            VALUES (?, NULL, NULL, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '')
+            "queue2" ("link", "status", "added_on", "description")
+            VALUES (?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '')
             RETURNING qid;]],
         insert_image_into_queue = [[INSERT INTO
-            "queue" (
-                "link",
+            "queue2" (
+                "added_on",
+                "status",
+                "description"
+            )
+            VALUES (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), 0, '')
+            RETURNING qid;]],
+        insert_image_file_into_queue = [[INSERT INTO "queue_images" (
+                "qid",
                 "image",
                 "image_mime_type",
                 "image_width",
-                "image_height",
-                "tombstone",
-                "added_on",
-                "status"
-            )
-            VALUES (NULL, ?, ?, ?, ?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '')
-            RETURNING qid;]],
+                "image_height"
+            ) VALUES (?, ?, ?, ?, ?);]],
         insert_image_into_images = [[INSERT INTO
             "images" ("file", "mime_type", "width", "height", "kind", "rating", "file_size", "saved_at")
             VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
@@ -845,7 +897,7 @@ local queries = {
             ("share_id", "image_id", "shared_to") VALUES (?, ?, ?);]],
         insert_pending_share_record_for_image_group = [[INSERT INTO "share_records"
             ("share_id", "ig_id", "shared_to") VALUES (?, ?, ?);]],
-        delete_item_from_queue = [[DELETE FROM "queue" WHERE qid = ?;]],
+        delete_item_from_queue = [[DELETE FROM "queue2" WHERE qid = ?;]],
         delete_image_by_id = [[DELETE FROM "images" WHERE image_id = ?;]],
         delete_artist_by_id = [[DELETE FROM "artists" WHERE artist_id = ?;]],
         delete_tag_by_id = [[DELETE FROM "tags" WHERE tag_id = ?;]],
@@ -864,29 +916,27 @@ local queries = {
             WHERE spl_entry_id = ? AND tag_id = ?;]],
         delete_pl_negative_tag = [[DELETE FROM "pl_entry_negative_tags"
             WHERE spl_entry_id = ? AND tag_id = ?;]],
-        delete_handled_queue_entries = [[DELETE FROM "queue" WHERE
+        delete_handled_queue_entries = [[DELETE FROM "queue2" WHERE
             (
-                "tombstone" = 2 OR
-                ("tombstone" = 1 AND "status" LIKE 'Duplicate%')
+                "status" = 2 OR
+                ("status" = 1 AND "description" LIKE 'Duplicate%')
             ) AND "qid" != (SELECT MAX("qid") FROM "queue");]],
         delete_share_record_by_id = [[DELETE FROM "share_records" WHERE
             "share_id" = ?;]],
-        update_queue_item_status = [[UPDATE "queue"
-            SET "status" = ?, "tombstone" = ?
+        update_queue_item_status = [[UPDATE "queue2"
+            SET "description" = ?, "status" = ?
             WHERE qid = ?;]],
-        update_queue_item_status_only = [[UPDATE "queue"
-            SET "tombstone" = ?
+        update_queue_item_status_only = [[UPDATE "queue2"
+            SET "status" = ?
             WHERE qid = ?;]],
-        update_queue_item_status_to_zero = [[UPDATE "queue"
-            SET "tombstone" = 0, "retry_count" = 0, "disambiguation_request" = NULL, "disambiguation_data" = NULL
+        update_queue_item_status_to_zero = [[UPDATE "queue2"
+            SET "status" = 0, "retry_count" = 0, "help_ask" = NULL, "help_answer" = NULL
             WHERE qid = ?;]],
-        update_queue_item_disambiguation_req = [[UPDATE "queue"
-            SET "disambiguation_request" = ?
-            WHERE qid = ?;]],
-        update_queue_item_disambiguation_data = [[UPDATE "queue"
-            SET "disambiguation_data" = ?
-            WHERE qid = ?;]],
-        update_queue_item_telegram_ids = [[UPDATE "queue"
+        update_queue_item_help_ask = [[UPDATE "queue2"
+            SET "help_ask" = ? WHERE qid = ?;]],
+        update_queue_item_help_answer = [[UPDATE "queue2"
+            SET "help_answer" = ? WHERE qid = ?;]],
+        update_queue_item_telegram_ids = [[UPDATE "queue2"
             SET "tg_chat_id" = ?, "tg_message_id" = ? WHERE qid = ?;]],
         update_handles_to_other_artist = [[UPDATE "artist_handles"
             SET "artist_id" = ?
@@ -915,6 +965,13 @@ local queries = {
             WHERE image_id = ?;]],
         update_image_size_by_id = [[UPDATE images SET file_size = ?
             WHERE image_id = ?;]],
+        update_image_replace_image_by_id = [[UPDATE images SET
+                file = ?,
+                mime_type = ?,
+                width = ?,
+                height = ?,
+                file_size = ?
+            WHERE image_id = ?;]],
         update_tag_by_id = [[UPDATE tags
             SET name = ?, description = ?
             WHERE tag_id = ?;]],
@@ -924,7 +981,7 @@ local queries = {
         update_tag_rule_by_id = [[UPDATE "tag_rules"
             SET incoming_name = ?, incoming_domain = ?, tag_id = ?
             WHERE tag_rule_id = ?;]],
-        update_queue_item_retry_count_increment_by_one = [[UPDATE "queue"
+        update_queue_item_retry_count_increment_by_one = [[UPDATE "queue2"
             SET retry_count = retry_count + 1
             WHERE qid = ?;]],
         update_pending_share_record_with_date_now = [[UPDATE "share_records"
@@ -1057,7 +1114,7 @@ function Model:getRecentQueueEntries()
     return self.conn:fetchAll(queries.model.get_recent_queue_entries)
 end
 
----@alias ActiveQueueEntry {qid: string, link: string, image: string, image_mime_type: string, tombstone: integer, added_on: string, status: string, disambiguation_request: string, disambiguation_data: string, retry_count: integer}
+---@alias ActiveQueueEntry {qid: integer, link: string, image: string, image_mime_type: string, tombstone: integer, added_on: string, status: string, help_ask: string, help_answer: string, retry_count: integer, tg_message_id: integer, tg_chat_id: integer}
 ---@return ActiveQueueEntry[]
 function Model:getAllActiveQueueEntries()
     return self.conn:fetchAll(
@@ -1100,6 +1157,14 @@ end
 
 function Model:getQueueImageById(qid)
     return fetchOneExactly(self.conn, queries.model.get_queue_image_by_id, qid)
+end
+
+function Model:getQueueImageByFilename(filename)
+    return fetchOneExactly(
+        self.conn,
+        queries.model.get_queue_image_by_filename,
+        filename
+    )
 end
 
 function Model:getImageById(image_id)
@@ -1185,13 +1250,31 @@ function Model:enqueueImage(mime_type, image_data)
             Log(kLogWarn, "error while parsing image for enqueue:" .. i_err)
         end
     end
-    return self.conn:fetchOne(
-        queries.model.insert_image_into_queue,
-        image_data,
+    local filename = FsTools.save_queue(image_data, mime_type, self.user_id)
+    local q_record, qerr =
+        self.conn:fetchOne(queries.model.insert_image_into_queue)
+    Log(kLogDebug, "q_record: " .. EncodeJson(q_record))
+    if not q_record then
+        Log(kLogInfo, "error while adding queue record for image: " .. qerr)
+        return nil, qerr
+    end
+    local imgok, imgerr = self.conn:execute(
+        queries.model.insert_image_file_into_queue,
+        q_record.qid,
+        filename,
         mime_type,
         width,
         height
     )
+    Log(kLogDebug, "imgok: " .. EncodeJson(imgok))
+    if not imgok then
+        Log(
+            kLogInfo,
+            "error while adding queue_image record for image: " .. imgerr
+        )
+        return nil, imgerr
+    end
+    return q_record
 end
 
 function Model:updateQueueItemTelegramIds(qid, chat_id, message_id)
@@ -1268,19 +1351,30 @@ end
 
 function Model:setQueueItemDisambiguationRequest(queue_id, disambiguation_data)
     return self.conn:execute(
-        queries.model.update_queue_item_disambiguation_req,
+        queries.model.update_queue_item_help_ask,
         disambiguation_data,
         queue_id
     )
 end
 
-function Model:setQueueItemDisambiguationResponse(queue_id, disambiguation_data)
-    if type(disambiguation_data) ~= "string" then
-        disambiguation_data = EncodeJson(disambiguation_data)
+function Model:setQueueItemHelpAnswer(queue_id, help_answer)
+    if type(help_answer) ~= "string" then
+        help_answer = EncodeJson(help_answer)
     end
     return self.conn:fetchOne(
-        queries.model.update_queue_item_disambiguation_data,
-        disambiguation_data,
+        queries.model.update_queue_item_help_answer,
+        help_answer,
+        queue_id
+    )
+end
+
+function Model:setQueueItemHelpAsk(queue_id, value)
+    if type(value) ~= "string" then
+        value = EncodeJson(value)
+    end
+    return self.conn:execute(
+        queries.model.update_queue_item_help_ask,
+        value,
         queue_id
     )
 end
@@ -1310,12 +1404,59 @@ function Model:insertImage(image_data, mime_type, width, height, kind, rating)
         #image_data
     )
     if not ok then
-        return nil, "Duplicate record file hash"
+        return nil, "An exact copy of this media file is already archived."
     end
+    Log(
+        kLogDebug,
+        "image: %s; i_err: %s" % { tostring(image), tostring(i_err) }
+    )
     if not image then
         return nil, i_err
     end
     return image
+end
+
+---Replace the image file for a record with a new file.
+---@param image_id integer The ID of the record to update.
+---@param image_data string The new media file data to associate with the record, instead of what's already there.
+---@param mime_type string The MIME type of the new media file data.
+---@param width integer The width in pixels of the new media file.
+---@param height integer The height in pixels of the new media file.
+function Model:replaceImage(image_id, image_data, mime_type, width, height)
+    local existing, e_err = self:getImageById(image_id)
+    if not existing then
+        return nil, e_err
+    end
+    -- If the image isn't bigger/higher quality, do nothing.
+    if
+        (width > existing.width and height > existing.height)
+        or (
+            width == existing.width
+            and height == existing.height
+            and mime_type == "image/png"
+        )
+    then
+        return { image_id = image_id }
+    end
+    local filename = FsTools.save_image(image_data, mime_type)
+    local ok, image, i_err = pcall(
+        self.conn.execute,
+        self.conn,
+        queries.model.update_image_replace_image_by_id,
+        filename,
+        mime_type,
+        width,
+        height,
+        #image_data,
+        image_id
+    )
+    if not ok then
+        return nil, "An exact copy of this media file is already archived."
+    end
+    if not image then
+        return nil, i_err
+    end
+    return { image_id = image_id }
 end
 
 function Model:insertThumbnailForImage(

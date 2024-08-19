@@ -8,3 +8,4 @@ srv/*
 images/*
 *.paw
 *.toolbox
+/queue

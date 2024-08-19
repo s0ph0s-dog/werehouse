@@ -27,39 +27,12 @@ local function can_process_uri(uri)
     return extract_submission_id(uri) ~= nil
 end
 
-local function update_image_size(scraped_data)
-    if not img then
-        Log(
-            kLogWarn,
-            "img library not available; unable to determine size of image from Weasyl"
-        )
-        return scraped_data
-    end
-    local status, headers, body = Fetch(scraped_data.raw_image_uri)
-    if status ~= 200 then
-        Log(
-            kLogWarn,
-            "Error %s while downloading image from Weasyl: %s"
-                % { tostring(status), body }
-        )
-        return scraped_data
-    end
-    local imageu8, img_err = img.loadbuffer(body)
-    if not imageu8 then
-        Log(kLogInfo, "Failed to load image: %s" % { img_err })
-        return scraped_data
-    end
-    scraped_data.image_data = body
-    scraped_data.mime_type = headers["Content-Type"]
-    scraped_data.width = imageu8:width()
-    scraped_data.height = imageu8:height()
-    return scraped_data
-end
-
 local function process_json(json)
     if not json.owner or not json.owner_login then
         return nil,
-            PermScraperError("No owner information in Weasyl API response")
+            PipelineErrorPermanent(
+                "No owner information in Weasyl API response"
+            )
     end
     local author = {
         handle = json.owner_login,
@@ -67,28 +40,33 @@ local function process_json(json)
         profile_url = "https://www.weasyl.com/~" .. json.owner_login,
     }
     if not json.rating then
-        return nil, PermScraperError("No rating in Weasyl API response")
+        return nil, PipelineErrorPermanent("No rating in Weasyl API response")
     end
     local rating = RATING_MAP[json.rating]
     if not json.media.submission then
         return nil,
-            PermScraperError(
+            PipelineErrorPermanent(
                 "No ‘submission’ in Weasyl API response, so full size image is unavailable"
             )
     end
-    return table.map(json.media.submission, function(m)
-        return {
+    return table.maperr(json.media.submission, function(m)
+        ---@type ScrapedSourceData
+        local result = {
+            media_url = m.url,
+            width = 0,
+            height = 0,
             kind = DbUtil.k.ImageKind.Image,
             canonical_domain = CANONICAL_DOMAIN,
             authors = { author },
             this_source = json.link,
             rating = rating,
-            raw_image_uri = m.url,
             incoming_tags = json.tags,
         }
+        return result
     end)
 end
 
+---@type ScraperProcess
 local function process_uri(uri)
     local submission_id = extract_submission_id(uri)
     local api_url = EncodeUrl {
@@ -102,25 +80,18 @@ local function process_uri(uri)
         },
     })
     if not json then
-        return nil, Err(PermScraperError(err))
+        return nil, PipelineErrorPermanent(err)
     end
     if not json or not json.link then
-        return Err(PermScraperError("Invalid response from Weasyl"))
+        return nil, PipelineErrorPermanent("Invalid response from Weasyl")
     end
     if json.type ~= "submission" or json.subtype ~= "visual" then
-        return Err(
-            PermScraperError(
+        return nil,
+            PipelineErrorPermanent(
                 "For now, I can only save visual submissions. Characters, literary submissions, and multimedia sumbissions are not supported yet."
             )
-        )
     end
-    local result, err = process_json(json)
-    if result then
-        local fetched_result = table.map(result, update_image_size)
-        return Ok(fetched_result)
-    else
-        return Err(err)
-    end
+    return process_json(json)
 end
 
 return {

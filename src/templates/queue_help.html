@@ -1,104 +1,72 @@
-{% function help_dupes() %}
-<p>This entry might be a duplicate of something that's already been saved.</p>
-<table>
-  <thead>
-    <tr>
-      <th class="txt">Kind</th>
-      <th class="txt">Info</th>
-      <th class="txt">Maybe Duplicate Of</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for _, dupe in ipairs(disambiguation_data.d.duplicates) do %}
-    <tr>
-      {% if dupe.source_kind == "hash" then %}
-      <td class="txt">content hash</td>
-      <td class="txt">{%& dupe.similarity %}% similar</td>
-      {% else %}
-      <td class="txt">{%& dupe.source_kind %} source</td>
-      <td class="txt"><a href="{%& dupe.url %}">{%& dupe.url %}</a></td>
-      {% end %}
-      <td class="txt">
-        <a href="/image/{%& dupe.image_id %}">Record {%& dupe.image_id %}</a>
-      </td>
-    </tr>
-    {% end %}
-  </tbody>
-</table>
-<form method="POST" action="{%& form_path %}" hx-boost="true">
-  <p>What do you want to do?</p>
-  <span class="buttons">
-    <input
-      type="submit"
-      name="cancel"
-      value="Cancel"
-      formnovalidate
-      hx-post="{%& form_path %}"
-      hx-swap="none"
-    />
-    <input type="submit" name="discard" value="Discard" />
-    <input type="submit" name="save" value="Save Anyway" />
-  </span>
-</form>
-{% end %}{% function help_heuristic() %}
+{% function select_image(source_idx, image_idx, duplicates) %}
+<select name="s_{%& source_idx %}_i_{%& image_idx %}">
+  {% for i = 1, #duplicates do local duplicate = duplicates[i] %}
+  <option>Merge with {%& duplicate.duplicate_of %}</option>
+  {% end %}
+  <option>Discard</option>
+  <option>Archive</option>
+</select>
+{% end %} {% function block.content() %}{% if help_ask.any_duplicates then %}
+<p>This might be a duplicate of something that's already been saved.</p>
+{% else %}
 <p>
-  The sources for this entry have different numbers of records, and Werehouse
-  can't guess what to do. Check the boxes of the records you'd like to save. All
-  of them will be in a group together.
+  The sources for this entry have different numbers of records, and I can't
+  guess what to do. Check the boxes of the records you'd like to save. All of
+  them will be in a group together.
 </p>
+{% end %}
 <form method="POST" action="{%& form_path %}" hx-boost="true">
+  {% for source_idx, source in ipairs(help_ask.decoded) do %}
+  <h3>
+    <a href="{%& source[1].this_source %}">{%& source[1].this_source %}</a>
+  </h3>
   <ol>
-    {% for source_idx, source in ipairs(disambiguation_data.h) do %}
+    {% for image_idx, image in ipairs(source) do %}
     <li>
-      <div>
-        <a href="{%& source[1].this_source %}">{%& source[1].this_source %}</a>
-      </div>
-      <ol>
-        {% for image_idx, image in ipairs(source) do %}
+      <a href="{%& image.media_url %}">
+        <img
+          src="/queue-image/{%& image.media_file %}"
+          height="{%& image.height %}"
+          width="{%& image.width %}"
+          class="constrain-width"
+        />
+      </a>
+      <span
+        >{%& image.width %} by {%& image.height %} • {%& image.mime_type %}
+        • Posted by {%& image.authors[1].handle %}</span
+      >
+      <ul>
+        {% for dupe_idx = 1, #image.duplicates do local duplicate =
+        image.duplicates[dupe_idx] %}
         <li>
-          <label>
-            <input
-              type="checkbox"
-              name="save_images[]"
-              value="{%& source_idx %},{%& image_idx %}"
-            />
-            <a href="{%& image.raw_image_uri %}">
-              <img
-                src="{%& image.raw_image_uri %}"
-                height="{%& image.height %}"
-                width="{%& image.width %}"
-                class="constrain-width"
-              />
-            </a>
-            <span
-              >{%& image.width %} by {%& image.height %} • {%& image.mime_type
-              %} • Posted by {%& image.authors[1].handle %}</span
-            >
-          </label>
+          Might be a duplicate of
+          <a href="/images/{%& duplicate.duplicate_of %}"
+            >Record {%& duplicate.duplicate_of %}</a
+          >
+          <ul>
+            {% if duplicate.similarity then %}
+            <li>Content hash: {%& duplicate.similarity %}% similar</li>
+            {% end %} {% for ms_idx = 1, #duplicate.matched_sources do local ms
+            = duplicate.matched_sources[ms_idx] %}
+            <li>Matched source: <a href="{%& ms %}">{%& ms %}</a></li>
+            {% end %}
+          </ul>
         </li>
         {% end %}
-      </ol>
+      </ul>
+      {% select_image(source_idx, image_idx, image.duplicates) %}
     </li>
     {% end %}
   </ol>
+  {% end %}
   <span class="buttons">
-    <input
+    <input type="submit" name="discard" value="Discard All" /><input
       type="submit"
       name="cancel"
       value="Cancel"
       formnovalidate
-      hx-post="{%& form_path %}" /><input
-      type="submit"
-      name="archive_selected"
-      value="Archive Selected"
+      hx-post="{%& form_path %}" /><input type="submit" name="ok" value="OK"
   /></span>
 </form>
-{% end %}{% function block.content() %} {% if disambiguation_data.d then %}{%
-help_dupes() %}{% elseif disambiguation_data.h then %}{% help_heuristic() %}{%
-else %}
-<p>
-  Error: something has gone wrong and the scraper pipeline has asked for help in
-  a way that the web front-end doesn't know how to display.
-</p>
-{% end %}{% end %}{% render("layouts/dialog", { title = "Provide Help", user =
-user, dialog_width = "36em", hx = hx }) %}
+{% end %}{% render("layouts/dialog", { title = "Provide Help", user = user,
+dialog_width = "36em", hx = hx }) %}

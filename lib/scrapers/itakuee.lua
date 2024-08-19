@@ -33,14 +33,11 @@ local function map_tags(tags)
 end
 
 ---@return ScrapedSourceData
+---@overload fun(post: table): nil, PipelineError
 local function map_post(post)
-    local mime_type = Nu.guess_mime_from_url(post.image)
-    if not mime_type then
-        -- Hope for the best.
-        mime_type = "image/jpeg"
-    end
     local tags = map_tags(post.tags)
-    return {
+    ---@type ScrapedSourceData
+    local result = {
         kind = DbUtil.k.ImageKind.Image,
         authors = {
             {
@@ -51,50 +48,20 @@ local function map_post(post)
             },
         },
         this_source = "https://itaku.ee/images/%d" % { post.id },
-        raw_image_uri = post.image,
-        mime_type = mime_type,
-        -- These will be filled in later.
+        media_url = post.image,
         width = 0,
         height = 0,
         canonical_domain = CANONICAL_DOMAIN,
         rating = RATING_MAP[post.maturity_rating],
         incoming_tags = tags,
     }
-end
-
-local function update_image_size(scraped_data)
-    if not img then
-        Log(
-            kLogWarn,
-            "img library not available; unable to determine size of image from itaku.ee"
-        )
-        return scraped_data
-    end
-    local status, headers, body = Fetch(scraped_data.raw_image_uri)
-    if status ~= 200 then
-        Log(
-            kLogWarn,
-            "Error %s while downloading image from itaku.ee: %s"
-                % { tostring(status), body }
-        )
-        return scraped_data
-    end
-    local imageu8, img_err = img.loadbuffer(body)
-    if not imageu8 then
-        Log(kLogInfo, "Failed to load image: %s" % { img_err })
-        return scraped_data
-    end
-    scraped_data.image_data = body
-    scraped_data.mime_type = headers["Content-Type"]
-    scraped_data.width = imageu8:width()
-    scraped_data.height = imageu8:height()
-    return scraped_data
+    return { result }
 end
 
 local function process_uri(uri)
     local post_id = match_itakuee_uri(uri)
     if not post_id then
-        return Err(PermScraperError("Unsupported itaku.ee URL"))
+        return nil, PipelineErrorPermanent("Unsupported itaku.ee URL")
     end
     local api_url = EncodeUrl {
         scheme = "https",
@@ -106,11 +73,9 @@ local function process_uri(uri)
     }
     local json, fetch_err = Nu.FetchJson(api_url)
     if not json then
-        return Err(PermScraperError(fetch_err))
+        return nil, PipelineErrorPermanent(fetch_err)
     end
-    local scraped_data = map_post(json)
-    scraped_data = update_image_size(scraped_data)
-    return Ok { scraped_data }
+    return map_post(json)
 end
 
 return {

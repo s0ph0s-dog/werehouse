@@ -75,10 +75,10 @@ local function get_artist_profile(post_uri, handle_or_did, did)
         }
         local repo_json, errmsg3 = Nu.FetchJson(xrpc_user_uri)
         if not repo_json then
-            return nil, TempScraperError(errmsg3)
+            return nil, PipelineErrorTemporary(errmsg3)
         end
         if not repo_json.handle or type(repo_json.handle) ~= "string" then
-            return nil, TempScraperError("No handle?")
+            return nil, PipelineErrorTemporary("No handle?")
         end
         handle = repo_json.handle
     end
@@ -94,14 +94,14 @@ local function get_artist_profile(post_uri, handle_or_did, did)
     }
     local user_json, errmsg2 = Nu.FetchJson(xrpc_profile_uri)
     if not user_json then
-        return nil, TempScraperError(errmsg2)
+        return nil, PipelineErrorTemporary(errmsg2)
     end
     if not user_json.records[1] then
-        return nil, PermScraperError("Missing profile")
+        return nil, PipelineErrorPermanent("Missing profile")
     end
     local displayName = user_json.records[1].value.displayName
     if not displayName then
-        return nil, PermScraperError("No display name")
+        return nil, PipelineErrorPermanent("No display name")
     end
     local profile_url = EncodeUrl {
         scheme = "https",
@@ -117,11 +117,51 @@ end
 
 -- TODO: parse at:// URIs too
 
----@return Result<ScrapedSourceData, string>
+---@param image table Bluesky image embed
+---@param did string Bluesky DID of user who posted
+---@param uri string Bluesky URI for post
+---@param artist ScrapedAuthor Author object for the user who posted
+---@return ScrapedSourceData
+---@overload fun(image: table, did: string, uri: string, artist: ScrapedAuthor): nil, PipelineError
+local function process_image(image, did, uri, artist)
+    if not image then
+        return nil, PipelineErrorPermanent("image was null")
+    end
+    if not image.image then
+        return nil, PipelineErrorPermanent("Image.image was null")
+    end
+    if not image.image.ref then
+        return nil, PipelineErrorPermanent("Image.image.ref was null")
+    end
+    local image_uri = make_image_uri(did, image.image.ref["$link"])
+    local aspectRatio = image.aspectRatio
+    if not aspectRatio then
+        -- This is apparently not required. Assume 0 for both. The later stages of the pipeline will download the image and update the sizes.
+        aspectRatio = {
+            width = 0,
+            height = 0,
+        }
+    end
+    ---@type ScrapedSourceData
+    local data = {
+        kind = DbUtil.k.ImageKind.Image,
+        rating = DbUtil.k.Rating.General,
+        media_url = image_uri,
+        mime_type = image.image.mimeType,
+        width = aspectRatio.width,
+        height = aspectRatio.height,
+        canonical_domain = CANONICAL_DOMAIN,
+        this_source = uri,
+        authors = { artist },
+    }
+    return data
+end
+
+---@type ScraperProcess
 local function process_uri(uri)
     local handle_or_did, post_id = parse_bsky_uri(uri)
     if not handle_or_did or type(post_id) == "re.Errno" then
-        return Err(PermScraperError("Invalid Bluesky post URI"))
+        return nil, PipelineErrorPermanent("Invalid Bluesky post URI")
     end
     local xrpc_uri = EncodeUrl {
         scheme = "https",
@@ -135,57 +175,29 @@ local function process_uri(uri)
     }
     local json, errmsg = Nu.FetchJson(xrpc_uri)
     if not json then
-        return Err(TempScraperError(errmsg))
+        return nil, PipelineErrorTemporary(errmsg)
     end
     local images = extract_image_embeds(json)
     if not images then
-        return Err(PermScraperError("Post had no images"))
+        return nil, PipelineErrorPermanent("Post had no images")
+    end
+    if not json.uri or type(json.uri) ~= "string" then
+        return nil,
+            PipelineErrorPermanent(
+                "Bluesky API didn't provide a URI for this post?"
+            )
     end
     local match, did = BSKY_DID_EXP:search(json.uri)
     if not match or type(did) == "re.Errno" then
-        return nil, PermScraperError("Invalid bsky post URI??")
+        return nil, PipelineErrorPermanent("Invalid bsky post URI??")
     end
     local artist, errmsg2 = get_artist_profile(json.uri, handle_or_did, did)
     if not artist then
-        return Err(errmsg2)
+        return nil, PipelineErrorPermanent(errmsg2)
     end
-    local results = table.map(
-        images,
-        ---@return ScrapedSourceData
-        function(image)
-            if not image then
-                Log(kLogInfo, "Image was null")
-                return nil
-            end
-            if not image.image then
-                Log(kLogInfo, "Image.image was null")
-                return nil
-            end
-            if not image.image.ref then
-                Log(kLogInfo, "Image.image.ref was null")
-                return nil
-            end
-            local aspectRatio = image.aspectRatio
-            if not aspectRatio then
-                -- This is apparently not required. Assume 0 for both. This will get chosen last among available sources, which is maybe not the best choice, but I don't want to download the image and compute the size myself yet.
-                aspectRatio = {
-                    width = 0,
-                    height = 0,
-                }
-            end
-            return {
-                kind = DbUtil.k.ImageKind.Image,
-                raw_image_uri = make_image_uri(did, image.image.ref["$link"]),
-                mime_type = image.image.mimeType,
-                width = aspectRatio.width,
-                height = aspectRatio.height,
-                canonical_domain = CANONICAL_DOMAIN,
-                this_source = uri,
-                authors = { artist },
-            }
-        end
-    )
-    return Ok(results)
+    return table.maperr(images, function(image)
+        return process_image(image, did, uri, artist)
+    end)
 end
 
 local function can_process_uri(uri)

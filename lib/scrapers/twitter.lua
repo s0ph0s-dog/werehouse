@@ -46,6 +46,9 @@ local function process_embeds(json)
     if not json.media.all then
         return nil
     end
+    if #json.media.all < 1 then
+        return nil, PipelineErrorPermanent("This tweet has no embedded media.")
+    end
     if not json.author then
         return nil
     end
@@ -58,61 +61,52 @@ local function process_embeds(json)
         profile_url = json.author.url,
         display_name = json.author.name,
     }
-    return table.map(json.media.all, function(twitter_embed)
-        local mime_type = Nu.guess_mime_from_url(twitter_embed.url)
-        if not mime_type then
-            -- Hope for the best.
-            mime_type = "image/jpeg"
-        end
-        return {
+    return table.maperr(json.media.all, function(twitter_embed)
+        ---@type ScrapedSourceData
+        local result = {
             kind = TYPE_TO_KIND_MAP[twitter_embed.type],
             authors = { author },
             this_source = json.url,
-            raw_image_uri = twitter_embed.url,
-            mime_type = mime_type,
+            media_url = twitter_embed.url,
             height = twitter_embed.height,
             width = twitter_embed.width,
             canonical_domain = "twitter.com",
             rating = rating,
             thumbnails = make_thumbnail(twitter_embed),
         }
+        return result
     end)
 end
 
+---@type ScraperProcess
 local function process_uri(uri)
     local normalized = normalize_twitter_uri(uri)
     if not normalized then
-        return Err(PermScraperError("Not a Twitter URI."))
+        return nil, PipelineErrorPermanent("Not a Twitter URI.")
     end
     local json, errmsg1 = Nu.FetchJson(normalized)
     if not json then
         -- TODO: some of these are probably not permanent (e.g. 502, 429)
-        return Err(PermScraperError(errmsg1))
+        return nil, PipelineErrorPermanent(errmsg1)
     end
     if not json.code then
-        return Err(PermScraperError("Invalid response from fxtwitter."))
+        return nil, PipelineErrorPermanent("Invalid response from fxtwitter.")
     end
     if json.code == 401 then
-        return Err(PermScraperError("This tweet is private."))
+        return nil, PipelineErrorPermanent("This tweet is private.")
     elseif json.code == 404 then
-        return Err(PermScraperError("This tweet doesn't exist."))
+        return nil, PipelineErrorPermanent("This tweet doesn't exist.")
     elseif json.code == 500 then
-        return Err(
-            TempScraperError(
+        return nil,
+            PipelineErrorTemporary(
                 "Temporary Twitter API error, will retry next time."
             )
-        )
     end
     -- Only remaining option should be 200.
     if not json.tweet then
-        return Err(PermScraperError("Invalid response from fxtwitter."))
+        return nil, PipelineErrorPermanent("Invalid response from fxtwitter.")
     end
-    local supported_embeds = process_embeds(json.tweet)
-    if not supported_embeds then
-        -- TODO: support videos
-        return Err(PermScraperError("This tweet has no embedded media."))
-    end
-    return Ok(supported_embeds)
+    return process_embeds(json.tweet)
 end
 
 return {

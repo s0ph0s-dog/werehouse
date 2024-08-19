@@ -403,16 +403,16 @@ local render_home = login_required(function(r, user_record)
 end)
 
 local render_queue_image = login_required(function(r, _)
-    local result, errmsg = Model:getQueueImageById(r.params.id)
-    if not result then
-        Log(kLogDebug, errmsg)
+    local content_type = Nu.guess_mime_from_url(r.params.filename)
+        or "application/octet-stream"
+    local image_data = FsTools.load_queue(r.params.filename, Model.user_id)
+    if not image_data then
         return Fm.serve404()
     end
-    r.headers.ContentType = result.image_mime_type
     return Fm.serveResponse(200, {
-        ContentType = result.image_mime_type,
+        ContentType = content_type,
         ["Cache-Control"] = "private, max-age=31536000",
-    }, result.image)
+    }, image_data)
 end)
 
 local render_thumbnail_file = login_required(function(r, _)
@@ -1443,11 +1443,11 @@ local render_queue_help = login_required(function(r, user_record)
     if not queue_entry then
         return Fm.serve404()
     end
-    local dd_str = queue_entry.disambiguation_request
-    if not dd_str then
-        dd_str = "{}"
+    local help_ask_str = queue_entry.help_ask
+    if not help_ask_str then
+        help_ask_str = "{}"
     end
-    local dd, json_err = DecodeJson(dd_str)
+    local help_ask, json_err = DecodeJson(help_ask_str)
     if json_err then
         Log(
             kLogWarn,
@@ -1459,7 +1459,7 @@ local render_queue_help = login_required(function(r, user_record)
     local params = {
         user = user_record,
         queue_entry = queue_entry,
-        disambiguation_data = dd,
+        help_ask = help_ask,
     }
     add_htmx_param(r, params)
     add_form_path(r, params)
@@ -1509,6 +1509,47 @@ local function queue_help_heuristic(r, dr_data)
     end
 end
 
+local function queue_help_new(r, help_ask_data)
+    if r.params.discard then
+        return { discard_all = true }
+    elseif r.params.ok then
+        local subtasks = {}
+        for source_idx = 1, #help_ask_data.decoded do
+            local source = help_ask_data.decoded[source_idx]
+            for image_idx = 1, #source do
+                local image = source[image_idx]
+                local key = "s_%d_i_%d" % { source_idx, image_idx }
+                local decision = r.params[key]
+                if not decision then
+                    return nil, Fm.serve400()
+                end
+                if decision == "Discard" then
+                    Log(kLogDebug, "Doing nothing for discard")
+                elseif decision == "Archive" then
+                    ---@cast image PipelineSubtaskArchive
+                    image.archive = true
+                    subtasks[#subtasks + 1] = image
+                elseif decision:startswith("Merge with") then
+                    local _, _, merge_id_str = decision:find("(%d+)")
+                    local merge_id = tonumber(merge_id_str)
+                    ---@cast image PipelineSubtaskMerge
+                    image.merge = merge_id
+                    subtasks[#subtasks + 1] = image
+                else
+                    return nil, Fm.serve400()
+                end
+            end
+        end
+        print(EncodeJson(subtasks))
+        return {
+            type = PipelineTaskType.Archive,
+            qid = help_ask_data.qid,
+            sources = help_ask_data.sources,
+            subtasks = subtasks,
+        }
+    end
+end
+
 local accept_queue_help = login_required(function(r)
     local qid = r.params.qid
     if not qid then
@@ -1519,20 +1560,15 @@ local accept_queue_help = login_required(function(r)
         Log(kLogInfo, "Database error: %s" % { queue_err })
         return Fm.serve500()
     end
-    local dr_data = DecodeJson(queue_record.disambiguation_request)
+    local dr_data = DecodeJson(queue_record.help_ask)
     if not dr_data then
         return Fm.serve500()
     end
-    local result, r_err = nil, nil
-    if dr_data.d then
-        result, r_err = queue_help_dupes(r)
-    elseif dr_data.h then
-        result, r_err = queue_help_heuristic(r, dr_data)
-    end
+    local result, r_err = queue_help_new(r, dr_data)
     if not result then
         return r_err
     end
-    local ok, err = Model:setQueueItemDisambiguationResponse(qid, result)
+    local ok, err = Model:setQueueItemHelpAnswer(qid, result)
     if not ok or err then
         Log(kLogInfo, "Database error: %s" % { err })
         return Fm.serve500()
@@ -3150,7 +3186,7 @@ local function setup()
     Fm.setRoute(Fm.POST { "/queue" }, accept_queue)
     Fm.setRoute(Fm.GET { "/queue/:qid[%d]/help" }, render_queue_help)
     Fm.setRoute(Fm.POST { "/queue/:qid[%d]/help" }, accept_queue_help)
-    Fm.setRoute("/queue-image/:id[%d]", render_queue_image)
+    Fm.setRoute("/queue-image/:filename", render_queue_image)
     Fm.setRoute("/home", render_home)
     Fm.setRoute("/image-file/:filename", render_image_file)
     Fm.setRoute("/thumbnail-file/:thumbnail_id[%d]", render_thumbnail_file)

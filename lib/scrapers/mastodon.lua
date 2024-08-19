@@ -49,22 +49,34 @@ local function make_thumbnail(item)
     }
 end
 
+---@param post table
+---@param account ScrapedAuthor
+---@param domain string
+---@return ScrapedSourceData[]
+---@overload fun(table, ScrapedAuthor, string): nil, PipelineError
 local function process_media(post, account, domain)
-    return table.filtermap(post.media_attachments, function(item)
-        return TYPE_TO_KIND_MAP[item.type] ~= nil
-    end, function(item)
+    local supported_attachments = table.filter(
+        post.media_attachments,
+        function(item)
+            return TYPE_TO_KIND_MAP[item.type] ~= nil
+        end
+    )
+    if #supported_attachments == 0 then
+        return nil, PipelineErrorPermanent("No attached files on this post")
+    end
+    return table.maperr(supported_attachments, function(item)
         local tags = nil
         if post.tags then
             tags = table.map(post.tags, function(t)
                 return t.name
             end)
         end
-        return {
+        ---@type ScrapedSourceData
+        local result = {
             kind = TYPE_TO_KIND_MAP[item.type],
             authors = { account },
             this_source = post.url,
-            raw_image_uri = item.url,
-            mime_type = Nu.guess_mime_from_url(item.url),
+            media_url = item.url,
             height = process_meta_original(item.meta, "height", 0),
             width = process_meta_original(item.meta, "width", 0),
             canonical_domain = domain,
@@ -73,13 +85,15 @@ local function process_media(post, account, domain)
             incoming_tags = tags,
             thumbnails = { make_thumbnail(item) },
         }
+        return result
     end)
 end
 
+---@type ScraperProcess
 local function process_uri(uri)
     local domain, status_id = match_mastodon_uri(uri)
     if not domain then
-        return Err(PermScraperError("Not a Mastodon URL."))
+        return nil, PipelineErrorPermanent("Not a Mastodon URL.")
     end
     local api_url = EncodeUrl {
         scheme = "https",
@@ -89,41 +103,30 @@ local function process_uri(uri)
     local json, errmsg1 = Nu.FetchJson(api_url)
     if not json then
         if errmsg1 == 404 then
-            return Err(
-                PermScraperError(
+            return nil,
+                PipelineErrorPermanent(
                     "That post was deleted, or the server does not implement the Mastodon Client v1 API, so I can't scrape it."
                 )
-            )
         elseif errmsg1 == 401 then
-            return Err(
-                PermScraperError(
+            return nil,
+                PipelineErrorPermanent(
                     "The Mastodon instance operator has turned on Authorized Fetch, which blocks me from scraping it."
                 )
-            )
         end
         -- TODO: some of these are probably not permanent (e.g. 502, 429)
-        return Err(PermScraperError(errmsg1))
+        return nil, PipelineErrorPermanent(errmsg1)
     end
     if not json.account then
-        return Err(
-            PermScraperError(
+        return nil,
+            PipelineErrorPermanent(
                 "The `account` field was missing from the API response, so I can't tell who posted it."
             )
-        )
     end
     local account = process_account(json.account)
     if not json.media_attachments or #json.media_attachments == 0 then
-        return Err(PermScraperError("This post has no attached media."))
+        return nil, PipelineErrorPermanent("This post has no attached media.")
     end
-    local scraped_data = process_media(json, account, domain)
-    if not scraped_data then
-        return Err(
-            PermScraperError(
-                "The `media_attachments` key in the API response was missing critical information."
-            )
-        )
-    end
-    return Ok(scraped_data)
+    return process_media(json, account, domain)
 end
 
 return {

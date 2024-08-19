@@ -72,14 +72,14 @@ end
 local function FetchAndCheck(fetch_func, url, options)
     local status, headers, body = fetch_func(url, options)
     if not status then
-        return nil, Err(PermScraperError(headers))
+        return nil, PipelineErrorPermanent(headers)
     end
     if Nu.is_temporary_failure_status(status) then
-        return nil, Err(TempScraperError(status))
+        return nil, PipelineErrorTemporary(status)
     elseif Nu.is_permanent_failure_status(status) then
-        return nil, Err(PermScraperError(status))
+        return nil, PipelineErrorPermanent(status)
     elseif not Nu.is_success_status(status) then
-        return nil, Err(PermScraperError(status))
+        return nil, PipelineErrorPermanent(status)
     end
     return status, headers, body
 end
@@ -116,13 +116,14 @@ local function process_deviation(json, uri)
 end
 
 local function process_download(json, result)
-    result.raw_image_uri = json.src
+    result.media_url = json.src
     result.width = json.width
     result.height = json.height
     return result
 end
 
 local function process_metadata(json, result)
+    ---@cast result ScrapedSourceData
     result.incoming_tags = table.map(json.metadata[1].tags, function(t)
         return t.tag_name
     end)
@@ -141,11 +142,10 @@ end
 
 local function process_uri(uri)
     if not DA_CLIENT_ID or not DA_CLIENT_SECRET then
-        return Err(
-            PermScraperError(
+        return nil,
+            PipelineErrorPermanent(
                 "This instance has no DeviantArt credentials. Ask your administrator to provide the DA_CLIENT_ID and DA_CLIENT_SECRET environment variables."
             )
-        )
     end
     local status, headers, body = FetchAndCheck(Fetch, uri)
     if not status then
@@ -153,18 +153,23 @@ local function process_uri(uri)
     end
     local root = HtmlParser.parse(body, 5000)
     if not root then
-        return Err(PermScraperError("DeviantArt returned invalid HTML."))
+        return nil, PipelineErrorPermanent("DeviantArt returned invalid HTML.")
     end
     local appurl_elt = first(root:select("meta[property='da:appurl']"))
     if not appurl_elt or not appurl_elt.attributes.content then
-        return Err(
-            PermScraperError(
+        return nil,
+            PipelineErrorPermanent(
                 "DeviantArt did not include the da:appurl meta tag in this page, so I can’t determine the post ID."
             )
-        )
     end
     local appurl = appurl_elt.attributes.content
     local post_id_with_slash = ParseUrl(appurl).path
+    if not post_id_with_slash then
+        return nil,
+            PipelineErrorPermanent(
+                "DeviantArt included an invalid da:appurl meta tag value with no post ID."
+            )
+    end
     local deviation_url = encode_da_url(
         "/deviation" .. post_id_with_slash,
         { { "with_session", "0" } }
@@ -194,7 +199,7 @@ local function process_uri(uri)
         return meta_headers
     end
     local phase3 = process_metadata(meta_json, phase2)
-    return Ok { phase3 }
+    return { phase3 }
 end
 
 return {

@@ -92,6 +92,26 @@ function table.map(sequence, transformation)
     return result
 end
 
+---@generic T : any, U : any, E : any
+---@param sequence T[]
+---@param transformation fun(item: T): U?, E?
+---@return U[]
+---@overload fun(sequence: T[], transformation: fun(item: T): U?, E?): nil, E
+function table.maperr(sequence, transformation)
+    if not sequence then
+        return {}
+    end
+    local result = {}
+    for i = 1, #sequence do
+        local r, e = transformation(sequence[i])
+        if not r then
+            return nil, e
+        end
+        result[#result + 1] = r
+    end
+    return result
+end
+
 ---@generic T : any
 ---@param sequence (T[])
 ---@param predicate (fun(item: T): boolean)
@@ -201,6 +221,24 @@ function table.batch(sequence, batch_size)
             math.min(current_range_start + batch_size - 1, #sequence + 1)
     end
     return result
+end
+
+---Add all of the items from `additional` to `original` in-place.
+---@generic T
+---@param original T[]
+---@param additional T[]
+---@return T[]
+function table.extend(original, additional)
+    if not original then
+        return {}
+    end
+    if not additional then
+        return original
+    end
+    for i = 1, #additional do
+        original[#original + 1] = additional[i]
+    end
+    return original
 end
 
 ---@generic T

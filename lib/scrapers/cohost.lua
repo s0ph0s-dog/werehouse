@@ -45,31 +45,28 @@ local function process_attachment_blocks(post)
         profile_url = "https://cohost.org/" .. post.postingProject.handle,
         display_name = displayName,
     }
-    return table.map(attachment_blocks, function(block)
-        local mime_type = Nu.guess_mime_from_url(block.attachment.fileURL)
-        if not mime_type then
-            -- Hope for the best.
-            mime_type = "image/jpeg"
-        end
-        return {
+    return table.maperr(attachment_blocks, function(block)
+        ---@type ScrapedSourceData
+        local result = {
             kind = DbUtil.k.ImageKind.Image,
             authors = { author },
             this_source = post.singlePostPageUrl,
-            raw_image_uri = block.attachment.fileURL,
-            mime_type = mime_type,
+            media_url = block.attachment.fileURL,
             height = block.attachment.height,
             width = block.attachment.width,
             canonical_domain = CANONICAL_DOMAIN,
             rating = rating,
             incoming_tags = post.tags,
         }
+        return result
     end)
 end
 
+---@type ScraperProcess
 local function process_uri(uri)
     local project, post_id = match_cohost_uri(uri)
     if not project then
-        return Err(PermScraperError("Not a Cohost URI."))
+        return nil, PipelineErrorPermanent("Not a Cohost URI.")
     end
     local api_url = EncodeUrl {
         scheme = "https",
@@ -91,28 +88,27 @@ local function process_uri(uri)
     local json, errmsg1 = Nu.FetchJson(api_url)
     if not json then
         -- TODO: some of these are probably not permanent (e.g. 502, 429)
-        return Err(PermScraperError(errmsg1))
+        return nil, PipelineErrorPermanent(errmsg1)
     end
     if not json[1] or not json[1].result or not json[1].result.data then
-        return Err(PermScraperError("Invalid response from Cohost."))
+        return nil, PipelineErrorPermanent("Invalid response from Cohost.")
     end
     local post = json[1].result.data.post
     if not post then
-        return Err(PermScraperError("Invalid response from Cohost."))
+        return nil, PipelineErrorPermanent("Invalid response from Cohost.")
     end
     if post.limitedVisibilityReason ~= "none" then
-        return Err(
-            PermScraperError(
+        return nil,
+            PipelineErrorPermanent(
                 "This user's posts are only visible when logged in."
             )
-        )
     end
     local images = process_attachment_blocks(post)
     if not images then
         -- TODO: support videos
-        return Err(PermScraperError("This post has no attached photos."))
+        return nil, PipelineErrorPermanent("This post has no attached photos.")
     end
-    return Ok(images)
+    return images
 end
 
 return {

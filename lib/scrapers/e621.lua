@@ -60,25 +60,26 @@ end
 
 local function process_post(json, clean_uri, pool_uri)
     if json.post.flags and json.post.flags.deleted then
-        return Err(PermScraperError("This post was deleted"))
+        return nil, PipelineErrorPermanent("This post was deleted")
     end
     local file = json.post.file
     if not file then
-        return Err(
-            PermScraperError("The e621 API didn't give me a file for the post")
-        )
+        return nil,
+            PipelineErrorPermanent(
+                "The e621 API didn't give me a file for the post"
+            )
     end
     if not file.url then
-        return Err(
-            PermScraperError("The e621 API gave me a post file with no URL")
-        )
+        return nil,
+            PipelineErrorPermanent(
+                "The e621 API gave me a post file with no URL"
+            )
     end
     if not ALLOWED_EXTS[file.ext] then
-        return Err(
-            PermScraperError(
+        return nil,
+            PipelineErrorPermanent(
                 "This post is a %s, which isn't supported yet" % { file.ext }
             )
-        )
     end
     local additional_sources = json.post.sources
     if not additional_sources then
@@ -125,22 +126,21 @@ local function process_post(json, clean_uri, pool_uri)
             },
         }
     end)
-    return Ok {
-        {
-            kind = EXT_TO_KIND_MAP[file.ext],
-            raw_image_uri = file.url,
-            width = file.width,
-            height = file.height,
-            this_source = clean_uri,
-            additional_sources = additional_sources,
-            mime_type = Nu.ext_to_mime[file.ext],
-            canonical_domain = CANONICAL_DOMAIN,
-            authors = authors,
-            rating = RATING_MAP[json.post.rating],
-            incoming_tags = incoming_tags,
-            thumbnails = make_thumbnail(json.post),
-        },
+    ---@type ScrapedSourceData
+    local result = {
+        kind = EXT_TO_KIND_MAP[file.ext],
+        media_url = file.url,
+        width = file.width,
+        height = file.height,
+        this_source = clean_uri,
+        additional_sources = additional_sources,
+        canonical_domain = CANONICAL_DOMAIN,
+        authors = authors,
+        rating = RATING_MAP[json.post.rating],
+        incoming_tags = incoming_tags,
+        thumbnails = make_thumbnail(json.post),
     }
+    return { result }
 end
 
 local function process_pool(json, clean_uri)
@@ -156,21 +156,23 @@ local function process_pool(json, clean_uri)
         Sleep(0.2)
         local post_json, errmsg = Nu.FetchJson(post_uri)
         if not post_json then
-            return Err(PermScraperError(errmsg))
+            return nil, PipelineErrorPermanent(errmsg)
         end
         if not post_json.post then
-            return Err(PermScraperError("The e621 API didn't give me a post"))
+            return nil,
+                PipelineErrorPermanent("The e621 API didn't give me a post")
         end
-        local post_result = process_post(post_json, clean_post_uri, clean_uri)
-        assert(post_result, "post result was nil for " .. post_uri)
-        table.insert(result, post_result)
+        local post_result, post_err =
+            process_post(post_json, clean_post_uri, clean_uri)
+        if not post_result or not post_result[1] then
+            return nil, post_err
+        end
+        table.insert(result, post_result[1])
     end
-    local all_posts = table.collect(result)
-    local fixed = all_posts:map(table.flatten)
-    return fixed
+    return result
 end
 
----@return Result<ScrapedSourceData, ScraperError>
+---@type ScraperProcess
 local function process_uri(uri)
     local parts = ParseUrl(uri)
     parts.path = parts.path .. ".json"
@@ -180,16 +182,17 @@ local function process_uri(uri)
     local clean_uri = EncodeUrl(clean_parts)
     local json, errmsg = Nu.FetchJson(new_uri)
     if not json then
-        return Err(PermScraperError(errmsg))
+        return nil, PipelineErrorPermanent(errmsg)
     end
     if json.post then
         return process_post(json, clean_uri)
     elseif json.post_ids then
         return process_pool(json, clean_uri)
     else
-        return Err(
-            PermScraperError("The e621 API didn't give me a post or a pool")
-        )
+        return nil,
+            PipelineErrorPermanent(
+                "The e621 API didn't give me a post or a pool"
+            )
     end
 end
 

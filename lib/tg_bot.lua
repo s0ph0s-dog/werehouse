@@ -135,7 +135,7 @@ local function message_is_saveable(message)
         if not mime_type then
             return false,
                 "This file was sent without information to tell me what kind of file it is, so I can’t tell if I can save it."
-        elseif not ScraperPipeline.REVERSE_SEARCHABLE_MIME_TYPES[mime_type] then
+        elseif not Ris.SEARCHABLE_MIME_TYPES[mime_type] then
             return false,
                 "This file is %s, which I can’t automatically find sources for."
                     % { mime_type }

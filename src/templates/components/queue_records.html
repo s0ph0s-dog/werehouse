@@ -11,12 +11,12 @@
       <div><strong>{%& block.status_text(item) %}</strong></div>
       {% if item.link then %}
       <a href="{%& item.link %}">{%& item.link %}</a>
-      {% end %}{% if item.has_image == 1 then %}
+      {% end %}{% if item.image then %}
       <div>
         <img
           width="{%& item.image_width %}"
           height="{%& item.image_height %}"
-          src="/queue-image/{%& item.qid %}"
+          src="/queue-image/{%& item.image %}"
         />
       </div>
       {% end %}
