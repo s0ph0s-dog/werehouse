@@ -169,13 +169,19 @@ end
 ---@overload fun(string): nil, string An error message will be the second return value if the first return value is nil.
 local function search(image, mime_type)
     local fluffle_results, fluffle_err = fluffle_image(image, mime_type)
-    if fluffle_results then
+    Log(kLogDebug, "Fluffle results: " .. EncodeJson(fluffle_results))
+    if fluffle_results and #fluffle_results > 0 then
         return fluffle_results
     end
     local fuzzysearch_results, fuzzysearch_err =
         fuzzysearch_image(image, mime_type)
-    if fuzzysearch_results then
+    Log(kLogDebug, "FuzzySearch results: " .. EncodeJson(fuzzysearch_results))
+    if fuzzysearch_results and #fuzzysearch_results > 0 then
         return fuzzysearch_results
+    end
+    if #fluffle_results == 0 and #fuzzysearch_results == 0 then
+        return nil,
+            "No sources for this image found in the FuzzySearch or Fluffle.xyz databases."
     end
     return nil, fluffle_err + "; " + fuzzysearch_err
 end
