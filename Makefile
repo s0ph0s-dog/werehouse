@@ -139,7 +139,7 @@ $(SRV_DIR)%/.:
 	mkdir -p $@
 
 $(ABOUT_FILE):
-	echo "return { NAME = '$(OUTPUT)', VERSION = '$(VERSION)', REDBEAN_VERSION = '$(REDBEAN_VERSION)' }" > "$@"
+	echo "return { NAME = 'werehouse (github.com/s0ph0s-2/werehouse)', VERSION = '$(VERSION)', REDBEAN_VERSION = '$(REDBEAN_VERSION)' }" > "$@"
 
 $(REDBEAN):
 	curl -sSL "https://redbean.dev/$(REDBEAN)" -o "$(REDBEAN)" && chmod +x $(REDBEAN)

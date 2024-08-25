@@ -838,14 +838,14 @@ local queries = {
             RETURNING tag_id;]],
         insert_image_tag = [[INSERT OR IGNORE INTO "image_tags" ("image_id", "tag_id")
             VALUES (?, ?);]],
-        insert_source_for_image = [[INSERT INTO "sources" ("image_id", "link")
+        insert_source_for_image = [[INSERT OR IGNORE INTO "sources" ("image_id", "link")
             VALUES (?, ?);]],
         insert_artist = [[INSERT INTO "artists" ("name", "manually_confirmed")
             VALUES (?, ?)
             RETURNING artist_id;]],
-        insert_image_artist = [[INSERT INTO "image_artists" ("image_id", "artist_id")
+        insert_image_artist = [[INSERT OR IGNORE INTO "image_artists" ("image_id", "artist_id")
             VALUES (?, ?);]],
-        insert_artist_handle = [[INSERT INTO "artist_handles" ("artist_id", "handle", "domain", "profile_url")
+        insert_artist_handle = [[INSERT OR IGNORE INTO "artist_handles" ("artist_id", "handle", "domain", "profile_url")
             VALUES (?, ?, ?, ?);]],
         insert_image_group = [[INSERT INTO "image_group" ("name")
             VALUES (?)

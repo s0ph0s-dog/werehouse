@@ -9,8 +9,8 @@ FsTools = require("fstools")
 local about = require("about")
 local web = require("web")
 local _ = require("functools")
-ScraperPipeline = require("scraper_pipeline")
 Ris = require("reverse_image_search")
+ScraperPipeline = require("scraper_pipeline")
 Bot = require("tg_bot")
 GifTools = require("giftools")
 
@@ -25,6 +25,8 @@ ServerVersion = string.format(
     about.VERSION,
     about.REDBEAN_VERSION
 )
+
+ProgramBrand(ServerVersion)
 
 ProgramContentType("webmanifest", "application/manifest+json")
 ProgramCache(60 * 60 * 24 * 365, "private")

@@ -1,6 +1,6 @@
 WEASYL_URL_EXP = assert(
     re.compile(
-        [[^(https?://)?www.weasyl.com/(~[A-z0-9]+/)?(submissions?|view)/([0-9]+)]]
+        [[^(https?://)?(www.)?weasyl.com/(~[A-z0-9]+/)?(submissions?|view)/([0-9]+)]]
     )
 )
 
@@ -15,7 +15,7 @@ RATING_MAP = {
 }
 
 local function extract_submission_id(url)
-    local match, _, _, _, id = WEASYL_URL_EXP:search(url)
+    local match, _, _, _, _, id = WEASYL_URL_EXP:search(url)
     if match then
         return id
     else

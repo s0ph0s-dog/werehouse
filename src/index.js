@@ -158,5 +158,6 @@ htmx.onLoad((content) => {
 htmx.on("htmx:beforeHistorySave", () => {
   document.querySelectorAll("dialog").forEach((elt) => {
     elt.innerHtml = "";
+    elt.close();
   });
 });
