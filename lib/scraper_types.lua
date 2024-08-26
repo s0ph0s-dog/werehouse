@@ -4,6 +4,8 @@ QueueStatus = {
     Error = 1,
     Archived = 2,
     ToDoAgain = 3,
+    RetryLimitReached = 4,
+    Discarded = 5,
 }
 
 ---@class (exact) ScrapedAuthor
@@ -121,7 +123,10 @@ PipelineTaskAskHelp = {}
 PipelineErrorType = {
     Temporary = 0,
     Permanent = 1,
-    RetryLimitReached = 2,
+    -- 2 and 3 are disallowed here because they correspond to other statuses.
+    ---@see QueueStatus
+    RetryLimitReached = 4,
+    Discard = 5,
 }
 
 ---@class (exact) PipelineError
@@ -140,6 +145,13 @@ function PipelineErrorTemporary(description)
     return {
         type = PipelineErrorType.Temporary,
         description = description,
+    }
+end
+
+function PipelineErrorDiscard()
+    return {
+        type = PipelineErrorType.Discard,
+        description = "When answering a help request, you marked this to discard.",
     }
 end
 

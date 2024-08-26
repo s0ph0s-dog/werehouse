@@ -917,10 +917,8 @@ local queries = {
         delete_pl_negative_tag = [[DELETE FROM "pl_entry_negative_tags"
             WHERE spl_entry_id = ? AND tag_id = ?;]],
         delete_handled_queue_entries = [[DELETE FROM "queue2" WHERE
-            (
-                "status" = 2 OR
-                ("status" = 1 AND "description" = 'You marked this to discard.')
-            ) AND "qid" != (SELECT MAX("qid") FROM "queue2");]],
+            ( "status" = 2 OR "status" = 5 )
+            AND "qid" != (SELECT MAX("qid") FROM "queue2");]],
         delete_share_record_by_id = [[DELETE FROM "share_records" WHERE
             "share_id" = ?;]],
         update_queue_item_status = [[UPDATE "queue2"

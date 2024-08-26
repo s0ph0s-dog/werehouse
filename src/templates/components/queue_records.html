@@ -1,3 +1,33 @@
+{% function block.status_text(queue_item) %}
+{% if queue_item.status == 1 then %}
+❌ Error
+{% elseif queue_item.status == 2 then %}
+✅ Archived
+{% elseif queue_item.status == 3 then %}
+❌ “Temporary” Error Wasn’t
+{% elseif queue_item.status == 5 then %}
+🗑️ Discarded
+{% elseif queue_item.help_answer then %}
+📥 To Do (again)
+{% elseif queue_item.help_ask then %}
+⚠️ Help Needed
+{% else %}
+📥 To Do
+{% end %}{% end %}
+{% function block.status_desc(queue_item) %}
+{% if queue_item.help_ask and not queue_item.help_answer then %}
+<a hx-get="/queue/{%& queue_item.qid %}/help"
+   hx-target="dialog"
+   href="/queue/{%& queue_item.qid %}/help"
+  >Provide Help</a>
+{% else %}
+{% if type(queue_item.description) == "table" then %}
+<ul>
+  {% for i = 1, #queue_item.description do %}
+  <li>{%& queue_item.description[i] %}</li>
+  {% end %}
+</ul>
+{% else %}{%& queue_item.description %}{% end %}{% end %}{% end %}
 <div class="queue-container">
   {% for i = 1, #queue_records do local item = queue_records[i] %}
   <label class="queue-record hstack">

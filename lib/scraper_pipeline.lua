@@ -30,7 +30,7 @@ local function make_archive_task_from_help_answer(queue_entry, user_id)
         return nil, PipelineErrorPermanent(json_err)
     end
     if task.discard_all then
-        return nil, PipelineErrorPermanent("You marked this to discard.")
+        return nil, PipelineErrorDiscard()
     end
     if
         not task
