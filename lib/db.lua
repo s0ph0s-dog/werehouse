@@ -919,8 +919,8 @@ local queries = {
         delete_handled_queue_entries = [[DELETE FROM "queue2" WHERE
             (
                 "status" = 2 OR
-                ("status" = 1 AND "description" LIKE 'Duplicate%')
-            ) AND "qid" != (SELECT MAX("qid") FROM "queue");]],
+                ("status" = 1 AND "description" = 'You marked this to discard.')
+            ) AND "qid" != (SELECT MAX("qid") FROM "queue2");]],
         delete_share_record_by_id = [[DELETE FROM "share_records" WHERE
             "share_id" = ?;]],
         update_queue_item_status = [[UPDATE "queue2"
@@ -1709,6 +1709,7 @@ function Model:createOrAssociateArtistWithImage(image_id, domain, author_info)
         author_info.handle
     )
     if not artist then
+        Log(kLogInfo, "failed to look up artist by domain+handle: " .. errmsg)
         return nil, errmsg
     end
     local artist_id = artist.artist_id
@@ -1717,6 +1718,7 @@ function Model:createOrAssociateArtistWithImage(image_id, domain, author_info)
             self:createArtistAndFirstHandle(author_info, domain)
         if not result3 then
             self:rollback(SP)
+            Log(kLogInfo, "failed to create artist: " .. errmsg3)
             return nil, errmsg3
         end
         artist_id = result3
@@ -1724,6 +1726,7 @@ function Model:createOrAssociateArtistWithImage(image_id, domain, author_info)
     local result2, errmsg2 = self:associateArtistWithImage(image_id, artist_id)
     if not result2 then
         self:rollback(SP)
+        Log(kLogInfo, "failed to link artist with image: " .. errmsg2)
         return nil, errmsg2
     end
     self:release_savepoint(SP)
