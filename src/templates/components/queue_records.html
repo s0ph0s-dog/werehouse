@@ -16,10 +16,10 @@
 {% end %}{% end %}
 {% function block.status_desc(queue_item) %}
 {% if queue_item.help_ask and not queue_item.help_answer then %}
-<a hx-get="/queue/{%& queue_item.qid %}/help"
+<p><a hx-get="/queue/{%& queue_item.qid %}/help"
    hx-target="dialog"
    href="/queue/{%& queue_item.qid %}/help"
-  >Provide Help</a>
+  >Provide Help</a></p>
 {% else %}
 {% if type(queue_item.description) == "table" then %}
 <ul>
@@ -27,7 +27,7 @@
   <li>{%& queue_item.description[i] %}</li>
   {% end %}
 </ul>
-{% else %}{%& queue_item.description %}{% end %}{% end %}{% end %}
+{% else %}<p>{%& queue_item.description %}</p>{% end %}{% end %}{% end %}
 <div class="queue-container">
   {% for i = 1, #queue_records do local item = queue_records[i] %}
   <label class="queue-record hstack">
@@ -50,7 +50,7 @@
         />
       </div>
       {% end %}
-      <p>{%& block.status_desc(item) %}</p>
+      {%& block.status_desc(item) %}
     </div>
   </label>
   {% end %}

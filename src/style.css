@@ -465,6 +465,11 @@ table img {
   margin: 0;
 }
 
+.queue-record ul {
+  margin: 0;
+  padding-left: 1em;
+}
+
 .checkbox-bullets {
   list-style-type: none;
   padding-left: 1em;

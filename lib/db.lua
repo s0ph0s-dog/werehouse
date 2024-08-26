@@ -1106,19 +1106,41 @@ function Model:getPingsForImageGroup(ig_id, spl_id)
     )
 end
 
+local function decode_queue_description_errors(items)
+    for i = 1, #items do
+        ---@type ActiveQueueEntry
+        local item = items[i]
+        if item.description then
+            local decoded, json_err = DecodeJson(item.description)
+            if not json_err and type(decoded) == "table" then
+                ---@cast decoded string[]|table[]
+                item.description = table.map(decoded, function(desc_err)
+                    if type(desc_err) == "table" then
+                        return desc_err.description
+                    end
+                    return desc_err
+                end)
+            end
+        end
+    end
+    return items
+end
+
 ---@alias RecentQueueEntry {qid: string, link: string, tombstone: integer, added_on: string, status: string}
 ---@return RecentQueueEntry[]
 function Model:getRecentQueueEntries()
     return self.conn:fetchAll(queries.model.get_recent_queue_entries)
 end
 
----@alias ActiveQueueEntry {qid: integer, link: string, image: string, image_mime_type: string, tombstone: integer, added_on: string, status: string, help_ask: string, help_answer: string, retry_count: integer, tg_message_id: integer, tg_chat_id: integer}
+---@alias ActiveQueueEntry {qid: integer, link: string, image: string, image_mime_type: string, status: integer, added_on: string, description: string, help_ask: string, help_answer: string, retry_count: integer, tg_message_id: integer, tg_chat_id: integer}
 ---@return ActiveQueueEntry[]
 function Model:getAllActiveQueueEntries()
-    return self.conn:fetchAll(
-        queries.model.get_first_n_active_queue_entries,
-        10
-    )
+    local result, err =
+        self.conn:fetchAll(queries.model.get_first_n_active_queue_entries, 10)
+    if not result then
+        return err
+    end
+    return decode_queue_description_errors(result)
 end
 
 function Model:getQueueEntryCount()
@@ -1126,11 +1148,15 @@ function Model:getQueueEntryCount()
 end
 
 function Model:getPaginatedQueueEntries(page_num, per_page)
-    return self:_get_paginated(
+    local results, err = self:_get_paginated(
         queries.model.get_queue_entries_paginated,
         page_num,
         per_page
     )
+    if not results then
+        return err
+    end
+    return decode_queue_description_errors(results)
 end
 
 function Model:getImageEntryCount()
