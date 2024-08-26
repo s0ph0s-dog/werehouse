@@ -850,7 +850,7 @@ local queries = {
         insert_image_group = [[INSERT INTO "image_group" ("name")
             VALUES (?)
             RETURNING ig_id;]],
-        insert_image_in_group = [[INSERT INTO images_in_group (image_id, ig_id, "order")
+        insert_image_in_group = [[INSERT OR IGNORE INTO images_in_group (image_id, ig_id, "order")
             VALUES (?, ?, ?);]],
         insert_tag_rule = [[INSERT INTO "tag_rules" (
                 "incoming_name",
