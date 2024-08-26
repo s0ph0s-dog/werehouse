@@ -1120,6 +1120,9 @@ local function decode_queue_description_errors(items)
                     end
                     return desc_err
                 end)
+                if #item.description == 1 then
+                    item.description = item.description[1]
+                end
             end
         end
     end
