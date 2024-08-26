@@ -795,6 +795,13 @@ local function p_execute(model, queue_entry, task)
             return nil, PipelineErrorPermanent(result)
         end
         model:release_savepoint(SP)
+        if queue_entry.tg_message_id then
+            Bot.update_queue_message_with_status(
+                queue_entry.tg_chat_id,
+                queue_entry.tg_message_id,
+                "Archived!"
+            )
+        end
         return result
     elseif task.type == PipelineTaskType.AskHelp then
         return do_ask_help(model, queue_entry, task)
