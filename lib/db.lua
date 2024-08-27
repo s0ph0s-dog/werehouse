@@ -1132,18 +1132,21 @@ end
 ---@alias RecentQueueEntry {qid: string, link: string, tombstone: integer, added_on: string, status: string}
 ---@return RecentQueueEntry[]
 function Model:getRecentQueueEntries()
-    return self.conn:fetchAll(queries.model.get_recent_queue_entries)
+    local result, err =
+        self.conn:fetchAll(queries.model.get_recent_queue_entries)
+    if not result then
+        return err
+    end
+    return decode_queue_description_errors(result)
 end
 
 ---@alias ActiveQueueEntry {qid: integer, link: string, image: string, image_mime_type: string, status: integer, added_on: string, description: string, help_ask: string, help_answer: string, retry_count: integer, tg_message_id: integer, tg_chat_id: integer}
 ---@return ActiveQueueEntry[]
 function Model:getAllActiveQueueEntries()
-    local result, err =
-        self.conn:fetchAll(queries.model.get_first_n_active_queue_entries, 10)
-    if not result then
-        return err
-    end
-    return decode_queue_description_errors(result)
+    return self.conn:fetchAll(
+        queries.model.get_first_n_active_queue_entries,
+        10
+    )
 end
 
 function Model:getQueueEntryCount()
