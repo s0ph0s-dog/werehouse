@@ -1,6 +1,6 @@
 {% if editable then %}
-<form method="POST">
-  <span class="buttons"
+<form method="POST" hx-boost="true" hx-swap="show:none">
+  <span class="buttons sticky-top"
     ><input type="reset" value="Deselect All" /><button
       type="button"
       onclick="document.getElementsByName('image_ids[]').forEach((e) => { e.checked=true; })"

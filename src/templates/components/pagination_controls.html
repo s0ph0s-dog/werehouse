@@ -4,10 +4,10 @@
   total {%& kind_plural %}
 </p>
 <div class="pages" hx-boost="true">
-  {% if pages.before then %}<a href="?page={%& pages.before.num %}"
+  {% if pages.before then %}<a href="?page={%& pages.before.num %}" hx-swap="show:top"
     >← Previous</a
   >{% end %} &nbsp; {% if pages.after then %}<a
-    href="?page={%& pages.after.num %}"
+    href="?page={%& pages.after.num %}" hx-swap="show:top"
     >Next →</a
   >{% end %}
 </div>

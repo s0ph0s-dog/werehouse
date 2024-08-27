@@ -54,8 +54,9 @@
     <script src="/htmx.js"></script>
     <script src="/index.js"></script>
   </head>
-  <body>
+  <body hx-indicator="#loader">
     <div class="content">
+      <div id="loader" class="sticky-top htmx-indicator"></div>
       {% if not hide_header then %}{% block.navbar() %}{% end %}{% function
       block.content() %}This page was configured incorrectly and no page content
       was provided.{% end %}{% block.content() %}{% if not hide_footer then %}{%
