@@ -18,6 +18,12 @@ local EXT_TO_KIND_MAP = {
     gif = DbUtil.k.ImageKind.Image,
 }
 local CANONICAL_DOMAIN = "e621.net"
+local E621_USERNAME = os.getenv("E621_USERNAME")
+local E621_API_KEY = os.getenv("E621_API_KEY")
+local E621_TOKEN = nil
+if E621_USERNAME and E621_API_KEY then
+    E621_TOKEN = EncodeBase64("%s:%s" % { E621_USERNAME, E621_API_KEY })
+end
 
 local function can_process_uri(uri)
     local parts = ParseUrl(uri)
@@ -154,7 +160,13 @@ local function process_pool(json, clean_uri)
         local clean_post_uri = post_uri:sub(1, #post_uri - 5)
         -- Be kind to e6's servers
         Sleep(0.2)
-        local post_json, errmsg = Nu.FetchJson(post_uri)
+        local headers = {}
+        if E621_TOKEN then
+            headers.Authorization = "Bearer " .. E621_TOKEN
+        end
+        local post_json, errmsg = Nu.FetchJson(post_uri, {
+            headers = headers,
+        })
         if not post_json then
             return nil, PipelineErrorPermanent(errmsg)
         end
@@ -175,12 +187,22 @@ end
 ---@type ScraperProcess
 local function process_uri(uri)
     local parts = ParseUrl(uri)
+    -- Strip trailing slashes to avoid "mystery" 404 errors.
+    if parts.path:endswith("/") then
+        parts.path = parts.path:sub(1, -2)
+    end
     parts.path = parts.path .. ".json"
     local new_uri = EncodeUrl(parts)
     local clean_parts = ParseUrl(uri)
     clean_parts.params = nil
     local clean_uri = EncodeUrl(clean_parts)
-    local json, errmsg = Nu.FetchJson(new_uri)
+    local headers = {}
+    if E621_TOKEN then
+        headers.Authorization = "Bearer " .. E621_TOKEN
+    end
+    local json, errmsg = Nu.FetchJson(new_uri, {
+        headers = headers,
+    })
     if not json then
         return nil, PipelineErrorPermanent(errmsg)
     end
