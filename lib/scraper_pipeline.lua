@@ -774,6 +774,15 @@ local function do_ask_help(model, queue_entry, task)
     if not ok then
         return nil, PipelineErrorTemporary(err)
     end
+    if queue_entry.tg_message_id then
+        Bot.update_queue_message_with_status(
+            queue_entry.tg_chat_id,
+            queue_entry.tg_message_id,
+            "I need help to figure this one out: https://werehouse.s0ph0s.dog/queue/%d/help"
+                % { queue_entry.qid }
+        )
+    end
+
     return {}
 end
 
