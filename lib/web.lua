@@ -2127,18 +2127,57 @@ local accept_edit_image_group = login_required(function(r)
     end
     local SP = "reorder_images_in_group"
     Model:create_savepoint(SP)
+    local existing_images, ei_err = Model:getImagesForGroup(ig_id)
+    if not existing_images then
+        Model:rollback(SP)
+        Log(kLogInfo, ei_err)
+        return Fm.serve500()
+    end
+    Log(
+        kLogVerbose,
+        "existing images: " .. tostring(EncodeJson(existing_images))
+    )
+    local existing_image_ids = {}
+    for i = 1, #existing_images do
+        local ex_id = existing_images[i].image_id
+        Log(kLogDebug, "wtf: " .. ex_id)
+        existing_image_ids[ex_id] = true
+    end
+    Log(
+        kLogVerbose,
+        "existing image IDs: " .. tostring(EncodeJson(existing_image_ids))
+    )
     local rename_ok, rename_err = Model:renameImageGroup(ig_id, new_name)
     if not rename_ok then
         Model:rollback(SP)
         Log(kLogInfo, rename_err)
         return Fm.serve500()
     end
+    local untouched_image_ids_set = existing_image_ids
     for i = 1, #image_ids do
+        local image_id = image_ids[i]
         local reorder_ok, reorder_err =
-            Model:setOrderForImageInGroup(ig_id, image_ids[i], new_orders[i])
+            Model:setOrderForImageInGroup(ig_id, image_id, new_orders[i])
         if not reorder_ok then
             Model:rollback(SP)
             Log(kLogInfo, reorder_err)
+            return Fm.serve500()
+        end
+        untouched_image_ids_set[tonumber(image_id)] = nil
+    end
+    Log(
+        kLogVerbose,
+        "untouched_image_ids_set: "
+            .. tostring(EncodeJson(untouched_image_ids_set))
+    )
+    local to_delete_ids = table.keys(untouched_image_ids_set)
+    Log(kLogVerbose, "to_delete_ids: " .. tostring(EncodeJson(to_delete_ids)))
+    if #to_delete_ids > 0 then
+        local del_ok, del_err =
+            Model:removeImagesFromGroupById(ig_id, to_delete_ids)
+        if not del_ok then
+            Model:rollback(SP)
+            Log(kLogInfo, tostring(del_err))
             return Fm.serve500()
         end
     end

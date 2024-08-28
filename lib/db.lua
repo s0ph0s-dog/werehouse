@@ -898,6 +898,8 @@ local queries = {
         insert_pending_share_record_for_image_group = [[INSERT INTO "share_records"
             ("share_id", "ig_id", "shared_to") VALUES (?, ?, ?);]],
         delete_item_from_queue = [[DELETE FROM "queue2" WHERE qid = ?;]],
+        delete_image_from_group_by_id = [[DELETE FROM "images_in_group" WHERE
+            ig_id = ? AND image_id = ?;]],
         delete_image_by_id = [[DELETE FROM "images" WHERE image_id = ?;]],
         delete_artist_by_id = [[DELETE FROM "artists" WHERE artist_id = ?;]],
         delete_tag_by_id = [[DELETE FROM "tags" WHERE tag_id = ?;]],
@@ -1986,6 +1988,14 @@ function Model:addImageToGroupAtEnd(image_id, group_id)
         image_id,
         group_id,
         (last_order.max_order or 0) + 1
+    )
+end
+
+function Model:removeImagesFromGroupById(ig_id, image_ids)
+    return self:_delete_by_two_ids(
+        queries.model.delete_image_from_group_by_id,
+        ig_id,
+        image_ids
     )
 end
 

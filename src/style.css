@@ -542,3 +542,19 @@ abbr {
   top:0;
   background-color: Canvas;
 }
+
+table.t50-25-25 {
+  table-layout: fixed;
+}
+
+table.t50-25-25 th:first-child {
+  width: 50%;
+}
+
+table.t50-25-25 th:nth-child(2) {
+  width: 25%;
+}
+
+table.t50-25-25 th:nth-child(3) {
+  width: 25%;
+}

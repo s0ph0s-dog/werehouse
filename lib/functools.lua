@@ -241,6 +241,14 @@ function table.extend(original, additional)
     return original
 end
 
+function table.keys(t)
+    local result = {}
+    for key, _ in pairs(t) do
+        result[#result + 1] = key
+    end
+    return result
+end
+
 ---@generic T
 ---@generic E
 ---@class ResultInternal<T, E>

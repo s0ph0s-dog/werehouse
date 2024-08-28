@@ -15,11 +15,12 @@
     <option>{%& images[i].order %}</option>
     {% end %}
   </datalist>
-  <table>
+  <table class="t50-25-25">
     <thead>
       <tr>
         <th class="txt">Record</th>
         <th class="num">Order</th>
+        <th class="num">Action</th>
       </tr>
     </thead>
     <tbody>
@@ -43,10 +44,67 @@
             value="{%& image.order %}"
           />
         </td>
+        <td>
+          <span class="buttons">
+            <button class="reorder-up">⬆︎</button>
+            <button class="reorder-down">⬇︎</button>
+            <button class="reorder-remove">🗑️</button>
+          </span>
+        </td>
         {% end %}
       </tr>
     </tbody>
   </table>
+  <script>
+    function swap_orders(first_row, second_row) {
+      const number_input = 'input[type="number"]';
+      const first_order = first_row.querySelector(number_input);
+      const second_order = second_row.querySelector(number_input);
+      let tmp = first_order.value;
+      first_order.value = second_order.value;
+      second_order.value = tmp;
+    }
+    function reorder_up(e) {
+      e.preventDefault();
+      // Get this tr
+      const myself = e.target.closest("tr");
+      // Get previous tr
+      const previous = myself.previousElementSibling;
+      if (previous === null) {
+        // If no previous tr, return
+        return;
+      }
+      swap_orders(myself, previous);
+      // Move this tr before the previous tr
+      previous.before(myself);
+    }
+    function reorder_down(e) {
+      e.preventDefault();
+      // Get this tr
+      const myself = e.target.closest("tr");
+      // Get next tr
+      const next_row = myself.nextElementSibling;
+      if (next_row === null) {
+        // If no previous tr, return
+        return;
+      }
+      swap_orders(myself, next_row);
+      // Move this tr before the previous tr
+      myself.before(next_row);
+    }
+    document.querySelectorAll(".reorder-up").forEach((elt) => {
+      elt.addEventListener("click", reorder_up);
+    });
+    document.querySelectorAll(".reorder-down").forEach((elt) => {
+      elt.addEventListener("click", reorder_down);
+    });
+    document.querySelectorAll(".reorder-remove").forEach((elt) => {
+      elt.addEventListener("click", (e) => {
+        const myself = e.target.closest("tr");
+        myself.parentElement.removeChild(myself);
+      });
+    });
+  </script>
   <span class="buttons">
     <input
       type="submit"
