@@ -20,41 +20,44 @@
   <h3>
     <a href="{%& source[1].this_source %}">{%& source[1].this_source %}</a>
   </h3>
-  <ol>
+  <ol class="list-item-block">
     {% for image_idx, image in ipairs(source) do %}
     <li>
-      <a href="{%& image.media_url %}">
-        <img
-          src="/queue-image/{%& image.media_file %}"
-          height="{%& image.height %}"
-          width="{%& image.width %}"
-          class="constrain-width"
-        />
-      </a>
-      <span
-        >{%& image.width %} by {%& image.height %} • {%& image.mime_type %}
-        • Posted by {%& image.authors[1].handle %}</span
-      >
-      <ul>
-        {% for dupe_idx = 1, #image.duplicates do local duplicate =
-        image.duplicates[dupe_idx] %}
-        <li>
-          Might be a duplicate of
-          <a href="/image/{%& duplicate.duplicate_of %}"
-            >Record {%& duplicate.duplicate_of %}</a
-          >
-          <ul>
-            {% if duplicate.similarity then %}
-            <li>Content hash: {%& duplicate.similarity %}% similar</li>
-            {% end %} {% for ms_idx = 1, #duplicate.matched_sources do local ms
-            = duplicate.matched_sources[ms_idx] %}
-            <li>Matched source: <a href="{%& ms %}">{%& ms %}</a></li>
-            {% end %}
-          </ul>
-        </li>
-        {% end %}
-      </ul>
-      {% select_image(source_idx, image_idx, image.duplicates) %}
+      <div>
+        <a href="{%& image.media_url %}">
+          <img
+            src="/queue-image/{%& image.media_file %}"
+            height="{%& image.height %}"
+            width="{%& image.width %}"
+            class="constrain-width"
+          />
+        </a>
+      </div>
+      <div>
+        <span
+          >{%& image.width %} by {%& image.height %} • {%& image.mime_type %}
+          • Posted by {%& image.authors[1].handle %}</span>
+        <ul>
+          {% for dupe_idx = 1, #image.duplicates do local duplicate =
+          image.duplicates[dupe_idx] %}
+          <li>
+            Might be a duplicate of
+            <a href="/image/{%& duplicate.duplicate_of %}"
+              >Record {%& duplicate.duplicate_of %}</a
+            >
+            <ul>
+              {% if duplicate.similarity then %}
+              <li>Content hash: {%& duplicate.similarity %}% similar</li>
+              {% end %} {% for ms_idx = 1, #duplicate.matched_sources do local ms
+              = duplicate.matched_sources[ms_idx] %}
+              <li>Matched source: <a href="{%& ms %}">{%& ms %}</a></li>
+              {% end %}
+            </ul>
+          </li>
+          {% end %}
+        </ul>
+        {% select_image(source_idx, image_idx, image.duplicates) %}
+      </div>
     </li>
     {% end %}
   </ol>

@@ -558,3 +558,20 @@ table.t50-25-25 th:nth-child(2) {
 table.t50-25-25 th:nth-child(3) {
   width: 25%;
 }
+
+.list-item-block > li {
+  margin-bottom: 1em;
+}
+
+.list-item-block > li > * {
+  display: inline-block;
+  vertical-align: text-top;
+}
+
+.list-item-block div {
+  max-width: 100%
+}
+
+.list-item-block a {
+  word-wrap: break-word;
+}
