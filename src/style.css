@@ -21,6 +21,9 @@ body {
 .dialog h1 {
   font-size: 1.5rem;
 }
+#dialog-contents a {
+  word-wrap: break-word;
+}
 .vbox {
   display: flex;
   flex-direction: column;
@@ -575,3 +578,4 @@ table.t50-25-25 th:nth-child(3) {
 .list-item-block a {
   word-wrap: break-word;
 }
+
