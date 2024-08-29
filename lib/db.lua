@@ -1471,16 +1471,38 @@ function Model:replaceImage(image_id, image_data, mime_type, width, height)
         return nil, e_err
     end
     -- If the image isn't bigger/higher quality, do nothing.
+    Log(
+        kLogDebug,
+        "Existing image: %d x %d (%s); Replacement image: %d x %d (%s)"
+            % {
+                existing.width,
+                existing.height,
+                existing.mime_type,
+                width,
+                height,
+                mime_type,
+            }
+    )
     if
-        (width > existing.width and height > existing.height)
-        or (
-            width == existing.width
-            and height == existing.height
-            and mime_type == "image/png"
+        not (
+            (width > existing.width and height > existing.height)
+            or (
+                width == existing.width
+                and height == existing.height
+                and mime_type == "image/png"
+            )
         )
     then
+        Log(
+            kLogVerbose,
+            "Not replacing image because the newer version is smaller or not an equally-sized PNG"
+        )
         return { image_id = image_id }
     end
+    Log(
+        kLogVerbose,
+        "Replaced the image because the newer version is larger or an equally-sized PNG"
+    )
     local filename = FsTools.save_image(image_data, mime_type)
     local ok, image, i_err = pcall(
         self.conn.execute,
