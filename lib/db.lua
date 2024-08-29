@@ -560,7 +560,8 @@ local queries = {
             FROM tags INNER JOIN image_tags
             ON image_tags.tag_id = tags.tag_id
             JOIN tag_counts ON tag_counts.tag_id = image_tags.tag_id
-            WHERE image_tags.image_id = ?;]],
+            WHERE image_tags.image_id = ?
+            ORDER BY tags.name COLLATE NOCASE;]],
         get_incoming_tags_for_image_by_id = [[SELECT name, itid
             FROM incoming_tags WHERE image_id = ? AND applied = 0;]],
         get_incoming_tag_by_id = [[SELECT itid, name, domain, applied
