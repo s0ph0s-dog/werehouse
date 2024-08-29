@@ -147,15 +147,15 @@
           value="Cancel"
           formnovalidate
           hx-post="{%& form_path %}"
-          hx-select=".content"
           hx-target="body"
+          hx-push-url="true"
         /><input
           type="submit"
           name="save"
           value="Save"
           hx-post="{%& form_path %}"
-          hx-select=".content"
           hx-target="body"
+          hx-push-url="true"
         />
       </span>
     </form>
