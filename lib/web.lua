@@ -3153,7 +3153,7 @@ local render_archive = login_required(function(r, user_record)
                         thumbnail:width(),
                         thumbnail:height(),
                         1,
-                        "image/png"
+                        "image/webp"
                     )
                     if not ti_ok then
                         Log(kLogInfo, tostring(ti_err))
