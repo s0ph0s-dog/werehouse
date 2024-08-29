@@ -144,7 +144,10 @@ htmx.onLoad((content) => {
   cancelButtons.forEach((btn) => {
     btn.addEventListener("click", (e) => {
       console.log("cancelling");
-      btn.closest("dialog").close();
+      const closest_dialog = btn.closest("dialog");
+      if (closest_dialog) {
+        closest_dialog.close();
+      }
     });
   });
   const taggers = content.querySelectorAll("[data-tagger-name]");
