@@ -965,6 +965,12 @@ local render_image_share = login_required(function(r, user_record)
         Log(kLogInfo, sources_err)
         return Fm.serve500()
     end
+    local attributions, attributions_err =
+        Model:getAttributionForImage(image_id)
+    if not attributions then
+        Log(kLogInfo, attributions_err)
+        return Fm.serve500()
+    end
     if r.params.cancel then
         if not r.params.share_id then
             return Fm.serveError(400, "Must include share_id in request")
@@ -1027,6 +1033,17 @@ local render_image_share = login_required(function(r, user_record)
             return Fm.serve500()
         end
     end
+    local attribution_text
+    if #attributions == 1 then
+        attribution_text = attributions[1].name
+    else
+        attribution_text = table.concat(
+            table.map(attributions, function(a)
+                return a.name
+            end),
+            ", "
+        )
+    end
     local sources_text
     if #sources == 1 then
         sources_text = sources[1].link
@@ -1038,6 +1055,7 @@ local render_image_share = login_required(function(r, user_record)
             "\n"
         )
     end
+    local per_media_text = "By " .. attribution_text .. "\n" .. sources_text
     local ping_text = table.concat(
         table.map(ping_data, function(d)
             return string.format("%s: %s", d.handle, d.tag_names)
@@ -1048,14 +1066,14 @@ local render_image_share = login_required(function(r, user_record)
     if attribution then
         ping_text = ping_text .. "\n\n" .. attribution
     end
-    local form_sources_text = r.params.sources_text or sources_text
+    local form_per_media_text = r.params.sources_text or per_media_text
     local form_ping_text = r.params.ping_text or ping_text
     local params = {
         user = user_record,
         image = image,
         share_ping_list = spl,
-        sources_text = form_sources_text,
-        sources_text_size = form_sources_text:linecount(),
+        sources_text = form_per_media_text,
+        sources_text_size = form_per_media_text:linecount(),
         ping_text = form_ping_text,
         ping_text_size = form_ping_text:linecount(),
         share_id = r.params.t,
@@ -1104,7 +1122,14 @@ local render_image_group_share = login_required(function(r, user_record)
             Log(kLogInfo, sources_err)
             return Fm.serve500()
         end
+        local attributions, attributions_err =
+            Model:getAttributionForImage(image.image_id)
+        if not attributions then
+            Log(kLogInfo, attributions_err)
+            return Fm.serve500()
+        end
         image.sources = sources
+        image.attributions = attributions
         image.sources_text = r.params["sources_text_record_" .. image.image_id]
         image.spoiler = r.params["spoiler_record_" .. image.image_id]
         local _, file_path = FsTools.make_image_path_from_filename(image.file)
@@ -1159,6 +1184,17 @@ local render_image_group_share = login_required(function(r, user_record)
     end
     for i = 1, #images do
         local image = images[i]
+        local attribution_text
+        if #image.attributions == 1 then
+            attribution_text = image.attributions[1].name
+        else
+            attribution_text = table.concat(
+                table.map(image.attributions, function(a)
+                    return a.name
+                end),
+                ", "
+            )
+        end
         local sources_text
         if #image.sources == 1 then
             sources_text = image.sources[1].link
@@ -1170,8 +1206,9 @@ local render_image_group_share = login_required(function(r, user_record)
                 "\n"
             )
         end
-        image.sources_text = sources_text
-        image.sources_text_size = sources_text:linecount()
+        local per_media_text = "By " .. attribution_text .. "\n" .. sources_text
+        image.sources_text = image.sources_text or per_media_text
+        image.sources_text_size = image.sources_text:linecount()
     end
     local ping_text = table.concat(
         table.map(ping_data, function(d)

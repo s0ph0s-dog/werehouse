@@ -810,6 +810,12 @@ local queries = {
             FROM "share_records" WHERE "image_id" = ?;]],
         get_share_records_for_image_group = [[SELECT "share_id", "shared_to", "shared_at"
             FROM "share_records" WHERE "ig_id" = ?;]],
+        get_attribution_for_image = [[SELECT artists.name
+            FROM "artists" WHERE "artist_id" IN (
+                SELECT "artist_id"
+                FROM "image_artists"
+                WHERE "image_id" = ?
+            );]],
         insert_link_into_queue = [[INSERT INTO
             "queue2" ("link", "status", "added_on", "description")
             VALUES (?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), '')
@@ -1246,6 +1252,10 @@ end
 
 function Model:getSourcesForImage(image_id)
     return self.conn:fetchAll(queries.model.get_sources_for_image, image_id)
+end
+
+function Model:getAttributionForImage(image_id)
+    return self.conn:fetchAll(queries.model.get_attribution_for_image, image_id)
 end
 
 function Model:updateImageMetadata(image_id, category, rating)
