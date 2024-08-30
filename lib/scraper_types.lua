@@ -163,4 +163,7 @@ end
 --- scraper is able to process that URI.
 ---@alias ScraperCanProcess fun(uri: string): boolean
 
----@alias Scraper {process_uri: ScraperProcess, can_process_uri: ScraperCanProcess}
+--- Convert a URI from its current form to this scraper's canonical form. If it is not a URI the current scraper can process, leave it unchanged.
+---@alias ScraperNormalize fun(uri: string): string
+
+---@alias Scraper {process_uri: ScraperProcess, can_process_uri: ScraperCanProcess, normalize_uri: ScraperNormalize}

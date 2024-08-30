@@ -15,9 +15,9 @@ RATING_MAP = {
 }
 
 local function extract_submission_id(url)
-    local match, _, _, _, _, id = WEASYL_URL_EXP:search(url)
+    local match, _, _, user, _, id = WEASYL_URL_EXP:search(url)
     if match then
-        return id
+        return id, user
     else
         return nil
     end
@@ -25,6 +25,15 @@ end
 
 local function can_process_uri(uri)
     return extract_submission_id(uri) ~= nil
+end
+
+---@type ScraperNormalize
+local function normalize_uri(uri)
+    local submission_id, user = extract_submission_id(uri)
+    if not submission_id then
+        return uri
+    end
+    return "https://www.weasyl.com/%sview/%s" % { user or "", submission_id }
 end
 
 local function process_json(json)
@@ -97,5 +106,6 @@ end
 return {
     can_process_uri = can_process_uri,
     process_uri = process_uri,
+    normalize_uri = normalize_uri,
     CANONICAL_DOMAIN = CANONICAL_DOMAIN,
 }

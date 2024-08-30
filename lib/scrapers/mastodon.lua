@@ -1,5 +1,5 @@
 -- This scraper implements the Mastodon Client API v1, not ActivityPub.
-local MASTO_PATH_EXP = assert(re.compile([[^/@[A-z0-9_-]+/([0-9]+)]]))
+local MASTO_PATH_EXP = assert(re.compile([[^/(@[A-z0-9_-]+)/([0-9]+)]]))
 local TYPE_TO_KIND_MAP = {
     image = DbUtil.k.ImageKind.Image,
     gifv = DbUtil.k.ImageKind.Animation,
@@ -8,16 +8,25 @@ local TYPE_TO_KIND_MAP = {
 
 local function match_mastodon_uri(uri)
     local parts = ParseUrl(uri)
-    local match, status_id = MASTO_PATH_EXP:search(parts.path)
+    local match, username, status_id = MASTO_PATH_EXP:search(parts.path)
     if not match then
         return nil
     end
-    return parts.host, tonumber(status_id)
+    return parts.host, tonumber(status_id), username
 end
 
 local function can_process_uri(uri)
     local ok = match_mastodon_uri(uri)
     return ok ~= nil
+end
+
+---@type ScraperNormalize
+local function normalize_uri(uri)
+    local host, status_id, username = match_mastodon_uri(uri)
+    if not host then
+        return uri
+    end
+    return "https://%s/%s/%d" % { host, username, status_id }
 end
 
 local function process_account(account)
@@ -132,4 +141,5 @@ end
 return {
     process_uri = process_uri,
     can_process_uri = can_process_uri,
+    normalize_uri = normalize_uri,
 }

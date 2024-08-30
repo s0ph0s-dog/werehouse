@@ -17,6 +17,14 @@ local function parse_bsky_uri(uri)
     return handle_or_did, post_id
 end
 
+local function normalize_uri(uri)
+    local handle_or_did, post_id = parse_bsky_uri(uri)
+    if not handle_or_did then
+        return uri
+    end
+    return "https://bsky.app/profile/%s/post/%s" % { handle_or_did, post_id }
+end
+
 local function extract_image_embeds(post_data)
     if not post_data then
         Log(kLogVerbose, "Post was nil")
@@ -213,4 +221,5 @@ end
 return {
     process_uri = process_uri,
     can_process_uri = can_process_uri,
+    normalize_uri = normalize_uri,
 }

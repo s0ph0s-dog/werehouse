@@ -10,6 +10,15 @@ local function match_cohost_uri(uri)
     return project, tonumber(post_id)
 end
 
+---@type ScraperNormalize
+local function normalize_uri(uri)
+    local project, post_id = match_cohost_uri(uri)
+    if not project then
+        return uri
+    end
+    return "https://cohost.org/%s/post/%s" % { project, post_id }
+end
+
 local function can_process_uri(uri)
     local ok = match_cohost_uri(uri)
     return ok ~= nil
@@ -114,4 +123,5 @@ end
 return {
     process_uri = process_uri,
     can_process_uri = can_process_uri,
+    normalize_uri = normalize_uri,
 }

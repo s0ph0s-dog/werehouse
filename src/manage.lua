@@ -4,6 +4,7 @@ Fm = require("third_party.fullmoon")
 DbUtil = require("db")
 FsTools = require("fstools")
 local _ = require("functools")
+ScraperPipeline = require("scraper_pipeline")
 
 local function help()
     print("usage: ./werehouse.com -i /zip/manage.lua <COMMAND> [options]")
@@ -44,6 +45,9 @@ local function help()
     )
     print(
         "- calc_queue_wh (-d): Calculate width and height for images in the queue."
+    )
+    print(
+        "- clean_sources (-d): Loop through every source in each user's database and clean up duplicates caused by slightly different URLs (trailing slashes, etc.)"
     )
 end
 
@@ -652,6 +656,50 @@ local function queue2_migrate(other_args)
     end)
 end
 
+local function clean_sources(other_args)
+    local dry_run = other_args[1] == "-d"
+    for_each_user(function(_, _, model)
+        local SP = "clean_sources"
+        model:create_savepoint(SP)
+        local all_sources_q = [[select source_id, link from sources;]]
+        local update_source_q =
+            [[update or replace sources set link = ? where source_id = ?;]]
+        local all_sources, source_err = model.conn:fetchAll(all_sources_q)
+        if not all_sources then
+            Log(kLogInfo, source_err)
+            model:rollback(SP)
+            return 0
+        end
+        local update_count = 0
+        for i = 1, #all_sources do
+            local source = all_sources[i]
+            local cleaned = ScraperPipeline.normalize_uri(source.link)
+            if cleaned ~= source.link then
+                Log(kLogVerbose, "%s -> %s" % { source.link, cleaned })
+                if not dry_run then
+                    local ok, up_err = model.conn:execute(
+                        update_source_q,
+                        cleaned,
+                        source.source_id
+                    )
+                    if not ok then
+                        Log(kLogInfo, up_err)
+                        model:rollback(SP)
+                        return 0
+                    end
+                    update_count = update_count + 1
+                end
+            end
+        end
+        model:release_savepoint(SP)
+        Log(kLogInfo, "Updated %d records%s" % {
+            update_count,
+            dry_run and " (because dry-run)" or "",
+        })
+        return 0
+    end)
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
@@ -665,6 +713,7 @@ local commands = {
     fix_0wh = fix_0wh,
     calc_queue_wh = calc_queue_wh,
     queue2_migrate = queue2_migrate,
+    clean_sources = clean_sources,
 }
 
 local remaining_args = arg

@@ -170,6 +170,9 @@ local user_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE
     );
 
+    CREATE UNIQUE INDEX IF NOT EXISTS "unique_sources_per_image" ON "sources"
+        ("image_id", "link");
+
     CREATE TABLE IF NOT EXISTS "artists" (
         "artist_id" INTEGER NOT NULL UNIQUE,
         "manually_confirmed" INTEGER NOT NULL DEFAULT 0,

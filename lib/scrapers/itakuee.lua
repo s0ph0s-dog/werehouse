@@ -4,15 +4,23 @@ local RATING_MAP = {
 }
 
 local ITAKUEE_URI_EXP =
-    assert(re.compile([[^https?://itaku.ee/images/([0-9]+)]]))
+    assert(re.compile([[^(https?://)?itaku.ee/images/([0-9]+)]]))
 local CANONICAL_DOMAIN = "itaku.ee"
 
 local function match_itakuee_uri(uri)
-    local match, post_id = ITAKUEE_URI_EXP:search(uri)
+    local match, _, post_id = ITAKUEE_URI_EXP:search(uri)
     if not match then
         return nil
     end
     return tonumber(post_id)
+end
+
+local function normalize_uri(uri)
+    local post_id = match_itakuee_uri(uri)
+    if not post_id then
+        return uri
+    end
+    return "https://itaku.ee/images/" .. tostring(post_id)
 end
 
 local function can_process_uri(uri)
@@ -81,4 +89,5 @@ end
 return {
     can_process_uri = can_process_uri,
     process_uri = process_uri,
+    normalize_uri = normalize_uri,
 }

@@ -184,23 +184,32 @@ local function process_pool(json, clean_uri)
     return result
 end
 
+---@type ScraperNormalize
+local function normalize_uri(uri)
+    local parts = ParseUrl(uri)
+    if parts.host ~= "e621.net" and parts.host ~= "e926.net" then
+        return uri
+    end
+    -- Require HTTPS
+    parts.scheme = "https"
+    -- E621 doesn't use the params for anything other than optional data on pool/post pages
+    parts.params = nil
+    -- Strip all trailing slashes
+    if parts.path:endswith("/") then
+        parts.path = parts.path:gsub("/+$", "")
+    end
+    return EncodeUrl(parts)
+end
+
 ---@type ScraperProcess
 local function process_uri(uri)
-    local parts = ParseUrl(uri)
-    -- Strip trailing slashes to avoid "mystery" 404 errors.
-    if parts.path:endswith("/") then
-        parts.path = parts.path:sub(1, -2)
-    end
-    parts.path = parts.path .. ".json"
-    local new_uri = EncodeUrl(parts)
-    local clean_parts = ParseUrl(uri)
-    clean_parts.params = nil
-    local clean_uri = EncodeUrl(clean_parts)
+    local clean_uri = normalize_uri(uri)
+    local api_uri = clean_uri .. ".json"
     local headers = {}
     if E621_TOKEN then
         headers.Authorization = "Bearer " .. E621_TOKEN
     end
-    local json, errmsg = Nu.FetchJson(new_uri, {
+    local json, errmsg = Nu.FetchJson(api_uri, {
         headers = headers,
     })
     if not json then
@@ -221,4 +230,5 @@ end
 return {
     process_uri = process_uri,
     can_process_uri = can_process_uri,
+    normalize_uri = normalize_uri,
 }

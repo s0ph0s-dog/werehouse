@@ -1,4 +1,5 @@
-local IB_URL_EXP = assert(re.compile([[^(https?://)?inkbunny.net/s/([0-9]+)]]))
+local IB_URL_EXP =
+    assert(re.compile([[^(https?://)?(www\.)?inkbunny.net/s/([0-9]+)]]))
 
 local RATING_MAP = {
     [0] = DbUtil.k.Rating.General,
@@ -95,7 +96,7 @@ local function IBFetchJson(url_parts, options)
 end
 
 local function extract_submission_id(url)
-    local match, _, id = IB_URL_EXP:search(url)
+    local match, _, _, id = IB_URL_EXP:search(url)
     if match then
         return id
     else
@@ -105,6 +106,14 @@ end
 
 local function can_process_uri(uri)
     return extract_submission_id(uri) ~= nil
+end
+
+local function normalize_uri(uri)
+    local submission_id = extract_submission_id(uri)
+    if not submission_id then
+        return uri
+    end
+    return "https://inkbunny.net/s/" .. submission_id
 end
 
 ---@return ScrapedSourceData[]
@@ -171,5 +180,6 @@ end
 return {
     can_process_uri = can_process_uri,
     process_uri = process_uri,
+    normalize_uri = normalize_uri,
     CANONICAL_DOMAIN = CANONICAL_DOMAIN,
 }

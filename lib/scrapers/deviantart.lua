@@ -1,5 +1,7 @@
 local DA_URI_EXP = assert(
-    re.compile([[^(https?://)?www.deviantart.com/([a-z0-9])+/art/([A-z0-9-])+]])
+    re.compile(
+        [[^(https?://)?(www.)?deviantart.com/([a-z0-9])+/art/([A-z0-9-])+]]
+    )
 )
 
 local DA_CLIENT_ID = os.getenv("DA_CLIENT_ID")
@@ -95,6 +97,15 @@ end
 
 local function can_process_uri(uri)
     return DA_URI_EXP:search(uri)
+end
+
+---@type ScraperNormalize
+local function normalize_uri(uri)
+    local match, _, _, user, post_slug = DA_URI_EXP:search(uri)
+    if not match then
+        return uri
+    end
+    return "https://www.deviantart.com/%s/art/%s" % { user, post_slug }
 end
 
 local function process_deviation(json, uri)
@@ -205,4 +216,5 @@ end
 return {
     can_process_uri = can_process_uri,
     process_uri = process_uri,
+    normalize_uri = normalize_uri,
 }

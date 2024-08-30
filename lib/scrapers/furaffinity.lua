@@ -20,6 +20,14 @@ local function normalize_fa_uri(uri)
     return "https://www.furaffinity.net/full/%s" % { id }
 end
 
+local function normalize_uri(uri)
+    local result = normalize_fa_uri(uri)
+    if not result then
+        return uri
+    end
+    return result
+end
+
 local function can_process_uri(uri)
     local norm = normalize_fa_uri(uri)
     return norm ~= nil
@@ -168,4 +176,5 @@ end
 return {
     process_uri = process_uri,
     can_process_uri = can_process_uri,
+    normalize_uri = normalize_uri,
 }

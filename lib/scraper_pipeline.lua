@@ -664,6 +664,16 @@ local function do_archive_subtask_insert_hash(model, image_id, hash)
     end
 end
 
+local function normalize_uri(uri)
+    local norm_uri = uri
+    for i = 1, #scrapers do
+        Log(kLogDebug, "normalizing with " .. tostring(i))
+        norm_uri = scrapers[i].normalize_uri(norm_uri)
+        Log(kLogDebug, "url is now " .. norm_uri)
+    end
+    return norm_uri
+end
+
 ---Do all the work necessary to archive one subtask.
 ---@param model Model Database connection.
 ---@param subtask PipelineSubtask The subtask to archive.
@@ -675,7 +685,8 @@ local function do_archive_subtask(model, subtask, sources, ig_id)
     }
     table.extend(sources_with_dupes, sources)
     table.extend(sources_with_dupes, subtask.additional_sources)
-    local this_item_sources = table.uniq(sources_with_dupes)
+    -- There may be duplicates in this list, but the database query ignores duplicates on insert.
+    local this_item_sources = table.map(sources_with_dupes, normalize_uri)
 
     local image_id = do_archive_subtask_insert_update_image(model, subtask)
     do_archive_subtask_insert_sources(model, image_id, this_item_sources)
@@ -953,6 +964,7 @@ return {
     process_all_queues = process_all_queues,
     scrapers = scrapers,
     can_process_uri = can_process_uri,
+    normalize_uri = normalize_uri,
     CANONICAL_DOMAINS_WITH_TAGS = {
         "www.furaffinity.net",
         "e621.net",

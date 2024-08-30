@@ -11,17 +11,30 @@ local TYPE_TO_KIND_MAP = {
 -- Eat Shit, Elon
 local CANONICAL_DOMAIN = "twitter.com"
 
-local function normalize_twitter_uri(uri)
-    local match, _, _, _, snowflake = TWITTER_URI_EXP:search(uri)
+local function match_twitter_uri(uri)
+    local match, _, _, handle, snowflake = TWITTER_URI_EXP:search(uri)
     if not match then
         return nil
     end
-    return "https://api.fxtwitter.com/status/%s" % { snowflake }
+    return snowflake, handle
 end
 
 local function can_process_uri(uri)
-    local normalized = normalize_twitter_uri(uri)
-    return normalized ~= nil
+    local snowflake = match_twitter_uri(uri)
+    return snowflake ~= nil
+end
+
+---@type ScraperNormalize
+local function normalize_uri(uri)
+    local snowflake, handle = match_twitter_uri(uri)
+    if not snowflake then
+        return uri
+    end
+    return "https://twitter.com/%sstatus/%s"
+        % {
+            handle or "",
+            snowflake,
+        }
 end
 
 local function make_thumbnail(media)
@@ -80,10 +93,11 @@ end
 
 ---@type ScraperProcess
 local function process_uri(uri)
-    local normalized = normalize_twitter_uri(uri)
-    if not normalized then
+    local snowflake = match_twitter_uri(uri)
+    if not snowflake then
         return nil, PipelineErrorPermanent("Not a Twitter URI.")
     end
+    local normalized = "https://api.fxtwitter.com/status/" .. snowflake
     local json, errmsg1 = Nu.FetchJson(normalized)
     if not json then
         -- TODO: some of these are probably not permanent (e.g. 502, 429)
@@ -112,4 +126,5 @@ end
 return {
     process_uri = process_uri,
     can_process_uri = can_process_uri,
+    normalize_uri = normalize_uri,
 }
