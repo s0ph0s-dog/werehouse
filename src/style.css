@@ -523,6 +523,7 @@ abbr {
 }
 
 #dialog {
+  width:100%;
   max-width: 30em;
 }
 
