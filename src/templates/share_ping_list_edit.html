@@ -62,7 +62,9 @@
     <li>
       Ping this person if the shared post has any of these tags:
       <ul>
+        {% if kind ~= "pending" then %}
         {% tag_list(id, "positive", positive_tags) %}
+        {% end %}
         {% editable_tag_list(id, kind, "positive", "Paws",
         uncommitted_ptag_list) %}
         <li>
@@ -88,7 +90,9 @@
     <li>
       But not if the shared post has any of these tags:
       <ul>
+        {% if kind ~= "pending" then %}
         {% tag_list(id, "negative", negative_tags) %}
+        {% end %}
         {% editable_tag_list(id, kind, "negative", "Maws",
         uncommitted_ntag_list) %}
         <li>
