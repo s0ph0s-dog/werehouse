@@ -125,8 +125,8 @@ function tagger_setup(tagger) {
     add_field.focus();
   }
   add_button.addEventListener("click", add_pending);
-  add_field.addEventListener("keypress", (event) => {
-    if (event.which == 13) {
+  add_field.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
       add_pending(event);
     }
   });
@@ -151,9 +151,7 @@ htmx.onLoad((content) => {
     });
   });
   const taggers = content.querySelectorAll("[data-tagger-name]");
-  taggers.forEach((tagger) => {
-    tagger_setup(tagger);
-  });
+  taggers.forEach(tagger_setup);
 });
 
 // Remove dialogs from the page before saving history, so that they don't end
