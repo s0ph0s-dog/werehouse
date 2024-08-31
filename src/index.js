@@ -162,3 +162,8 @@ htmx.on("htmx:beforeHistorySave", () => {
     elt.close();
   });
 });
+
+htmx.on("htmx:responseError", (e) => {
+  console.log(e);
+  alert(`That action failed. The server said “${e.detail.xhr.statusText}.”`);
+});
