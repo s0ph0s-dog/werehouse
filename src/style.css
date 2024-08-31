@@ -1,5 +1,6 @@
 :root {
   color-scheme: light dark;
+  --navbar-height: 44px;
 }
 * {
   box-sizing: border-box;
@@ -10,7 +11,6 @@ html {
 }
 body {
   margin: 0;
-  padding: 0 8px;
 }
 .dialog {
   max-width: 40em;
@@ -104,9 +104,23 @@ nav img {
 }
 nav {
   border-bottom: 1px solid CanvasText;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-areas: "leading title trailing";
+  column-gap: 0.5em;
+  align-items: center;
   justify-content: space-between;
-  align-items: baseline;
+}
+nav .leading {
+  grid-area: leading;
+}
+nav .title {
+  grid-area: title;
+  text-align: center;
+}
+nav .trailing {
+  grid-area: trailing;
+  justify-self: end;
 }
 nav .links {
   display: flex;
@@ -255,6 +269,9 @@ footer {
 }
 
 @media (max-width: 639px) {
+  .desktop-only {
+    display: none;
+  }
   html,
   body {
     font-size: 18px;
@@ -272,20 +289,30 @@ footer {
   }
   .menu-button-container {
     display: flex;
+    stroke: LinkText;
   }
   nav {
     border-bottom: 0;
+    z-index: 99;
+    grid-template-rows: var(--navbar-height);
+    position: sticky;
+    top:0;
+    background-color: Canvas;
+    padding: 0 8px;
   }
   nav .links {
     position: absolute;
     top: 0;
-    margin-top: 77px;
+    margin-top: var(--navbar-height);
     left: 0;
     flex-direction: column;
     width: 100%;
     justify-content: center;
     align-items: center;
-    z-index: 100;
+  }
+  nav h1 {
+    margin: 0;
+    font-size: 1.25em;
   }
   #menu-toggle ~ .links a {
     height: 0;
@@ -305,10 +332,21 @@ footer {
     margin: 0;
     padding: 0.5em 0;
     width: 100%;
-    background-color: Canvas;
   }
   .links > a:last-child {
-    border-bottom: 1px solid CanvasText;
+    border-bottom: 3px solid CanvasText;
+  }
+  footer {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .content > * {
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+  .ignore-safe-area {
+    margin-left: 0;
+    margin-right: 0;
   }
   .gallery {
     gap: 0.5em;
@@ -323,6 +361,9 @@ footer {
   .gallery figure span {
     overflow-x: hidden;
     text-overflow: ellipsis;
+  }
+  .secondary-bg {
+    background-color: color-mix(in srgb, Canvas, gray 10%)
   }
   input[type="color"],
   input[type="date"],
@@ -358,9 +399,26 @@ footer {
   .queue-record {
     flex: 1 1 100%;
   }
+
+  .sticky-top:not(nav) {
+    top: calc(var(--navbar-height) + 1px);
+    z-index: 0;
+  }
+
+  #loader {
+    top: calc(var(--navbar-height) + 3px) !important;
+    z-index: 100;
+  }
 }
 
 @media (min-width: 640px) {
+  .mobile-only {
+    display: none;
+  }
+  nav .trailing-desktop-only {
+    grid-area: trailing;
+    justify-self: end;
+  }
   .queue-container {
     flex-direction: row;
     flex-wrap: wrap;
@@ -536,6 +594,9 @@ abbr {
   height: 0.25em;
   background: repeating-linear-gradient(-45deg, CanvasText 0 15px,#0000 0 20px) left/200% 100%;
   animation: l3 8s infinite linear;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 @keyframes l3 {
     100% {background-position:right}
