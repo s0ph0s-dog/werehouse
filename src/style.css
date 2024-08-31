@@ -127,6 +127,9 @@ nav .leading {
 nav .title {
   grid-area: title;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 nav .trailing {
   grid-area: trailing;
