@@ -2,6 +2,16 @@
   color-scheme: light dark;
   --navbar-height: 44px;
 }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --secondary-bg: #333;
+  }
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --secondary-bg: #E6E6E6;
+  }
+}
 * {
   box-sizing: border-box;
 }
@@ -363,7 +373,7 @@ footer {
     text-overflow: ellipsis;
   }
   .secondary-bg {
-    background-color: color-mix(in srgb, Canvas, gray 10%)
+    background-color: var(--secondary-bg);
   }
   input[type="color"],
   input[type="date"],

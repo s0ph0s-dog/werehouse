@@ -3,7 +3,7 @@
   "short_name": "Werehouse",
   "start_url": "/home",
   "display": "standalone",
-  "background_color": "#000",
+  "background_color": "#333",
   "theme_color": "#fff",
   "description": "An art archiving and sharing tool.",
   "icons": [
