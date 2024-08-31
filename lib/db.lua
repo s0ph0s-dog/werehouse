@@ -251,6 +251,7 @@ local user_setup = [[
         "name" TEXT NOT NULL,
         -- JSON blob that contains settings necessary for sharing to whatever service.
         "share_data" TEXT NOT NULL,
+        "send_with_attribution" INTEGER NOT NULL DEFAULT 1,
         PRIMARY KEY("spl_id")
     );
 
@@ -781,7 +782,11 @@ local queries = {
             group by "share_ping_list_entry".handle
             order by tag_count desc, "share_ping_list_entry".handle;]],
         get_all_share_ping_lists = [[SELECT spl_id, name, share_data FROM share_ping_list;]],
-        get_share_ping_list_by_id = [[SELECT spl_id, name, share_data
+        get_share_ping_list_by_id = [[SELECT
+                spl_id,
+                name,
+                share_data,
+                send_with_attribution
             FROM share_ping_list WHERE spl_id = ?;]],
         get_entries_for_ping_list_by_id = [[SELECT spl_entry_id, handle, spl_id
             FROM share_ping_list_entry WHERE spl_id = ?;]],
@@ -882,8 +887,9 @@ local queries = {
             VALUES (?, ?, ?, ?);]],
         insert_share_ping_list = [[INSERT INTO share_ping_list (
                 name,
-                share_data
-            ) VALUES (?, ?)
+                share_data,
+                send_with_attribution
+            ) VALUES (?, ?, ?)
             RETURNING spl_id;]],
         insert_spl_entry = [[INSERT INTO share_ping_list_entry (
             handle,
@@ -2296,14 +2302,15 @@ function Model:applyIncomingTagsNowMatchedByTagRules()
     return changes
 end
 
-function Model:createSharePingList(name, share_data)
+function Model:createSharePingList(name, share_data, send_with_attribution)
     if type(share_data) ~= "string" then
         share_data = EncodeJson(share_data)
     end
     local id, err = self.conn:fetchOne(
         queries.model.insert_share_ping_list,
         name,
-        share_data
+        share_data,
+        send_with_attribution
     )
     if not id then
         return nil, err

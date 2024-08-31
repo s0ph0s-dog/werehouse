@@ -11,9 +11,10 @@
 </label>
 {% local ta_name = "sources_text" if group then ta_name = "sources_text_record_"
 .. tostring(record.image_id) end %}
+<label>Media Caption:
 <textarea name="{%& ta_name %}" rows="{%& sources_text_size %}">
 {%& sources_text %}</textarea
->
+></label>
 {% end %}{% function block.content() %}
 <form
   class="vbox"
@@ -33,9 +34,10 @@
   image.sources_text_size, true) %}{% end %}{% elseif image then %}{%
   block.record_view(image, sources_text, sources_text_size, false) %}{% else
   %}There's a bug{% end %}{% if ping_text then %}
+  <label>Reply to First Media:
   <textarea name="ping_text" rows="{%& ping_text_size %}">
 {%& ping_text %}</textarea
-  >
+  ></label>
   {% end %}
   <span class="buttons">
     <input

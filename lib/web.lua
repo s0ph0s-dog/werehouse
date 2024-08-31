@@ -1063,7 +1063,7 @@ local render_image_share = login_required(function(r, user_record)
         "\n"
     )
     local attribution = "Shared by %s" % { user_record.username }
-    if attribution then
+    if spl and spl.send_with_attribution then
         ping_text = ping_text .. "\n\n" .. attribution
     end
     local form_per_media_text = r.params.sources_text or per_media_text
@@ -1217,16 +1217,19 @@ local render_image_group_share = login_required(function(r, user_record)
         "\n"
     )
     local attribution = "Shared by %s" % { user_record.username }
-    if attribution then
+    if spl and spl.send_with_attribution then
         ping_text = ping_text .. "\n\n" .. attribution
     end
     -- local form_sources_text = r.params.sources_text or sources_text
     local form_ping_text = r.params.ping_text or ping_text
+    local attribution = r.params.attribution
+        or (spl and spl.send_with_attribution)
     local params = {
         user = user_record,
         ig_id = r.params.ig_id,
         images = images,
         share_ping_list = spl,
+        attribution = attribution,
         ping_text = form_ping_text,
         ping_text_size = form_ping_text:linecount(),
         share_id = r.params.t,
@@ -2746,7 +2749,11 @@ local function accept_add_share_ping_list(
     }
     local SP = "add_share_ping_list"
     Model:create_savepoint(SP)
-    local spl_id, spl_err = Model:createSharePingList(r.params.name, share_data)
+    local spl_id, spl_err = Model:createSharePingList(
+        r.params.name,
+        share_data,
+        r.params.attribution == "true"
+    )
     if not spl_id then
         Log(kLogInfo, spl_err)
         Model:rollback(SP)
@@ -3057,6 +3064,8 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         filter_deleted_tags(delete_entry_positive_tags, positive_tags)
     negative_tags =
         filter_deleted_tags(delete_entry_negative_tags, negative_tags)
+    local attribution = r.params.attribution or spl.send_with_attribution
+    Log(kLogInfo, "attribution: " .. tostring(attribution))
     -- Render page.
     local params = {
         user = user_record,
@@ -3065,6 +3074,7 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         entries = entries,
         positive_tags = positive_tags,
         negative_tags = negative_tags,
+        attribution = attribution,
         share_services = { "Telegram" },
         name = r.params.name or spl.name,
         chat_id = r.params.chat_id or spl.share_data.chat_id,
