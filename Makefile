@@ -1,6 +1,6 @@
 # Configure here
 VERSION := 0.1
-REDBEAN_VERSION := 2.3beta
+REDBEAN_VERSION := 3.0beta
 OUTPUT := werehouse.com
 SRV_DIR := srv
 LIBS := lib/third_party/fullmoon.lua \
