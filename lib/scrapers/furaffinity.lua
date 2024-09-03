@@ -58,6 +58,16 @@ local function last(list)
     return list[#list]
 end
 
+local function second_last(list)
+    if not list then
+        return nil
+    end
+    if #list < 2 then
+        return nil
+    end
+    return list[#list - 1]
+end
+
 ---@return ScrapedSourceData
 ---@overload fun(root: any): nil, PipelineError
 local function scrape_image_data(root)
@@ -80,7 +90,8 @@ local function scrape_image_data(root)
     if not rating then
         Log(kLogWarn, "Unknown rating from FA: %s" % { rating_text })
     end
-    local maybe_sidebar_size = last(root:select(".info div span"))
+    -- TODO: Loop over all of the divs in the .info container to find the one with a child strong that contains "Size", rather than picking by order.
+    local maybe_sidebar_size = second_last(root:select(".info div span"))
     if not maybe_sidebar_size then
         return nil, PipelineErrorPermanent("No size metadata in post.")
     end
@@ -167,7 +178,7 @@ local function process_uri(uri)
     end
     local data, errmsg = scrape_image_data(root)
     if not data then
-        return nil, PipelineErrorPermanent(errmsg)
+        return nil, errmsg
     end
     data.this_source = norm_uri
     return { data }
