@@ -121,6 +121,9 @@ nav {
   align-items: center;
   justify-content: space-between;
 }
+nav > * {
+  white-space: nowrap;
+}
 nav .leading {
   grid-area: leading;
 }
