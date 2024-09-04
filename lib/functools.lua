@@ -92,6 +92,21 @@ function table.map(sequence, transformation)
     return result
 end
 
+---@generic T : any, U : any
+---@param sequence (T[])
+---@param transformation (fun(item: T, index: integer): U)
+---@return (U[])
+function table.mapIdx(sequence, transformation)
+    if not sequence then
+        return {}
+    end
+    local result = {}
+    for i = 1, #sequence do
+        result[i] = transformation(sequence[i], i)
+    end
+    return result
+end
+
 ---@generic T : any, U : any, E : any
 ---@param sequence T[]
 ---@param transformation fun(item: T): U?, E?
@@ -245,6 +260,17 @@ function table.keys(t)
     local result = {}
     for key, _ in pairs(t) do
         result[#result + 1] = key
+    end
+    return result
+end
+
+function table.zip(s, t)
+    if not s or not t then
+        return {}
+    end
+    local result = {}
+    for i = 1, math.min(#s, #t) do
+        result[i] = { s[i], t[i] }
     end
     return result
 end

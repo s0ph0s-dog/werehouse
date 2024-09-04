@@ -151,6 +151,18 @@ function TestFunctools:testBatchWorksWhenBatchSizeSmallerThanList()
     luaunit.assertEquals(result, expected)
 end
 
+function TestFunctools:testZipWorks()
+    local input1 = { "a", "b", "c" }
+    local input2 = { 5, 4, 3, 2 }
+    local expected = {
+        { "a", 5 },
+        { "b", 4 },
+        { "c", 3 },
+    }
+    local result = table.zip(input1, input2)
+    luaunit.assertEquals(result, expected)
+end
+
 ---@alias MockData {whenCalledWith: string, thenReturn: any[]}
 
 ---@param data MockData[]

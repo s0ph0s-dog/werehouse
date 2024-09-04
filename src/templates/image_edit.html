@@ -23,7 +23,7 @@
         <li>
           <span class="baseline">
             Categories:
-            <select name="category[]" multiple="true" required size="{%& #DbUtilK.CategoryLoopable %}">
+            <select name="category[]" multiple="true" size="{%& #DbUtilK.CategoryLoopable %}">
               {% local cs = DbUtilK.CategoryLoopable for i = 1, #cs do local c =
               cs[i] %}
               <option value="{%& c[1] %}"{% if ((category or 0) & c[1]) == c[1] then %} selected{% end %}>{%& c[2] %}</option>
@@ -156,6 +156,7 @@
           hx-post="{%& form_path %}"
           hx-target="body"
           hx-push-url="true"
+          hx-validate="true"
         />
       </span>
     </form>

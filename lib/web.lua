@@ -21,7 +21,8 @@ end
 
 local function render_invite(r)
     local invite_record = Accounts:findInvite(r.params.invite_code)
-    if not invite_record then
+    -- If the invite doesn't exist, or if it has already been used.
+    if not invite_record or invite_record.invitee then
         return Fm.serve404()
     end
     local params = { error = r.session.error, invite_record = invite_record }
@@ -447,6 +448,12 @@ local accept_enqueue = login_required(function(r)
     if r.params.cancel then
         return redirect
     end
+    if r.params.link and #r.params.link > 0 and r.params.multipart.image then
+        return Fm.serveError(
+            400,
+            "Must provide either link or image, not both."
+        )
+    end
     if r.params.link and #r.params.link > 0 then
         local result, errmsg = Model:enqueueLink(r.params.link)
         if not result then
@@ -801,8 +808,8 @@ local accept_edit_image = login_required(function(r, user_record)
     if r.params.save then
         local image_id = r.params.image_id
         -- Image Metadata
-        if not r.params.category or not r.params.rating then
-            return Fm.serveError(400, "Missing category or rating")
+        if not r.params.rating then
+            return Fm.serveError(400, "Missing rating")
         end
         local metadata_ok, metadata_err = Model:updateImageMetadata(
             image_id,
@@ -2147,6 +2154,21 @@ local render_edit_image_group = login_required(function(r, user_record)
     return Fm.serveContent("image_group_edit", params)
 end)
 
+local function normalize_order_values(image_ids, new_orders)
+    local merged = table.zip(image_ids, new_orders)
+    table.sort(merged, function(a, b)
+        return a[2] < b[2]
+    end)
+    if not merged then
+        error("wtf")
+    end
+    local reordered = table.mapIdx(merged, function(item, idx)
+        item[2] = idx
+        return item
+    end)
+    return reordered
+end
+
 local accept_edit_image_group = login_required(function(r)
     local redirect = get_post_dialog_redirect(r, "/image-group")
     if r.params.cancel then
@@ -2165,6 +2187,21 @@ local accept_edit_image_group = login_required(function(r)
             "Must have the same number of image_ids as new_orders"
         )
     end
+    local new_orders_num, new_orders_err = table.maperr(
+        new_orders,
+        function(item)
+            local number = tonumber(item)
+            if not number then
+                return nil, '"%s" is not a number'
+            end
+            return number
+        end
+    )
+    if not new_orders_num then
+        return Fm.serveError(400, new_orders_err)
+    end
+    local normalized_images_orders =
+        normalize_order_values(image_ids, new_orders_num)
     local SP = "reorder_images_in_group"
     Model:create_savepoint(SP)
     local existing_images, ei_err = Model:getImagesForGroup(ig_id)
@@ -2194,10 +2231,10 @@ local accept_edit_image_group = login_required(function(r)
         return Fm.serve500()
     end
     local untouched_image_ids_set = existing_image_ids
-    for i = 1, #image_ids do
-        local image_id = image_ids[i]
+    for i = 1, #normalized_images_orders do
+        local image_id, new_order = table.unpack(normalized_images_orders[i])
         local reorder_ok, reorder_err =
-            Model:setOrderForImageInGroup(ig_id, image_id, new_orders[i])
+            Model:setOrderForImageInGroup(ig_id, image_id, new_order)
         if not reorder_ok then
             Model:rollback(SP)
             Log(kLogInfo, reorder_err)
