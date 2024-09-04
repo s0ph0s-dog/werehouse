@@ -606,7 +606,7 @@ abbr {
 }
 
 #loader {
-  width: 100%;
+  width: 200%;
   height: 0.25em;
   background: repeating-linear-gradient(-45deg, CanvasText 0 15px,#0000 0 20px) left/200% 100%;
   animation: l3 8s infinite linear;
@@ -615,7 +615,7 @@ abbr {
   left: 0;
 }
 @keyframes l3 {
-    100% {background-position:right}
+    100% {transform: translateX(-50%)}
 }
 
 .sticky-top {

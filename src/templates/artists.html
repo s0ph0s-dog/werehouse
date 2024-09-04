@@ -57,7 +57,7 @@
 </form>
 <script>
 document.body.addEventListener('htmx:confirm', function(evt) {
-  if (evt.explicitOriginalTarget.matches("[data-confirm-nicely]")) {
+  if (evt.explicitOriginalTarget && evt.explicitOriginalTarget.matches("[data-confirm-nicely]")) {
     evt.preventDefault();
     const verb = evt.explicitOriginalTarget.value;
     const form = evt.target;

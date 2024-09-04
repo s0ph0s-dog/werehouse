@@ -1405,7 +1405,7 @@ local function pagination_data(
 end
 
 local render_queue = login_required(function(r, user_record)
-    local per_page = 100
+    local per_page = 50
     local queue_count, count_errmsg = Model:getQueueEntryCount()
     if not queue_count then
         Log(kLogDebug, count_errmsg)
@@ -1624,7 +1624,7 @@ local accept_queue_help = login_required(function(r)
 end)
 
 local render_images = login_required(function(r, user_record)
-    local per_page = 100
+    local per_page = 50
     local image_count, count_errmsg = Model:getImageEntryCount()
     if not image_count then
         Log(kLogDebug, count_errmsg)
@@ -1684,7 +1684,7 @@ local accept_images = login_required(function(r, _)
 end)
 
 local render_artists = login_required(function(r, user_record)
-    local per_page = 100
+    local per_page = 50
     local artist_count, count_errmsg = Model:getArtistCount()
     if not artist_count then
         Log(kLogDebug, count_errmsg)
@@ -1972,7 +1972,7 @@ local accept_add_artist = login_required(function(r)
 end)
 
 local render_image_groups = login_required(function(r, user_record)
-    local per_page = 100
+    local per_page = 50
     local ig_count, count_errmsg = Model:getImageGroupCount()
     if not ig_count then
         Log(kLogDebug, tostring(count_errmsg))
@@ -2330,7 +2330,7 @@ local accept_telegram_link = login_required(function(r, user_record)
 end)
 
 local render_tags = login_required(function(r, user_record)
-    local per_page = 100
+    local per_page = 50
     local tag_count, tagcount_errmsg = Model:getTagCount()
     if not tag_count then
         Log(kLogDebug, tostring(tagcount_errmsg))
@@ -2589,7 +2589,7 @@ local accept_change_password = login_required(function(r, user_record)
 end)
 
 local render_tag_rules = login_required(function(r, user_record)
-    local per_page = 100
+    local per_page = 50
     local tag_rule_count, trc_errmsg = Model:getTagRuleCount()
     if not tag_rule_count then
         Log(kLogDebug, tostring(trc_errmsg))
