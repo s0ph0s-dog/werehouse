@@ -2716,8 +2716,9 @@ local render_add_tag_rule = login_required(function(r)
 end)
 
 local accept_add_tag_rule = login_required(function(r)
-    if r.params.cancel then
-        return Fm.serveRedirect("/tag-rule", 302)
+    local redirect = get_post_dialog_redirect(r, "/tag-rule")
+    if r.params.cancel or r.params.ok then
+        return redirect
     end
     if not r.params.incoming_name then
         return Fm.serveError(400, "Incoming tag name is required")
@@ -2737,7 +2738,19 @@ local accept_add_tag_rule = login_required(function(r)
         Log(kLogInfo, tostring(err))
         return Fm.serve500(err)
     end
-    return Fm.serveRedirect("/tag-rule/" .. tag_rule_id, 302)
+    local changes, change_err = Model:applyIncomingTagsNowMatchedByTagRules()
+    assert((changes == nil) ~= (change_err == nil))
+    if not changes then
+        Log(kLogInfo, change_err)
+        return Fm.serve500()
+    end
+    if #changes < 1 then
+        return redirect
+    end
+    local params = { changes = changes }
+    add_htmx_param(r, params)
+    add_form_path(r, params)
+    return Fm.serveContent("tag_rule_changelist", params)
 end)
 
 local function reorganize_tags(kind, r)

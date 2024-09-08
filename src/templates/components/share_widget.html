@@ -1,3 +1,10 @@
+{% if (#share_ping_lists + #telegram_accounts) < 1 then %}
+<p>
+  You have no share options configured yet. If you want to share to other
+  services, go to <a href="/account">your Account page</a> and link an account
+  or add a Share Option.
+</p>
+{% else %}
 <form method="POST" hx-post="" hx-target="dialog">
   <span class="buttons">
     <select name="share_option">
@@ -11,6 +18,7 @@
     <input type="submit" name="share" value="Share…" />
   </span>
 </form>
+{% end %}
 {% if share_records and #share_records > 0 then %}
 <ul>
   {% for i = 1, #share_records do local sr = share_records[i] %}

@@ -49,7 +49,14 @@
       hx-post="{%& form_path %}"
       hx-swap="none"
     />
-    <input type="submit" name="add" value="Add" />
+    <input
+      type="submit"
+      name="add"
+      value="Add"
+      hx-post="{%& form_path %}"
+      hx-target="dialog"
+      hx-validate="true"
+    />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Add Tag Rule", hx = hx}) %}

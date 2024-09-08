@@ -559,7 +559,8 @@ local queries = {
             FROM artists INNER JOIN image_artists
             ON image_artists.artist_id = artists.artist_id
             WHERE image_artists.image_id = ?;]],
-        get_tag_id_by_name = [[SELECT tag_id FROM tags WHERE name = ?;]],
+        get_tag_id_by_name = [[SELECT tag_id FROM tags
+            WHERE lower(name) = lower(?) COLLATE NOCASE;]],
         get_tags_for_image = [[SELECT tags.tag_id, tags.name, tag_counts.count
             FROM tags INNER JOIN image_tags
             ON image_tags.tag_id = tags.tag_id
@@ -621,7 +622,8 @@ local queries = {
             WHERE artist_id = ?;]],
         get_tag_by_id = [[SELECT tag_id, name, description
             FROM tags WHERE tag_id = ?;]],
-        get_artist_id_by_name = [[SELECT artist_id FROM artists WHERE name = ?;]],
+        get_artist_id_by_name = [[SELECT artist_id FROM artists
+            WHERE lower(name) = lower(?) COLLATE NOCASE;]],
         get_handles_for_artist = [[SELECT handle_id, handle, domain, profile_url
             FROM artist_handles
             WHERE artist_id = ?;]],
