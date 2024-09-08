@@ -455,10 +455,10 @@ function TestScraperPipeline:testValidTwitterLinks()
         profile_url = "https://twitter.com/JackieTheYeen",
     }
     local expectedImage = table.map({
-        "https://pbs.twimg.com/media/GK_fDarXQAE6yBj.jpg",
-        "https://pbs.twimg.com/media/GK_fDaaXsAATM_X.jpg",
-        "https://pbs.twimg.com/media/GK_fDaUWYAABb40.jpg",
-        "https://pbs.twimg.com/media/GK_fDaUXsAAGJng.jpg",
+        "https://pbs.twimg.com/media/GK_fDarXQAE6yBj?format=jpg&name=orig",
+        "https://pbs.twimg.com/media/GK_fDaaXsAATM_X?format=jpg&name=orig",
+        "https://pbs.twimg.com/media/GK_fDaUWYAABb40?format=jpg&name=orig",
+        "https://pbs.twimg.com/media/GK_fDaUXsAAGJng?format=jpg&name=orig",
     }, function(item)
         return {
             kind = DbUtil.k.ImageKind.Image,
@@ -518,7 +518,7 @@ function TestScraperPipeline:testValidTwitterLinks()
             height = 1200,
             kind = DbUtil.k.ImageKind.Image,
             rating = DbUtil.k.Rating.General,
-            media_url = "https://pbs.twimg.com/media/GR8GzykbkAACRqi.jpg",
+            media_url = "https://pbs.twimg.com/media/GR8GzykbkAACRqi?format=jpg&name=orig",
             this_source = "https://twitter.com/JackieTheYeen/status/1810173812761383143",
             width = 1200,
         },

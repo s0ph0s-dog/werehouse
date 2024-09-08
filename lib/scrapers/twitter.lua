@@ -75,12 +75,26 @@ local function process_embeds(json)
         display_name = json.author.name,
     }
     return table.maperr(json.media.all, function(twitter_embed)
+        local fullsize_media_url
+        if twitter_embed.type == "photo" then
+            local parts = ParseUrl(twitter_embed.url)
+            parts.path = parts.path:gsub("%.%a%a%a%a?$", "")
+            parts.params = {
+                -- If the original upload is a PNG, this is lossy. But if the original upload is a JPEG, specifying PNG would make a PNG out of a JPEG and prevent the image replacement code from replacing it with a proper PNG if that's found later.
+                { "format", "jpg" },
+                -- `orig` is the original size of the image.
+                { "name", "orig" },
+            }
+            fullsize_media_url = EncodeUrl(parts)
+        else
+            fullsize_media_url = twitter_embed.url
+        end
         ---@type ScrapedSourceData
         local result = {
             kind = TYPE_TO_KIND_MAP[twitter_embed.type],
             authors = { author },
             this_source = json.url,
-            media_url = twitter_embed.url,
+            media_url = fullsize_media_url,
             height = twitter_embed.height,
             width = twitter_embed.width,
             canonical_domain = "twitter.com",
