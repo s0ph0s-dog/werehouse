@@ -201,7 +201,7 @@ local function process_uri(uri)
     end
     local artist, errmsg2 = get_artist_profile(json.uri, handle_or_did, did)
     if not artist then
-        return nil, PipelineErrorPermanent(errmsg2)
+        return nil, errmsg2
     end
     return table.maperr(images, function(image)
         return process_image(image, did, uri, artist)
