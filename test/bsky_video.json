@@ -1,0 +1,22 @@
+{
+  "uri": "at://did:plc:2dwd4zvjtr3fob2pv2pwuf3t/app.bsky.feed.post/3l3vpkeq4lr2j",
+  "cid": "bafyreifgrseu3l3qaw6sywwx6t5ew43zlhogyry5htc3cxie4icygtnore",
+  "value": {
+    "text": "test",
+    "$type": "app.bsky.feed.post",
+    "embed": {
+      "$type": "app.bsky.embed.video",
+      "video": {
+        "$type": "blob",
+        "ref": {
+          "$link": "bafkreiacrbck4lycvn6hyzwuskm5dfzago3sur7nwcpstaqx7igrggzadm"
+        },
+        "mimeType": "video/mp4",
+        "size": 539263
+      },
+      "aspectRatio": { "width": 1920, "height": 1080 }
+    },
+    "langs": ["en"],
+    "createdAt": "2024-09-11T19:55:53.436Z"
+  }
+}

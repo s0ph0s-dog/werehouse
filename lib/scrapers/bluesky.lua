@@ -44,17 +44,27 @@ local function extract_image_embeds(post_data)
         or (
             embed_type ~= "app.bsky.embed.images"
             and embed_type ~= "app.bsky.embed.recordWithMedia"
+            and embed_type ~= "app.bsky.embed.video"
         )
     then
-        Log(kLogVerbose, "Post embed was not an image.")
+        Log(kLogVerbose, "Post embed was not an image or video.")
         return nil
     end
-    local embed_images = post_data.value.embed.images
+    local embed_media = post_data.value.embed.images
+        or post_data.value.embed.video
         or post_data.value.embed.media.images
-    if not embed_images then
+        or post_data.value.embed.media.video
+    if not embed_media then
         return nil
     end
-    return embed_images
+    if #embed_media < 1 then
+        local ar = post_data.value.embed.aspectRatio
+        if ar then
+            embed_media.aspectRatio = ar
+        end
+        return { embed_media }
+    end
+    return embed_media
 end
 
 local function make_image_uri(handle_or_did, image_ref)
@@ -135,13 +145,6 @@ local function process_image(image, did, uri, artist)
     if not image then
         return nil, PipelineErrorPermanent("image was null")
     end
-    if not image.image then
-        return nil, PipelineErrorPermanent("Image.image was null")
-    end
-    if not image.image.ref then
-        return nil, PipelineErrorPermanent("Image.image.ref was null")
-    end
-    local image_uri = make_image_uri(did, image.image.ref["$link"])
     local aspectRatio = image.aspectRatio
     if not aspectRatio then
         -- This is apparently not required. Assume 0 for both. The later stages of the pipeline will download the image and update the sizes.
@@ -150,19 +153,63 @@ local function process_image(image, did, uri, artist)
             height = 0,
         }
     end
-    ---@type ScrapedSourceData
-    local data = {
-        kind = DbUtil.k.ImageKind.Image,
-        rating = DbUtil.k.Rating.General,
-        media_url = image_uri,
-        mime_type = image.image.mimeType,
-        width = aspectRatio.width,
-        height = aspectRatio.height,
-        canonical_domain = CANONICAL_DOMAIN,
-        this_source = uri,
-        authors = { artist },
-    }
-    return data
+    if image.mimeType == "video/mp4" then
+        if not image.ref then
+            return nil, PipelineErrorPermanent("Video.ref was null")
+        end
+        local video_uri = make_image_uri(did, image.ref["$link"])
+        ---@type ScrapedSourceData
+        local data = {
+            kind = DbUtil.k.ImageKind.Video,
+            rating = DbUtil.k.Rating.General,
+            media_url = video_uri,
+            mime_type = image.mimeType,
+            width = aspectRatio.width,
+            height = aspectRatio.height,
+            canonical_domain = CANONICAL_DOMAIN,
+            this_source = uri,
+            authors = { artist },
+            thumbnails = {
+                {
+                    raw_uri = EncodeUrl {
+                        scheme = "https",
+                        host = "video.bsky.app",
+                        path = "/watch/%s/%s/thumbnail.jpg"
+                            % {
+                                did,
+                                image.ref["$link"],
+                            },
+                    },
+                    mime_type = "image/jpeg",
+                    width = 0,
+                    height = 0,
+                    scale = 1,
+                },
+            },
+        }
+        return data
+    else
+        if not image.image then
+            return nil, PipelineErrorPermanent("Image.image was null")
+        end
+        if not image.image.ref then
+            return nil, PipelineErrorPermanent("Image.image.ref was null")
+        end
+        local image_uri = make_image_uri(did, image.image.ref["$link"])
+        ---@type ScrapedSourceData
+        local data = {
+            kind = DbUtil.k.ImageKind.Image,
+            rating = DbUtil.k.Rating.General,
+            media_url = image_uri,
+            mime_type = image.image.mimeType,
+            width = aspectRatio.width,
+            height = aspectRatio.height,
+            canonical_domain = CANONICAL_DOMAIN,
+            this_source = uri,
+            authors = { artist },
+        }
+        return data
+    end
 end
 
 ---@type ScraperProcess
@@ -187,7 +234,7 @@ local function process_uri(uri)
     end
     local images = extract_image_embeds(json)
     if not images then
-        return nil, PipelineErrorPermanent("Post had no images")
+        return nil, PipelineErrorPermanent("Post had no images or video")
     end
     if not json.uri or type(json.uri) ~= "string" then
         return nil,

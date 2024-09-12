@@ -381,6 +381,70 @@ function TestScraperPipeline:testBskyLinkWithNoAspectRatio()
     )
 end
 
+function TestScraperPipeline:testBskyVideo()
+    local input =
+        "https://bsky.app/profile/did:plc:2dwd4zvjtr3fob2pv2pwuf3t/post/3l3vpkeq4lr2j"
+    local mocks = {
+        fetch_mock_head_html_200(input),
+        {
+            whenCalledWith = "https://bsky.social/xrpc/com.atproto.repo.getRecord?repo=did%3Aplc%3A2dwd4zvjtr3fob2pv2pwuf3t&collection=app.bsky.feed.post&rkey=3l3vpkeq4lr2j",
+            thenReturn = { 200, {}, Slurp("./test/bsky_video.json") },
+        },
+        {
+            whenCalledWith = "https://bsky.social/xrpc/com.atproto.repo.describeRepo?repo=did%3Aplc%3A2dwd4zvjtr3fob2pv2pwuf3t",
+            thenReturn = {
+                200,
+                {},
+                [[{"handle":"tabuley.bsky.social","did":"did:plc:2dwd4zvjtr3fob2pv2pwuf3t","didDoc":{"@context":["https://www.w3.org/ns/did/v1","https://w3id.org/security/multikey/v1","https://w3id.org/security/suites/secp256k1-2019/v1"],"id":"did:plc:2dwd4zvjtr3fob2pv2pwuf3t","alsoKnownAs":["at://tabuley.bsky.social"],"verificationMethod":[{"id":"did:plc:2dwd4zvjtr3fob2pv2pwuf3t#atproto","type":"Multikey","controller":"did:plc:2dwd4zvjtr3fob2pv2pwuf3t","publicKeyMultibase":"zQ3shUcnYPgwpmb1q7CChik9q3BxehfCfMXRxpwNZ1vJrjKM6"}],"service":[{"id":"#atproto_pds","type":"AtprotoPersonalDataServer","serviceEndpoint":"https://morel.us-east.host.bsky.network"}]},"collections":["app.bsky.actor.profile","app.bsky.feed.generator","app.bsky.feed.like","app.bsky.feed.post","app.bsky.feed.repost","app.bsky.graph.follow","chat.bsky.actor.declaration"],"handleIsCorrect":true}]],
+            },
+        },
+        {
+            whenCalledWith = "https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=did%3Aplc%3A2dwd4zvjtr3fob2pv2pwuf3t&collection=app.bsky.actor.profile&limit=1",
+            thenReturn = {
+                200,
+                {},
+                [[{"records":[{"uri":"at://did:plc:2dwd4zvjtr3fob2pv2pwuf3t/app.bsky.actor.profile/self","cid":"bafyreifgwnrtrf2j5gp6uuxykucjlxgtdgcl2w232dww75dj4pk6rewcf4","value":{"$type":"app.bsky.actor.profile","avatar":{"$type":"blob","ref":{"$link":"bafkreieql73xf3bolqlyfbmi33qu73j6nkyhal6xkdlxxog3tm37z34e2i"},"mimeType":"image/jpeg","size":57702},"banner":{"$type":"blob","ref":{"$link":"bafkreifkresonse5pt4xkzl47lidlgh7eic2mvh5rz6n4p7ot2dyud6jnm"},"mimeType":"image/jpeg","size":112597},"description":"Tabuley\n","displayName":"Tabuley "}}],"cursor":"self"}]],
+            },
+        },
+    }
+    local expected = {
+        {
+            authors = {
+                {
+                    display_name = "Tabuley ",
+                    handle = "tabuley.bsky.social",
+                    profile_url = "https://bsky.app/profile/did:plc:2dwd4zvjtr3fob2pv2pwuf3t",
+                },
+            },
+            canonical_domain = "bsky.app",
+            height = 1080,
+            mime_type = "video/mp4",
+            this_source = "https://bsky.app/profile/did:plc:2dwd4zvjtr3fob2pv2pwuf3t/post/3l3vpkeq4lr2j",
+            media_url = "https://bsky.social/xrpc/com.atproto.sync.getBlob?did=did%3Aplc%3A2dwd4zvjtr3fob2pv2pwuf3t&cid=bafkreiacrbck4lycvn6hyzwuskm5dfzago3sur7nwcpstaqx7igrggzadm",
+            width = 1920,
+            kind = DbUtil.k.ImageKind.Video,
+            rating = DbUtil.k.Rating.General,
+            thumbnails = {
+                {
+                    height = 0,
+                    mime_type = "image/jpeg",
+                    raw_uri = "https://video.bsky.app/watch/did:plc:2dwd4zvjtr3fob2pv2pwuf3t/bafkreiacrbck4lycvn6hyzwuskm5dfzago3sur7nwcpstaqx7igrggzadm/thumbnail.jpg",
+                    scale = 1,
+                    width = 0,
+                },
+            },
+        },
+    }
+    local tests = {
+        { input = input, expected = { expected, nil } },
+    }
+    process_entry_framework_generic(
+        pipeline.scrapers[1].process_uri,
+        tests,
+        mocks
+    )
+end
+
 function TestScraperPipeline:testValidTwitterLinks()
     local tweetTrackingParams =
         "https://twitter.com/thatFunkybun/status/1778885919572979806?s=19"
