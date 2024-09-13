@@ -3,6 +3,7 @@ local TWITTER_URI_EXP = assert(
         [[^(https?://)?(twitter\.com|vxtwitter\.com|fxtwitter\.com|x\.com|fixupx\.com|fixvx\.com|nitter\.privacydev\.net|twittervx\.com)/([A-z0-9_]+/)?status/([A-z0-9]+)]]
     )
 )
+local SPLITEXT_EXP = assert(re.compile([[(.+)\.([a-z0-9]{3})$]]))
 local TYPE_TO_KIND_MAP = {
     photo = DbUtil.k.ImageKind.Image,
     video = DbUtil.k.ImageKind.Video,
@@ -78,14 +79,18 @@ local function process_embeds(json)
         local fullsize_media_url
         if twitter_embed.type == "photo" then
             local parts = ParseUrl(twitter_embed.url)
-            parts.path = parts.path:gsub("%.%a%a%a%a?$", "")
-            parts.params = {
-                -- If the original upload is a PNG, this is lossy. But if the original upload is a JPEG, specifying PNG would make a PNG out of a JPEG and prevent the image replacement code from replacing it with a proper PNG if that's found later.
-                { "format", "jpg" },
-                -- `orig` is the original size of the image.
-                { "name", "orig" },
-            }
-            fullsize_media_url = EncodeUrl(parts)
+            local m, path_prefix, ext = SPLITEXT_EXP:search(parts.path)
+            if not m then
+                fullsize_media_url = twitter_embed.url
+            else
+                parts.path = path_prefix
+                parts.params = {
+                    { "format", ext },
+                    -- `orig` is the original size of the image.
+                    { "name", "orig" },
+                }
+                fullsize_media_url = EncodeUrl(parts)
+            end
         else
             fullsize_media_url = twitter_embed.url
         end
