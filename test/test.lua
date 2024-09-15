@@ -2329,6 +2329,141 @@ function TestScraperPipeline:testInkbunny()
     )
 end
 
+function TestScraperPipeline:testTelegramWorks()
+    local input_image = "https://t.me/outsidewolves/1004"
+    local input_album = "https://t.me/momamo_art/994"
+    local input_video = "https://t.me/techcrimes/12101"
+    local author_momamo = {
+        display_name = "Momamo Art (NSFW)",
+        handle = "momamo_art",
+        profile_url = "https://t.me/momamo_art",
+    }
+    local tests = {
+        {
+            input = input_image,
+            expected = {
+                {
+                    {
+                        authors = {
+                            {
+                                display_name = "outsidewolves",
+                                handle = "outsidewolves",
+                                profile_url = "https://t.me/outsidewolves",
+                            },
+                        },
+                        canonical_domain = "t.me",
+                        height = 0,
+                        kind = 1,
+                        media_url = "https://cdn1.cdn-telegram.org/file/fndwIL00yvFkvucPuen7mzFQO0S4dyjh1BNt434WdMF-17u3dWNWHropOTSvpRIzu7d3Q-pOGjRehEmUGerPmVIbqLrfKaEoR0wlqmfCg-31EuNwLD6l_0Jfa58tX7h9S7mAH3yczA5tlAaEcRuGCvxCHDRdfYb6kXSpqQoKBF9Dn9aMfZfEOnXtT-SzeA1lEmpy3GbYi15ZSlxyWYXr0OpFFjg_cnCN2YDK9KrlHE1fZIwo4DiU3otcUlFQiAmvlt-awJRaapdb8imls4BEnH1wgoOFyVaTuXGsE26MGo6TXyBSXyKNP6daaKyiKfLCfauiU6qc07tlxvPmI9f9iA.jpg",
+                        mime_type = "image/jpeg",
+                        this_source = input_image,
+                        width = 0,
+                    },
+                },
+                nil,
+            },
+        },
+        {
+            input = input_album,
+            expected = {
+                table.map({
+                    {
+                        "https://t.me/momamo_art/992?single",
+                        "https://cdn1.cdn-telegram.org/file/f1N8klbt7tGahr9jlt9ALDYL0IY0QEhk_rrDzKUwzD8uJ3cTUmtpP5hBMWS5X6Rz4FDPSiz1hZcg8SgdzeqS3Vf1N-PTjMpco5qGcxmqm7BqbBjhR_yHlJga32kcr3y3pAb13wjsDUcjec_Lmn6y_xa0pFrcWSN-rFK5AgwzFY-_IHg1AtNgI7GahgyW7yX8VwttvorjcAlP8sJZmM80YXS4ibfV89TCGP-J35g7BmGLyGD58NOPaqqgQ0JCeT4dluERwUEOFHkbCBjgTLXXkOOkphaGvonMBvSyfYYS6_0f7_QZ_pdgAd2sBAn63adffVthMGZySiKebKvQv2ZuBQ.jpg",
+                    },
+                    {
+                        "https://t.me/momamo_art/993?single",
+                        "https://cdn1.cdn-telegram.org/file/KXTv6hLTSt5r8FLyYpkQUcaC0456UEoGoZcIZCQg-AubuJFlnC8VJxcsWtLnRe84nAfhfCD40veh8cknoGyRaLbl8YlLX0SVuhq_eNC4nqFBawFDoUR_bpGRmbK8Hb1fw_RxXUR3YK5gi273ejMNmTFxGBMB3XAYlNEzCm0AgdQneh-1vqZwXWOG0SkCa9p3mcJxPpAylpJaLFiawOFCgips3gqV70pDfJkODeDLk_ClBU6vYRT14VWCv6e--IMwY63KtWPzHTFJcXmbvpGjSK9EgT5alqoal0-UipEIb-x49Sis9och_gCssPrfh9bsXfeReg6i_ypHxz-PE0uuUA.jpg",
+                    },
+                    {
+                        "https://t.me/momamo_art/994?single",
+                        "https://cdn1.cdn-telegram.org/file/phHSckqwc_dI0-DzArJPZ2P8UA99-37xAaCFciUavkBF6wbKFMBfgHkaCbGqjbvOJiYg5WmuhCRkunVSGBvw3-GsHWEj0mqnlxhwDz2i0nTTPkDgxz4lSDtVNV-h2QKQtnrkREt03mMXUWumLtItpRDcOOi21E6BE0CGH-_bVz7X64E7HthCZMyqhiZUOlAWM_dwH0f1Ob-UTkpAl9ATlaJvmqhOOlMkP6Gd3Iz-iSoeY9UXD-BbXRtcwapssMs5mLJE8qIsip-51KFUTPnr7ZXiWTXoFPxdccUPr460VujqqzFh4RdMIztnH7Eg_hcLSzuuItG1nM75fFvP9G9FeA.jpg",
+                    },
+                    {
+                        "https://t.me/momamo_art/995?single",
+                        "https://cdn1.cdn-telegram.org/file/fvUFJnryegGASNL4zuMpPzEf5bCqRV-VM2cdvF3aPq6n_5v9-sRZJc5-ZfYkb0NUXTPX2ygN2wmWVdtDx8AWsqDqsmsLejBZJ2JvkX7fB6BBhQJi4M7rb8kB8yUTILSGv8Z0KDrIh9AjiSvQTFuiRT3Z1dEGgyOCJRkxnAwUj7o6fYhCaNoS69nFWVbNFQ6bIKh_7G1WuhFMhPXjMIGBSaGMgNVM0dxXo-Mtaaru-5mQ3ZDvZZuq6jjxo11N2ckkg9G-JR1CO1YnqnOd7VusOkWZwQjvejnsV3-RDeHZ03VSwdpTcDP9lvt88aP86UUPMs7RNuRWOtDjx94xGE2C8w.jpg",
+                    },
+                    {
+                        "https://t.me/momamo_art/996?single",
+                        "https://cdn1.cdn-telegram.org/file/I3db6T25Nv_X-gy5zOwDsDW8s7i1cNUmFV17HKK7NpAEE-E1eysMwwTKYEJHFB_owu7FzwxkZPA5_3LHCvhtZHCWN44aMZtfHXjTyJsTLrZSiW0p1tXEvZP81np3h_4KzLlueSzioIDPBgFnLrBgb9qrGBofTYSht3GijpMSRuyATMS2_-30hlbTkiQY-LL5IZIVICI06TJfxuI7BiL0_DJ1iF2jRuwv564F0n6RTIwXVF8alaUPcojdDaG8hL3hLxEXHl1ePwnjDut69CvvmC8LN83RBNFi0qaY1zMVTWmiqt43H5R6COSSNzXoaf-JVyiQ62Ohi4r5o17pMhLiFQ.jpg",
+                    },
+                    {
+                        "https://t.me/momamo_art/997?single",
+                        "https://cdn1.cdn-telegram.org/file/VOMQ3xKMkqB1etIeOmiQ9-1dt-85ZWci7iUwwPYLpiYTdPTibkebfNUFXj9YH_umEfo7ZXW2B0uXSeI7kg8JDunst6WJjKVrbhCaVKqsAV1OgFopGEtph6lX_NUEHeTjEh1lnWs5dWApsfEa3hdrVd2CkMntGkwKF5ODY7DZK6lMCi1pI_fKQtspU-uGih0FytPS0aR_ki-IBlETIcs1CBPUpgamAgK1henTPtxADX6OabzSZfShnFK1LFc4tee6asEqv0gwspjGGuq9_nXlio-ygoDiwUZruxC09ZJ-UEZzkcMz_MZS5UJs6C89LXoePunJBhGpW7DysrovVj1Xfw.jpg",
+                    },
+                }, function(source)
+                    return {
+                        authors = { author_momamo },
+                        canonical_domain = "t.me",
+                        kind = DbUtil.k.ImageKind.Image,
+                        media_url = source[2],
+                        mime_type = "image/jpeg",
+                        this_source = source[1],
+                        height = 0,
+                        width = 0,
+                    }
+                end),
+                nil,
+            },
+        },
+        {
+            input = input_video,
+            expected = {
+                {
+                    {
+                        authors = {
+                            {
+                                display_name = "Tech Crimes",
+                                handle = "techcrimes",
+                                profile_url = "https://t.me/techcrimes",
+                            },
+                        },
+                        canonical_domain = "t.me",
+                        kind = DbUtil.k.ImageKind.Video,
+                        media_url = "https://cdn4.cdn-telegram.org/file/119b6ffe41.mp4?token=SZiDkxWR9t4kKajYsO6xAuND9AG-ApHANn30pHwoUqmRgV4Pm7remJGimdhblo6b1B0yaNp3ZckXeSbkBR7MAnav0bpk2ujZbfwsLEd-oZwOY2x7OXUxwBmP_5uHzsr07dBdSmGurus29SZGcTwjGs2kWxuVKC6GvE1IOQzt6DbJbSHp8_bA1qyeQAgTk1Jm7tIJk-kU10fvVFEGj5PjeDhsk2ycyLoiKLkGl2WrqiJpF3DG7fOhtuCVyIBdZaZ3-cpeDrodeDWDnldbtdr2H1EQpmkaCjWt3d0vqBflaJy1AtqVNj44zmX5-dKfHSDiwVL2HYBHiksuwoYdUnD6Zg",
+                        mime_type = "video/mp4",
+                        this_source = input_video,
+                        height = 0,
+                        width = 0,
+                        thumbnails = {
+                            {
+                                height = 0,
+                                mime_type = "image/jpeg",
+                                raw_uri = "https://cdn4.cdn-telegram.org/file/QutViAtFhi80wsK-a-FMxsGYiNBQ5SfuFftBKbndtRETozpDsNchJZY9B_A4T62G9LdvO-12_Db_h36M8bUAwQEIEcTEkIgHk7hlBep8j6duVOGya7Xu8lbRZ3ZtUy8Ts59waE8GnteFl2nYU3K7nK-EbLjfa_URPaHlqKkRG7-mGZl3KBHjPj3s9dQtsUTQ36CvAR0at89zuyCc9_tkp1b6sV5Ux44lDKcIo8iFPqFiGd2ij7rOsFdoe1bRsa8Wajza8-o9szR0589v9xhgNKzY5GDKR0WVIOX7vNCvBHziVWB0kU7a3jQ_Jd4rExd7-4LpmNY9vrhVvmeqLDJQTw",
+                                scale = 1,
+                                width = 0,
+                            },
+                        },
+                    },
+                },
+                nil,
+            },
+        },
+    }
+    local mocks = {
+        fetch_mock_head_html_200(input_image),
+        fetch_mock_head_html_200(input_album),
+        fetch_mock_head_html_200(input_video),
+        {
+            whenCalledWith = "https://t.me/outsidewolves/1004?embed=1&mode=tme",
+            thenReturn = { 200, {}, Slurp("test/telegram_image.html") },
+        },
+        {
+            whenCalledWith = "https://t.me/momamo_art/994?embed=1&mode=tme",
+            thenReturn = { 200, {}, Slurp("test/telegram_album.html") },
+        },
+        {
+            whenCalledWith = "https://t.me/techcrimes/12101?embed=1&mode=tme",
+            thenReturn = { 200, {}, Slurp("test/telegram_video.html") },
+        },
+    }
+    process_entry_framework_generic(
+        pipeline.scrapers[11].process_uri,
+        tests,
+        mocks
+    )
+end
+
 --[[
 TestMultipart = {}
 function TestMultipart:testEncode()

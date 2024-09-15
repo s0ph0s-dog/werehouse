@@ -3,16 +3,16 @@ record.mime_type == "image/gif") then %}
 <img
   src="/image-file/{%& record.file %}"
   class="height-limit"
-  width="{%& record.width %}"
-  height="{%& record.height %}"
+  width="{%& record.width == 0 and "100%" or record.width %}"
+  height="{%& record.height == 0 and "100%" or record.height %}"
 />
 {% elseif record.kind == kind.Video or (record.kind == kind.Animation and
 record.mime_type == "video/mp4") then %}
 <video
   {% if record.kind == kind.Video then %}controls{% else %}loop autoplay{% end %}
   class="height-limit"
-  width="{%& record.width %}"
-  height="{%& record.height %}"
+  width="{%& record.width == 0 and "100%" or record.width %}"
+  height="{%& record.height ==0 and "100%" or record.height %}"
   src="/image-file/{%& record.file %}"
   data-video-loop-toggled
 >

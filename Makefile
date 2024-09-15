@@ -25,6 +25,7 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/scrapers/mastodon.lua \
 	lib/scrapers/furaffinity.lua \
 	lib/scrapers/weasyl.lua \
+	lib/scrapers/telegram.lua \
 	lib/scrapers/e621.lua \
 	lib/scrapers/test.lua \
 	lib/network_utils.lua \

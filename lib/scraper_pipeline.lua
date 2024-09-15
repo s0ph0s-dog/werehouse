@@ -18,6 +18,7 @@ local scrapers = {
     require_only("scrapers.mastodon"),
     require_only("scrapers.deviantart"),
     require_only("scrapers.weasyl"),
+    require_only("scrapers.telegram"),
 }
 
 ---Given a queue entry, make any file reads necessary to convert the data into an archive task for the final stage of the pipeline.
