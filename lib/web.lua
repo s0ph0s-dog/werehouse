@@ -2609,6 +2609,10 @@ local render_tag_rules = login_required(function(r, user_record)
         pagination_data(cur_page, tag_rule_count, per_page, #tag_rule_records)
     local error = r.session.error
     r.session.error = nil
+    if r.session.retarget_to then
+        r.headers["HX-Retarget"] = r.session.retarget_to
+        r.session.retarget_to = nil
+    end
     set_after_dialog_action(r)
     return Fm.serveContent("tag_rules", {
         user = user_record,
@@ -2745,6 +2749,7 @@ local accept_add_tag_rule = login_required(function(r)
         return Fm.serve500()
     end
     if #changes < 1 then
+        r.session.retarget_to = "body"
         return redirect
     end
     local params = { changes = changes }
