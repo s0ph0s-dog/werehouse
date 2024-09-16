@@ -323,7 +323,7 @@ function api.get_file(file_id) -- https://core.telegram.org/bots/api#getfile
     return success, res
 end
 
-function api.download_file(file_id)
+function api.get_file_url(file_id)
     local file, err = api.get_file(file_id)
     if not file then
         return nil, err
@@ -337,6 +337,11 @@ function api.download_file(file_id)
             api.token,
             file_path,
         }
+    return file_url
+end
+
+function api.download_file(file_id)
+    local file_url = api.get_file_url(file_id)
     local status, headers, body = Fetch(file_url)
     if status ~= 200 then
         return nil, headers

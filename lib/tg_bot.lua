@@ -125,6 +125,20 @@ local function update_queue_with_tg_ids(result, tg_err, model, queue_entry)
     end
 end
 
+local function update_queue_with_tg_source(model, queue_entry, message)
+    local fo = message.forward_origin
+    if fo and fo.type == "channel" then
+        if fo.chat.username then
+            local source_link = "https://t.me/%s/%d?single"
+                % {
+                    fo.chat.username,
+                    fo.message_id,
+                }
+            model:updateQueueItemTelegramLink(queue_entry.qid, source_link)
+        end
+    end
+end
+
 local function message_is_saveable(message)
     if message.text or message.caption then
         return true
@@ -246,6 +260,7 @@ local function handle_enqueue(message)
         local result, tg_err =
             api.reply_to_message(message, "Added this to the queue!")
         update_queue_with_tg_ids(result, tg_err, model, queue_entry)
+        update_queue_with_tg_source(model, queue_entry, message)
         return
     end
     api.reply_to_message(

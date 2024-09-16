@@ -7,19 +7,20 @@ end
 
 --- All of the available scrapers
 ---@type Scraper[]
-local scrapers = {
-    require_only("scrapers.bluesky"),
-    require_only("scrapers.twitter"),
-    require_only("scrapers.furaffinity"),
-    require_only("scrapers.e621"),
-    require_only("scrapers.cohost"),
-    require_only("scrapers.itakuee"),
-    require_only("scrapers.inkbunny"),
-    require_only("scrapers.mastodon"),
-    require_only("scrapers.deviantart"),
-    require_only("scrapers.weasyl"),
-    require_only("scrapers.telegram"),
+local scrapers_by_name = {
+    bluesky = require_only("scrapers.bluesky"),
+    twitter = require_only("scrapers.twitter"),
+    furaffinity = require_only("scrapers.furaffinity"),
+    e621 = require_only("scrapers.e621"),
+    cohost = require_only("scrapers.cohost"),
+    itakuee = require_only("scrapers.itakuee"),
+    inkbunny = require_only("scrapers.inkbunny"),
+    mastodon = require_only("scrapers.mastodon"),
+    deviantart = require_only("scrapers.deviantart"),
+    weasyl = require_only("scrapers.weasyl"),
+    telegram = require_only("scrapers.telegram"),
 }
+local scrapers = table.values(scrapers_by_name)
 
 ---Given a queue entry, make any file reads necessary to convert the data into an archive task for the final stage of the pipeline.
 ---@param queue_entry ActiveQueueEntry The queue entry to create an archive task for.
@@ -183,6 +184,12 @@ local function p_scrape(model, queue_entry, task)
                 qid = task.qid,
                 sources = sources,
             }
+        elseif queue_entry.tg_source_link then
+            task = {
+                type = PipelineTaskType.Scrape,
+                qid = task.qid,
+                sources = { queue_entry.tg_source_link },
+            }
         else
             return nil, PipelineErrorPermanent(ris_err)
         end
@@ -242,34 +249,51 @@ local function p_fetch(model, queue_entry, task)
         return task
     end
     ---@cast task PipelineTaskFetch
-    for i = 1, #task.scraped do
-        local scraped_data_for_source = task.scraped[i]
-        for j = 1, #scraped_data_for_source do
-            local scraped_data = scraped_data_for_source[j]
-            ---@cast scraped_data FetchedSourceData
-            local media_data, err_or_headers =
-                Nu.FetchMedia(scraped_data.media_url)
-            if not media_data then
-                return nil, err_or_headers
-            end
-            local mime_type = err_or_headers["Content-Type"]
-                or Nu.guess_mime_from_url(scraped_data.media_url)
-                or "image/jpeg"
-            scraped_data.media_data = media_data
-            scraped_data.mime_type = mime_type
-            local thumbnails = scraped_data.thumbnails or {}
-            for k = 1, #thumbnails do
-                local thumbnail = thumbnails[k]
-                local image_data, thumb_err_or_headers =
-                    Nu.FetchMedia(thumbnail.raw_uri)
-                if not image_data then
-                    return nil, thumb_err_or_headers
+    if
+        #task.scraped == 1
+        and #task.scraped[1] == 1
+        and queue_entry.tg_source_link
+        and queue_entry.image
+    then
+        local scraped_data = task.scraped[1][1]
+        ---@cast scraped_data FetchedSourceData
+        local file_data = FsTools.load_queue(queue_entry.image, model.user_id)
+        if not file_data then
+            return nil, PipelineErrorPermanent("Queue file went missing!")
+        end
+        scraped_data.media_data = file_data
+        scraped_data.mime_type = Nu.guess_mime_from_url(queue_entry.image)
+            or "image/jpeg"
+    else
+        for i = 1, #task.scraped do
+            local scraped_data_for_source = task.scraped[i]
+            for j = 1, #scraped_data_for_source do
+                local scraped_data = scraped_data_for_source[j]
+                ---@cast scraped_data FetchedSourceData
+                local media_data, err_or_headers =
+                    Nu.FetchMedia(scraped_data.media_url)
+                if not media_data then
+                    return nil, err_or_headers
                 end
-                local thumb_mime = err_or_headers["Content-Type"]
-                    or Nu.guess_mime_from_url(thumbnail.raw_uri)
+                local mime_type = err_or_headers["Content-Type"]
+                    or Nu.guess_mime_from_url(scraped_data.media_url)
                     or "image/jpeg"
-                thumbnail.image_data = image_data
-                thumbnail.mime_type = thumb_mime
+                scraped_data.media_data = media_data
+                scraped_data.mime_type = mime_type
+                local thumbnails = scraped_data.thumbnails or {}
+                for k = 1, #thumbnails do
+                    local thumbnail = thumbnails[k]
+                    local image_data, thumb_err_or_headers =
+                        Nu.FetchMedia(thumbnail.raw_uri)
+                    if not image_data then
+                        return nil, thumb_err_or_headers
+                    end
+                    local thumb_mime = err_or_headers["Content-Type"]
+                        or Nu.guess_mime_from_url(thumbnail.raw_uri)
+                        or "image/jpeg"
+                    thumbnail.image_data = image_data
+                    thumbnail.mime_type = thumb_mime
+                end
             end
         end
     end
@@ -963,7 +987,7 @@ end
 
 return {
     process_all_queues = process_all_queues,
-    scrapers = scrapers,
+    scraper = scrapers_by_name,
     can_process_uri = can_process_uri,
     normalize_uri = normalize_uri,
     CANONICAL_DOMAINS_WITH_TAGS = {

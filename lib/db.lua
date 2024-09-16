@@ -343,6 +343,7 @@ local user_setup = [[
         "help_answer" TEXT,
         "tg_chat_id" INTEGER,
         "tg_message_id" INTEGER,
+        "tg_source_link" TEXT,
         PRIMARY KEY ("qid")
     );
 
@@ -489,6 +490,7 @@ local queries = {
                 queue2.help_answer,
                 queue2.tg_chat_id,
                 queue2.tg_message_id,
+                queue2.tg_source_link,
                 queue2.retry_count
             FROM queue2
             LEFT NATURAL JOIN queue_images
@@ -507,7 +509,8 @@ local queries = {
                 queue2.added_on,
                 queue2.description,
                 queue2.help_ask,
-                queue2.help_answer
+                queue2.help_answer,
+                queue2.tg_source_link
             FROM queue2
             LEFT NATURAL JOIN queue_images
             ORDER BY queue2.added_on DESC
@@ -522,7 +525,8 @@ local queries = {
                 queue2.added_on,
                 queue2.description,
                 queue2.help_ask,
-                queue2.help_answer
+                queue2.help_answer,
+                queue2.tg_source_link
             FROM queue2
             LEFT NATURAL JOIN queue_images
             WHERE queue2.qid = ?;]],
@@ -956,6 +960,8 @@ local queries = {
             SET "help_answer" = ? WHERE qid = ?;]],
         update_queue_item_telegram_ids = [[UPDATE "queue2"
             SET "tg_chat_id" = ?, "tg_message_id" = ? WHERE qid = ?;]],
+        update_queue_item_telegram_link = [[UPDATE "queue2"
+            SET "tg_source_link" = ? WHERE "qid" = ?;]],
         update_handles_to_other_artist = [[UPDATE "artist_handles"
             SET "artist_id" = ?
             WHERE "artist_id" = ?]],
@@ -1160,7 +1166,7 @@ function Model:getRecentQueueEntries()
     return decode_queue_description_errors(result)
 end
 
----@alias ActiveQueueEntry {qid: integer, link: string, image: string, image_mime_type: string, status: integer, added_on: string, description: string, help_ask: string, help_answer: string, retry_count: integer, tg_message_id: integer, tg_chat_id: integer}
+---@alias ActiveQueueEntry {qid: integer, link: string, image: string, image_mime_type: string, status: integer, added_on: string, description: string, help_ask: string, help_answer: string, retry_count: integer, tg_message_id: integer, tg_chat_id: integer, tg_source_link: string}
 ---@return ActiveQueueEntry[]
 function Model:getAllActiveQueueEntries()
     return self.conn:fetchAll(
@@ -1336,6 +1342,14 @@ function Model:updateQueueItemTelegramIds(qid, chat_id, message_id)
         queries.model.update_queue_item_telegram_ids,
         chat_id,
         message_id,
+        qid
+    )
+end
+
+function Model:updateQueueItemTelegramLink(qid, telegram_link)
+    return self.conn:execute(
+        queries.model.update_queue_item_telegram_link,
+        telegram_link,
         qid
     )
 end

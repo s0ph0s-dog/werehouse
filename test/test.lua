@@ -314,7 +314,7 @@ function TestScraperPipeline:testValidBskyLinks()
         { input = input, expected = { expected, nil } },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[1].process_uri,
+        pipeline.scraper.bluesky.process_uri,
         tests,
         mocks
     )
@@ -375,7 +375,7 @@ function TestScraperPipeline:testBskyLinkWithNoAspectRatio()
         { input = input, expected = { expected, nil } },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[1].process_uri,
+        pipeline.scraper.bluesky.process_uri,
         tests,
         mocks
     )
@@ -439,7 +439,7 @@ function TestScraperPipeline:testBskyVideo()
         { input = input, expected = { expected, nil } },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[1].process_uri,
+        pipeline.scraper.bluesky.process_uri,
         tests,
         mocks
     )
@@ -614,7 +614,7 @@ function TestScraperPipeline:testValidTwitterLinks()
         },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[2].process_uri,
+        pipeline.scraper.twitter.process_uri,
         tests,
         mocks
     )
@@ -695,7 +695,7 @@ function TestScraperPipeline:testValidFuraffinityLinks()
         },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[3].process_uri,
+        pipeline.scraper.furaffinity.process_uri,
         tests,
         mocks
     )
@@ -1758,7 +1758,7 @@ function TestScraperPipeline:testValidE6Links()
         },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[4].process_uri,
+        pipeline.scraper.e621.process_uri,
         tests,
         mocks
     )
@@ -1912,7 +1912,7 @@ function TestScraperPipeline:testValidCohostLinks()
         },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[5].process_uri,
+        pipeline.scraper.cohost.process_uri,
         tests,
         mocks
     )
@@ -1991,7 +1991,7 @@ function TestScraperPipeline:testItakuEEWorks()
         },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[6].process_uri,
+        pipeline.scraper.itakuee.process_uri,
         tests,
         mocks
     )
@@ -2097,7 +2097,7 @@ function TestScraperPipeline:testValidMastodonLinks()
         },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[8].process_uri,
+        pipeline.scraper.mastodon.process_uri,
         tests,
         mocks
     )
@@ -2167,7 +2167,7 @@ function TestScraperPipeline:testDeviantArt()
         },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[9].process_uri,
+        pipeline.scraper.deviantart.process_uri,
         tests,
         mocks
     )
@@ -2239,7 +2239,7 @@ function TestScraperPipeline:testWeasyl()
         },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[10].process_uri,
+        pipeline.scraper.weasyl.process_uri,
         tests,
         mocks
     )
@@ -2323,7 +2323,7 @@ function TestScraperPipeline:testInkbunny()
         },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[7].process_uri,
+        pipeline.scraper.inkbunny.process_uri,
         tests,
         mocks
     )
@@ -2458,7 +2458,7 @@ function TestScraperPipeline:testTelegramWorks()
         },
     }
     process_entry_framework_generic(
-        pipeline.scrapers[11].process_uri,
+        pipeline.scraper.telegram.process_uri,
         tests,
         mocks
     )

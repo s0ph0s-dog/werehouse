@@ -165,11 +165,19 @@ local function process_uri(uri)
     if not norm_uri then
         return nil, PipelineErrorPermanent("Invalid Telegram URL")
     end
+    local original_params = ParseUrl(uri).params
+    assert(original_params ~= nil)
+    local was_single = table.reduce(original_params, function(acc, next)
+        return acc or (next[1] == "single")
+    end)
     local parts = ParseUrl(norm_uri)
     parts.params = {
         { "embed", "1" },
         { "mode", "tme" },
     }
+    if was_single then
+        parts.params[#parts.params + 1] = { "single" }
+    end
     local embed_uri = EncodeUrl(parts)
     local status, resp_headers, body = Fetch(embed_uri)
     if not status then

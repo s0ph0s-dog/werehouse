@@ -264,6 +264,14 @@ function table.keys(t)
     return result
 end
 
+function table.values(t)
+    local result = {}
+    for _, value in pairs(t) do
+        result[#result + 1] = value
+    end
+    return result
+end
+
 function table.zip(s, t)
     if not s or not t then
         return {}
