@@ -256,13 +256,8 @@ local function process_uri(uri)
 end
 
 local function can_process_uri(uri)
-    if uri:startswith("at://") then
-        return true
-    end
-    if uri:find("^https?://[bp]sky%.app/") then
-        return true
-    end
-    return false
+    local match = parse_bsky_uri(uri)
+    return match ~= nil
 end
 
 return {
