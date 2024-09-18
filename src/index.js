@@ -167,3 +167,23 @@ htmx.on("htmx:responseError", (e) => {
   console.log(e);
   alert(`That action failed. The server said “${e.detail.xhr.statusText}.”`);
 });
+
+htmx.on('htmx:confirm', (evt) => {
+  if (evt.explicitOriginalTarget && evt.explicitOriginalTarget.matches("[data-confirm-nicely]")) {
+    evt.preventDefault();
+    const verb = evt.explicitOriginalTarget.value;
+    const form = evt.target;
+    const checkboxes = form.querySelectorAll("input[type='checkbox']:checked");
+    const names = Array.from(checkboxes).map((box) => {
+      return box.nextElementSibling.firstElementChild.textContent || "(error)";
+    });
+    const name_list = names.reduce(
+      (acc, curr) => acc + "\n • " + curr,
+      ""
+    );
+    const confirm_text = `Are you sure you want to ${verb} these ${names.length} items?${name_list}`;
+    if (confirm(confirm_text)) {
+      evt.detail.issueRequest();
+    }
+  }
+});
