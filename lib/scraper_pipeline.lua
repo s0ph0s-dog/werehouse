@@ -875,6 +875,31 @@ local function queue_entry_tostr(queue_entry)
     return EncodeJson(result)
 end
 
+--- Decode a (possibly) JSON error description and present it nicely as a bulleted list.
+---@param errdesc string Maybe JSON string describing errors
+---@return string # Nicely formatted representation of a JSON error, or the input string if it was not JSON.
+local function decode_errors(errdesc)
+    local json = DecodeJson(errdesc)
+    if not json or #json < 1 then
+        return errdesc
+    else
+        ---@cast json table
+        return table.reduce(
+            table.map(
+                table.filter(json, function(item)
+                    return type(item) == "table"
+                end),
+                function(item)
+                    return item.description
+                end
+            ),
+            function(acc, next)
+                return (acc or "") .. "\n" .. next
+            end
+        ) or "unable to process error message"
+    end
+end
+
 ---Update a queue entry with status/error information when one occurs.
 ---@param model Model
 ---@param queue_entry ActiveQueueEntry
@@ -894,10 +919,11 @@ local function handle_queue_error(model, queue_entry, error)
         })
     end
     if queue_entry.tg_message_id then
+        local msg = decode_errors(error.description)
         Bot.update_queue_message_with_status(
             queue_entry.tg_chat_id,
             queue_entry.tg_message_id,
-            "Error: " .. error.description
+            "Error: " .. msg
         )
     end
 end
