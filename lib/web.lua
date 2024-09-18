@@ -1598,9 +1598,13 @@ local function queue_help_new(r, help_ask_data)
 end
 
 local accept_queue_help = login_required(function(r)
+    local redirect = get_post_dialog_redirect(r, "/home")
     local qid = r.params.qid
     if not qid then
         return Fm.serve400()
+    end
+    if r.params.cancel then
+        return redirect
     end
     local queue_record, queue_err = Model:getQueueEntryById(qid)
     if not queue_record then
@@ -1620,7 +1624,7 @@ local accept_queue_help = login_required(function(r)
         Log(kLogInfo, "Database error: %s" % { err })
         return Fm.serve500()
     end
-    return get_post_dialog_redirect(r, "/home")
+    return redirect
 end)
 
 local render_images = login_required(function(r, user_record)
