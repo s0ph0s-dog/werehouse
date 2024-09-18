@@ -112,21 +112,27 @@ local user_setup = [[
         "image_id" INTEGER NOT NULL,
         "name" TEXT NOT NULL,
         "domain" TEXT NOT NULL,
-        "applied" INTEGER NOT NULL DEFAULT 0,
+        "image_tag_id" INTEGER,
         PRIMARY KEY("itid"),
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
-        ON UPDATE CASCADE ON DELETE CASCADE
+        ON UPDATE CASCADE ON DELETE CASCADE,
+        FOREIGN KEY ("image_tag_id") REFERENCES "image_tags"("image_tag_id")
+        ON UPDATE CASCADE ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS "image_tags" (
+        "image_tag_id" INTEGER NOT NULL,
         "image_id" INTEGER NOT NULL,
         "tag_id" INTEGER NOT NULL,
-        PRIMARY KEY("image_id", "tag_id"),
+        PRIMARY KEY ("image_tag_id"),
         FOREIGN KEY ("tag_id") REFERENCES "tags"("tag_id")
         ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS "no_duplicate_tags_on_images" ON "image_tags"
+        ("image_id", "tag_id");
 
     CREATE VIEW IF NOT EXISTS "tag_counts" (tag_id, count) AS
     SELECT image_tags.tag_id, COUNT(*) AS count
@@ -154,7 +160,7 @@ local user_setup = [[
         incoming_tags.image_id,
         tag_rules.tag_id,
         tags.name,
-        incoming_tags.applied
+        incoming_tags.image_tag_id IS NOT NULL
     FROM tag_rules
     INNER NATURAL JOIN tags
     INNER JOIN incoming_tags ON
@@ -572,8 +578,8 @@ local queries = {
             WHERE image_tags.image_id = ?
             ORDER BY tags.name COLLATE NOCASE;]],
         get_incoming_tags_for_image_by_id = [[SELECT name, itid
-            FROM incoming_tags WHERE image_id = ? AND applied = 0;]],
-        get_incoming_tag_by_id = [[SELECT itid, name, domain, applied
+            FROM incoming_tags WHERE image_id = ? AND image_tag_id IS NULL;]],
+        get_incoming_tag_by_id = [[SELECT itid, name, domain, image_tag_id
             FROM incoming_tags
             WHERE itid = ?;]],
         get_images_and_tags_for_new_tag_rules = [[SELECT
@@ -879,15 +885,19 @@ local queries = {
                 "tag_id"
             ) VALUES (?, ?, ?)
             RETURNING tag_rule_id;]],
-        insert_image_tags_for_new_tag_rules_and_mark_used_incoming_tags = [[
-            INSERT OR IGNORE INTO image_tags (image_id, tag_id)
+        insert_image_tags_for_new_tag_rules = [[INSERT
+            OR IGNORE INTO image_tags (image_id, tag_id)
             SELECT image_id, tag_id
-            FROM incoming_tags_now_matched_by_tag_rules
-            WHERE applied = 0;
-            UPDATE incoming_tags SET applied = 1 WHERE itid IN
-                (SELECT itid
-                    FROM incoming_tags_now_matched_by_tag_rules
-                    WHERE applied = 0);]],
+            FROM "incoming_tags_now_matched_by_tag_rules"
+            WHERE applied = 0
+            RETURNING image_id, tag_id, image_tag_id;]],
+        update_image_tag_id_for_incoming_tags = [[UPDATE incoming_tags
+            SET image_tag_id = ?
+            WHERE itid IN (
+                SELECT itid
+                FROM incoming_tags_now_matched_by_tag_rules
+                WHERE image_id = ? AND tag_id = ? AND applied = 0
+            );]],
         insert_incoming_tag = [[INSERT INTO
                 "incoming_tags" ("name", "domain", "image_id", "applied")
             VALUES (?, ?, ?, ?);]],
@@ -2305,13 +2315,26 @@ function Model:applyIncomingTagsNowMatchedByTagRules()
         self:release_savepoint(SP)
         return changes
     end
-    local apply_ok, apply_err = self.conn:execute(
-        queries.model.insert_image_tags_for_new_tag_rules_and_mark_used_incoming_tags
-    )
-    if not apply_ok then
-        Log(kLogDebug, "failed to make changes")
+    local new_ids, apply_err =
+        self.conn:fetchAll(queries.model.insert_image_tags_for_new_tag_rules)
+    if not new_ids then
+        Log(kLogDebug, "failed to apply tag rules")
         self:rollback(SP)
         return nil, apply_err
+    end
+    for i = 1, #new_ids do
+        local new_id = new_ids[i]
+        local upd_ok, upd_err = self.conn:execute(
+            queries.model.update_image_tag_id_for_incoming_tags,
+            new_id.image_tag_id,
+            new_id.image_id,
+            new_id.tag_id
+        )
+        if not upd_ok then
+            Log(kLogDebug, "failed to update image_tag_id for incoming tag")
+            self:rollback(SP)
+            return nil, upd_err
+        end
     end
     Log(kLogDebug, "made it to the end successfully")
     self:release_savepoint(SP)

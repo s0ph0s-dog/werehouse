@@ -700,6 +700,35 @@ local function clean_sources(other_args)
     end)
 end
 
+local function reapply_tags_from_rules(_)
+    for_each_user(function(_, _, model)
+        local SP = "reapply_tags_from_rules"
+        model:create_savepoint(SP)
+        local delete_q =
+            [[DELETE FROM image_tags WHERE (image_id, tag_id) IN (SELECT image_id, tag_id FROM incoming_tags_now_matched_by_tag_rules WHERE applied = 0);]]
+        Log(kLogInfo, "Deleting all tags which were added by a tag rule…")
+        local d_ok, d_err = model.conn:execute(delete_q)
+        if not d_ok then
+            Log(kLogWarn, tostring(d_err))
+            model:rollback(SP)
+            return 1
+        else
+            Log(kLogInfo, "Tags deleted: " .. tostring(d_ok))
+        end
+        Log(kLogInfo, "Reapplying all tag rules…")
+        local a_ok, a_err = model:applyIncomingTagsNowMatchedByTagRules()
+        if not a_ok then
+            Log(kLogWarn, tostring(a_err))
+            model:rollback(SP)
+            return 1
+        else
+            Log(kLogInfo, "Tags added: " .. tostring(#a_ok))
+        end
+        model:release_savepoint(SP)
+        return 0
+    end)
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
@@ -714,6 +743,7 @@ local commands = {
     calc_queue_wh = calc_queue_wh,
     queue2_migrate = queue2_migrate,
     clean_sources = clean_sources,
+    reapply_tags_from_rules = reapply_tags_from_rules,
 }
 
 local remaining_args = arg
