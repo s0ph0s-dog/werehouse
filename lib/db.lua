@@ -864,7 +864,7 @@ local queries = {
             VALUES (?, ?)
             RETURNING tag_id;]],
         insert_image_tag = [[INSERT OR IGNORE INTO "image_tags" ("image_id", "tag_id")
-            VALUES (?, ?);]],
+            VALUES (?, ?) RETURNING image_tag_id;]],
         insert_source_for_image = [[INSERT OR IGNORE INTO "sources" ("image_id", "link")
             VALUES (?, ?);]],
         insert_artist = [[INSERT INTO "artists" ("name", "manually_confirmed")
@@ -899,7 +899,7 @@ local queries = {
                 WHERE image_id = ? AND tag_id = ? AND applied = 0
             );]],
         insert_incoming_tag = [[INSERT INTO
-                "incoming_tags" ("name", "domain", "image_id", "applied")
+                "incoming_tags" ("name", "domain", "image_id", "image_tag_id")
             VALUES (?, ?, ?, ?);]],
         insert_share_ping_list = [[INSERT INTO share_ping_list (
                 name,
@@ -1770,7 +1770,7 @@ function Model:createArtistWithHandles(name, manually_verified, handles)
 end
 
 function Model:associateTagWithImage(image_id, tag_id)
-    return self.conn:execute(queries.model.insert_image_tag, image_id, tag_id)
+    return self.conn:fetchOne(queries.model.insert_image_tag, image_id, tag_id)
 end
 
 ---@param author_info ScrapedAuthor
@@ -2251,25 +2251,26 @@ function Model:addIncomingTagsForImage(
             self:rollback(SP)
             return nil, tag_rule_err
         end
-        local applied = tag_rule ~= self.conn.NONE
+        local image_tag_id = nil
+        if tag_rule ~= self.conn.NONE then
+            local image_tag, tag_err =
+                self:associateTagWithImage(image_id, tag_rule.tag_id)
+            if not image_tag then
+                self:rollback(SP)
+                return nil, tag_err
+            end
+            image_tag_id = image_tag.image_tag_id
+        end
         local itag_ok, itag_err = self.conn:execute(
             queries.model.insert_incoming_tag,
             name,
             incoming_domain,
             image_id,
-            applied
+            image_tag_id
         )
         if not itag_ok then
             self:rollback(SP)
             return nil, itag_err
-        end
-        if applied then
-            local tag_ok, tag_err =
-                self:associateTagWithImage(image_id, tag_rule.tag_id)
-            if not tag_ok then
-                self:rollback(SP)
-                return nil, tag_err
-            end
         end
     end
     self:release_savepoint(SP)
