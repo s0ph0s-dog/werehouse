@@ -198,6 +198,14 @@ local function process_uri(uri)
     if not root then
         return nil, PipelineErrorPermanent("Telegram returned invalid HTML.")
     end
+    local maybe_error = first(root:select(".tgme_widget_message_error"))
+    if maybe_error then
+        return nil,
+            PipelineErrorPermanent(
+                "Telegram blocked access to this post: “%s”"
+                    % { maybe_error:getcontent() }
+            )
+    end
     local data, errmsg = scrape_media_data(root)
     if not data then
         return nil, errmsg
