@@ -981,6 +981,9 @@ local queries = {
         update_image_tags_to_other_tag = [[UPDATE OR IGNORE "image_tags"
             SET "tag_id" = ?
             WHERE "tag_id" = ?;]],
+        update_tag_rules_to_other_tag = [[UPDATE OR IGNORE "tag_rules"
+            SET "tag_id" = ?
+            WHERE "tag_id" = ?;]],
         update_images_to_other_group_preserving_order = [[UPDATE images_in_group
             SET
                 ig_id = ?,
@@ -1962,6 +1965,16 @@ function Model:mergeTags(merge_into_id, merge_from_ids)
             self:rollback(SP_MERGE)
             Log(kLogInfo, image_err)
             return nil, image_err
+        end
+        local tr_ok, tr_err = self.conn:execute(
+            queries.model.update_tag_rules_to_other_tag,
+            merge_into_id,
+            merge_from_id
+        )
+        if not tr_ok then
+            self:rollback(SP_MERGE)
+            Log(kLogInfo, tr_err)
+            return nil, tr_err
         end
     end
     local delete_ok, delete_err = self:deleteTags(merge_from_ids)
