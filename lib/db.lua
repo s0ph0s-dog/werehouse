@@ -980,7 +980,7 @@ local queries = {
             WHERE "artist_id" = ?;]],
         update_image_tags_to_other_tag = [[UPDATE OR IGNORE "image_tags"
             SET "tag_id" = ?
-            WHERE "image_id" = ?;]],
+            WHERE "tag_id" = ?;]],
         update_images_to_other_group_preserving_order = [[UPDATE images_in_group
             SET
                 ig_id = ?,
