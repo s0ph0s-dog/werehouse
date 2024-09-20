@@ -2717,6 +2717,7 @@ local render_add_tag_rule = login_required(function(r)
     end
     local params = {
         alltags = alltags,
+        domains_with_tags = ScraperPipeline.CANONICAL_DOMAINS_WITH_TAGS,
     }
     add_htmx_param(r, params)
     add_form_path(r, params)

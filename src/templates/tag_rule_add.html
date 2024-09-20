@@ -19,9 +19,9 @@
   <label
     >Incoming Tag Domain
     <select name="incoming_domain">
-      <option>e621.net</option>
-      <option>www.furaffinity.net</option>
-      <option>cohost.org</option>
+      {% for i = 1, #domains_with_tags do %}
+      <option>{%& domains_with_tags[i] %}</option>
+      {% end %}
     </select>
   </label>
   <datalist id="all-tags">
