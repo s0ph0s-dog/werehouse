@@ -176,7 +176,7 @@ local function process_uri(uri)
         { "mode", "tme" },
     }
     if was_single then
-        parts.params[#parts.params + 1] = { "single" }
+        parts.params[#parts.params + 1] = { "single", "1" }
     end
     local embed_uri = EncodeUrl(parts)
     local status, resp_headers, body = Fetch(embed_uri)
