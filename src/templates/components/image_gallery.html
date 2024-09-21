@@ -18,7 +18,7 @@
   {% elseif #image_records == 0 then %}
   <p>Nothing archived yet</p>
   {% else %}
-  <div class="gallery" hx-boost="true">
+  <div class="gallery" hx-boost="true" hx-swap="show:top">
     {% for i = 1, #image_records do local image = image_records[i] %}
     <figure>
       <a href="/image/{%& image.image_id %}">

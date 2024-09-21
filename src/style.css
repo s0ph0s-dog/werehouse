@@ -613,6 +613,7 @@ abbr {
   position: fixed;
   top: 0;
   left: 0;
+  z-index: 10;
 }
 @keyframes l3 {
     100% {transform: translateX(-50%)}
