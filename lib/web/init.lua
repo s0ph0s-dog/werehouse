@@ -3299,8 +3299,7 @@ local render_archive = login_required(function(r, user_record)
     return Fm.serveContent("archive", params)
 end)
 
-local function setup()
-    Fm.setTemplate { "/templates/", html = "fmt" }
+local function setup_static()
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
     Fm.setRoute("/icon.svg", Fm.serveAsset)
     Fm.setRoute("/icon-180.png", Fm.serveAsset)
@@ -3315,9 +3314,9 @@ local function setup()
     end)
     Fm.setRoute("/index.js", Fm.serveAsset)
     Fm.setRoute("/sw.js", Fm.serveAsset)
-    Fm.setRoute("/", render_about)
-    Fm.setRoute("/tos", render_tos)
-    -- User-facing routes
+end
+
+local function setup_login_signup()
     Fm.setRoute(Fm.GET { "/accept-invite/:invite_code" }, render_invite)
     Fm.setRoute(
         Fm.POST { "/accept-invite/:invite_code", _ = invite_validator },
@@ -3328,12 +3327,19 @@ local function setup()
         Fm.POST { "/login", _ = login_validator, otherwise = 405 },
         accept_login
     )
+end
+
+local function setup_queue()
     Fm.setRoute(Fm.GET { "/queue" }, render_queue)
     Fm.setRoute(Fm.POST { "/queue" }, accept_queue)
     Fm.setRoute(Fm.GET { "/queue/:qid[%d]/help" }, render_queue_help)
     Fm.setRoute(Fm.POST { "/queue/:qid[%d]/help" }, accept_queue_help)
     Fm.setRoute("/queue-image/:filename", render_queue_image)
-    Fm.setRoute("/home", render_home)
+    Fm.setRoute(Fm.GET { "/enqueue" }, render_enqueue)
+    Fm.setRoute(Fm.POST { "/enqueue" }, accept_enqueue)
+end
+
+local function setup_images()
     Fm.setRoute("/image-file/:filename", render_image_file)
     Fm.setRoute("/thumbnail-file/:thumbnail_id[%d]", render_thumbnail_file)
     Fm.setRoute(Fm.GET { "/image" }, render_images)
@@ -3342,8 +3348,11 @@ local function setup()
     Fm.setRoute(Fm.GET { "/image/:image_id[%d]/edit" }, render_image)
     Fm.setRoute(Fm.POST { "/image/:image_id[%d]/edit" }, accept_edit_image)
     Fm.setRoute("/image/:image_id[%d]/share", render_image_share)
-    Fm.setRoute(Fm.GET { "/enqueue" }, render_enqueue)
-    Fm.setRoute(Fm.POST { "/enqueue" }, accept_enqueue)
+    -- Manual record upload:
+    Fm.setRoute("/archive", render_archive)
+end
+
+local function setup_artists()
     Fm.setRoute(Fm.GET { "/artist" }, render_artists)
     Fm.setRoute(Fm.POST { "/artist" }, accept_artists)
     Fm.setRoute(Fm.GET { "/artist/add" }, render_add_artist)
@@ -3351,6 +3360,9 @@ local function setup()
     Fm.setRoute("/artist/:artist_id[%d]", render_artist)
     Fm.setRoute(Fm.GET { "/artist/:artist_id[%d]/edit" }, render_edit_artist)
     Fm.setRoute(Fm.POST { "/artist/:artist_id[%d]/edit" }, accept_edit_artist)
+end
+
+local function setup_groups()
     Fm.setRoute(Fm.GET { "/image-group" }, render_image_groups)
     Fm.setRoute(Fm.POST { "/image-group" }, accept_image_groups)
     Fm.setRoute("/image-group/:ig_id[%d]", render_image_group)
@@ -3363,8 +3375,9 @@ local function setup()
         accept_edit_image_group
     )
     Fm.setRoute("/image-group/:ig_id[%d]/share", render_image_group_share)
-    Fm.setRoute(Fm.GET { "/link-telegram/:request_id" }, render_telegram_link)
-    Fm.setRoute(Fm.POST { "/link-telegram/:request_id" }, accept_telegram_link)
+end
+
+local function setup_tags()
     Fm.setRoute(Fm.GET { "/tag" }, render_tags)
     Fm.setRoute(Fm.POST { "/tag" }, accept_tags)
     Fm.setRoute(Fm.GET { "/tag/add" }, render_add_tag)
@@ -3386,19 +3399,39 @@ local function setup()
         Fm.POST { "/tag-rule/:tag_rule_id[%d]/edit" },
         accept_edit_tag_rule
     )
+end
+
+local function setup_account()
+    Fm.setRoute(Fm.GET { "/link-telegram/:request_id" }, render_telegram_link)
+    Fm.setRoute(Fm.POST { "/link-telegram/:request_id" }, accept_telegram_link)
     Fm.setRoute("/share-ping-list/add", render_add_share_ping_list)
     Fm.setRoute("/share-ping-list/:spl_id[%d]", render_share_ping_list)
     Fm.setRoute(
         "/share-ping-list/:spl_id[%d]/edit",
         render_edit_share_ping_list
     )
-    Fm.setRoute("/archive", render_archive)
     Fm.setRoute("/account", render_account)
     Fm.setRoute("/account/end-sessions", accept_end_sessions)
     Fm.setRoute(
         Fm.POST { "/account/change-password", _ = change_password_validator },
         accept_change_password
     )
+end
+
+local function setup()
+    Fm.setTemplate { "/templates/", html = "fmt" }
+    setup_static()
+    Fm.setRoute("/", render_about)
+    Fm.setRoute("/tos", render_tos)
+    -- User-facing routes
+    Fm.setRoute("/home", render_home)
+    setup_login_signup()
+    setup_queue()
+    setup_images()
+    setup_artists()
+    setup_groups()
+    setup_tags()
+    setup_account()
     Fm.setRoute("/help(/:page)", render_help)
 end
 
