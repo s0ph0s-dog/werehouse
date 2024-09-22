@@ -9,12 +9,17 @@
   hx-target="dialog"
   >Edit…</a
 >
+<form method="POST" action="{%& form_action %}" hx-boost="true">
+<span class="buttons sticky-top">
+  <input type="submit" name="delete" value="Delete" />
+</span>
+</form>
 {% if share_ping_list.share_data.type == "Telegram" then %}
 <p>Chat ID: {%& share_ping_list.share_data.chat_id %}</p>
 {% else %}
 <p>Unknown service: {%& share_ping_list.share_data.type %}</p>
 {% end %}
-<h1>Ping List</h1>
+<h2>Ping List</h2>
 <ul>
   {% for i = 1, #entries do local entry = entries[i] %}
   <li>

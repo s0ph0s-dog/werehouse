@@ -3156,7 +3156,20 @@ end)
 local render_share_ping_list = login_required(function(r, user_record)
     local share_ping_list, spl_err = Model:getSharePingListById(r.params.spl_id)
     if not share_ping_list then
-        return Fm.serve500()
+        return Fm.serve404()
+    end
+    Log(kLogInfo, "r.params.delete = " .. tostring(r.params.delete))
+    if r.params.delete == "Delete" then
+        local d_ok, d_err = Model:deleteSharePingList(r.params.spl_id)
+        if not d_ok then
+            Log(
+                kLogInfo,
+                "Error while trying to delete share option: " .. d_err
+            )
+            return Fm.serve500()
+        else
+            return Fm.serveRedirect(302, "/account")
+        end
     end
     local entries, positive_tags, negative_tags =
         Model:getEntriesForSPLById(r.params.spl_id)
@@ -3169,6 +3182,7 @@ local render_share_ping_list = login_required(function(r, user_record)
         entries = entries,
         positive_tags = positive_tags,
         negative_tags = negative_tags,
+        form_action = r.path,
     })
 end)
 

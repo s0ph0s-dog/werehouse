@@ -967,6 +967,7 @@ local queries = {
         delete_tag_rule_by_id = [[DELETE FROM "tag_rules" WHERE tag_rule_id = ?;]],
         delete_handle_for_artist_by_id = [[DELETE FROM "artist_handles"
             WHERE artist_id = ? AND handle_id = ?;]],
+        delete_spl_by_id = [[DELETE FROM "share_ping_list" WHERE spl_id = ?;]],
         delete_spl_entry_by_id = [[DELETE FROM "share_ping_list_entry"
             WHERE spl_entry_id = ?;]],
         delete_pl_positive_tag = [[DELETE FROM "pl_entry_positive_tags"
@@ -2471,6 +2472,10 @@ function Model:createSPLEntryWithTags(spl_id, handle, pos_tags, neg_tags)
     end
     self:release_savepoint(SP)
     return true
+end
+
+function Model:deleteSharePingList(spl_id)
+    return self:_delete_by_id(queries.model.delete_spl_by_id, { spl_id })
 end
 
 function Model:getSharePingListById(spl_id, skip_decode)
