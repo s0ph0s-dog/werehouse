@@ -91,6 +91,16 @@ local function db_migrate(other_args)
     end
     print(EncodeJson(a_changes))
     print("Done!")
+    local cache = DbUtil.TGForwardCache:new()
+    print("Migrating Telegram forward cache database… ")
+    local c_changes, c_err = cache:migrate(migrate_opts)
+    if not c_changes then
+        print("Failed :(")
+        print(c_err)
+        return 1
+    end
+    print(EncodeJson(a_changes))
+    print("Done!")
     local users, users_err = accounts:getAllUserIds()
     accounts.conn:close()
     if not users then

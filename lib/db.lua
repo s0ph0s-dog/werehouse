@@ -1,4 +1,5 @@
 local ACCOUNTS_DB_FILE = "db/werehouse-accounts.sqlite3"
+local TG_FORWARD_CACHE_DB_FILE = "db/werehouse-tg-forward-cache.sqlite3"
 local USER_DB_FILE_TEMPLATE = "db/werehouse-%s.sqlite3"
 
 local IdPrefixes = {
@@ -394,6 +395,28 @@ local user_setup = [[
         BEFORE UPDATE OF "shared_at" ON "share_records"
         FOR EACH ROW WHEN old.shared_at NOT NULL
         BEGIN SELECT RAISE(ROLLBACK, 'Share token already used'); END;
+]]
+
+local tg_forward_cache_setup = [[
+    PRAGMA journal_mode=WAL;
+    PRAGMA busy_timeout = 5000;
+    PRAGMA synchronous=NORMAL;
+    PRAGMA foreign_keys=ON;
+    CREATE TABLE IF NOT EXISTS "cache" (
+        "cache_id" INTEGER NOT NULL UNIQUE,
+        "type" TEXT NOT NULL,
+        "username" TEXT,
+        "title" TEXT,
+        "id" INTEGER,
+        "message_id" INTEGER NOT NULL,
+        "media_kind" TEXT NOT NULL,
+        "media" TEXT NOT NULL,
+        "cached_at" INTEGER,
+        PRIMARY KEY ("cache_id")
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS cache_by_username_message_id
+        ON cache (username, message_id);
 ]]
 
 local queries = {
@@ -3032,6 +3055,93 @@ function Accounts:rollback(to_savepoint)
     end
 end
 
+---@class TGForwardCache
+---@field conn any
+local TGForwardCache = {}
+
+---@return TGForwardCache
+function TGForwardCache:new(o)
+    o = o or {}
+    o.conn = Fm.makeStorage(TG_FORWARD_CACHE_DB_FILE, tg_forward_cache_setup)
+    setmetatable(o, self)
+    self.__index = self
+    return o
+end
+
+function TGForwardCache:migrate(opts)
+    return self.conn:upgrade(opts)
+end
+
+function TGForwardCache:insertChannelPost(
+    chan_id,
+    chan_title,
+    chan_username,
+    msg_id,
+    media_kind,
+    media
+)
+    if type(media) == "table" then
+        media = EncodeJson(media)
+    end
+    local q = [[INSERT OR IGNORE INTO "cache" (
+            "type",
+            "username",
+            "title",
+            "id",
+            "message_id",
+            "media_kind",
+            "media",
+            "cached_at"
+        ) VALUES (
+            'channel',
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            unixepoch('now')
+        );]]
+    return self.conn:execute(
+        q,
+        chan_username,
+        chan_title,
+        chan_id,
+        msg_id,
+        media_kind,
+        media
+    )
+end
+
+---@param username string
+---@param msg_id integer
+---@return {username: string, title: string, id: integer, message_id: integer, media_kind: string, media: table}
+function TGForwardCache:lookUpChannelPost(username, msg_id)
+    local q = [[SELECT
+            "username",
+            "title",
+            "id",
+            "message_id",
+            "media_kind",
+            "media"
+        FROM "cache"
+        WHERE username = ? AND message_id = ?;]]
+    local record, err = self.conn:fetchOne(q, username, tonumber(msg_id))
+    if not record then
+        return nil, err
+    end
+    if record.media then
+        record.media = DecodeJson(record.media)
+    end
+    return record
+end
+
+function TGForwardCache:clean(secs_in_past)
+    local q =
+        [[DELETE FROM "cache" WHERE "cached_at" < (unixepoch('now') - ?);]]
+    return self.conn:excute(q, secs_in_past)
+end
+
 local ImageKind = {
     Image = 1,
     Video = 2,
@@ -3072,6 +3182,7 @@ end)
 return {
     Accounts = Accounts,
     Model = Model,
+    TGForwardCache = TGForwardCache,
     -- k is for konstant! I passed spelling :)
     k = {
         ImageKind = ImageKind,

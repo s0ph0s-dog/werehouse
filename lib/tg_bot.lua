@@ -125,7 +125,11 @@ local function update_queue_with_tg_ids(result, tg_err, model, queue_entry)
     end
 end
 
-local function update_queue_with_tg_source(model, queue_entry, message)
+local function update_queue_with_tg_source_and_cache(
+    model,
+    queue_entry,
+    message
+)
     local fo = message.forward_origin
     if fo and fo.type == "channel" then
         if fo.chat.username then
@@ -135,6 +139,34 @@ local function update_queue_with_tg_source(model, queue_entry, message)
                     fo.message_id,
                 }
             model:updateQueueItemTelegramLink(queue_entry.qid, source_link)
+            local cache = DbUtil.TGForwardCache:new()
+            local kinds = {
+                -- Animation needs to come before document because sometimes Telegram includes both for a single message, and the rest of the code will see mime_type = "video/mp4" and assume it's a video.
+                "animation",
+                "document",
+                "video",
+                "photo",
+            }
+            local media_kind = nil
+            local media = nil
+            for i = 1, #kinds do
+                local kind = kinds[i]
+                if message[kind] then
+                    media_kind = kind
+                    media = message[kind]
+                end
+            end
+            local c_ok, c_err = cache:insertChannelPost(
+                fo.chat.id,
+                fo.chat.title,
+                fo.chat.username,
+                fo.message_id,
+                media_kind,
+                media
+            )
+            if not c_ok then
+                Log(kLogInfo, c_err)
+            end
         end
     end
 end
@@ -250,7 +282,7 @@ local function handle_enqueue(message)
         local queue_entry, err =
             model:enqueueImage(photo_data.mime_type, photo_data.data)
         if not queue_entry then
-            Log(kLogInfo, err)
+            Log(kLogInfo, tostring(err))
             api.reply_to_message(
                 message,
                 "I couldn’t add this photo to the queue: %s" % { err }
@@ -260,7 +292,7 @@ local function handle_enqueue(message)
         local result, tg_err =
             api.reply_to_message(message, "Added this to the queue!")
         update_queue_with_tg_ids(result, tg_err, model, queue_entry)
-        update_queue_with_tg_source(model, queue_entry, message)
+        update_queue_with_tg_source_and_cache(model, queue_entry, message)
         return
     end
     api.reply_to_message(

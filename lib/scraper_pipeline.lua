@@ -249,51 +249,34 @@ local function p_fetch(model, queue_entry, task)
         return task
     end
     ---@cast task PipelineTaskFetch
-    if
-        #task.scraped == 1
-        and #task.scraped[1] == 1
-        and queue_entry.tg_source_link
-        and queue_entry.image
-    then
-        local scraped_data = task.scraped[1][1]
-        ---@cast scraped_data FetchedSourceData
-        local file_data = FsTools.load_queue(queue_entry.image, model.user_id)
-        if not file_data then
-            return nil, PipelineErrorPermanent("Queue file went missing!")
-        end
-        scraped_data.media_data = file_data
-        scraped_data.mime_type = Nu.guess_mime_from_url(queue_entry.image)
-            or "image/jpeg"
-    else
-        for i = 1, #task.scraped do
-            local scraped_data_for_source = task.scraped[i]
-            for j = 1, #scraped_data_for_source do
-                local scraped_data = scraped_data_for_source[j]
-                ---@cast scraped_data FetchedSourceData
-                local media_data, err_or_headers =
-                    Nu.FetchMedia(scraped_data.media_url)
-                if not media_data then
-                    return nil, err_or_headers
+    for i = 1, #task.scraped do
+        local scraped_data_for_source = task.scraped[i]
+        for j = 1, #scraped_data_for_source do
+            local scraped_data = scraped_data_for_source[j]
+            ---@cast scraped_data FetchedSourceData
+            local media_data, err_or_headers =
+                Nu.FetchMedia(scraped_data.media_url)
+            if not media_data then
+                return nil, err_or_headers
+            end
+            local mime_type = err_or_headers["Content-Type"]
+                or Nu.guess_mime_from_url(scraped_data.media_url)
+                or "image/jpeg"
+            scraped_data.media_data = media_data
+            scraped_data.mime_type = mime_type
+            local thumbnails = scraped_data.thumbnails or {}
+            for k = 1, #thumbnails do
+                local thumbnail = thumbnails[k]
+                local image_data, thumb_err_or_headers =
+                    Nu.FetchMedia(thumbnail.raw_uri)
+                if not image_data then
+                    return nil, thumb_err_or_headers
                 end
-                local mime_type = err_or_headers["Content-Type"]
-                    or Nu.guess_mime_from_url(scraped_data.media_url)
+                local thumb_mime = err_or_headers["Content-Type"]
+                    or Nu.guess_mime_from_url(thumbnail.raw_uri)
                     or "image/jpeg"
-                scraped_data.media_data = media_data
-                scraped_data.mime_type = mime_type
-                local thumbnails = scraped_data.thumbnails or {}
-                for k = 1, #thumbnails do
-                    local thumbnail = thumbnails[k]
-                    local image_data, thumb_err_or_headers =
-                        Nu.FetchMedia(thumbnail.raw_uri)
-                    if not image_data then
-                        return nil, thumb_err_or_headers
-                    end
-                    local thumb_mime = err_or_headers["Content-Type"]
-                        or Nu.guess_mime_from_url(thumbnail.raw_uri)
-                        or "image/jpeg"
-                    thumbnail.image_data = image_data
-                    thumbnail.mime_type = thumb_mime
-                end
+                thumbnail.image_data = image_data
+                thumbnail.mime_type = thumb_mime
             end
         end
     end

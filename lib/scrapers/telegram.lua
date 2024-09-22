@@ -4,25 +4,25 @@ local TG_BG_IMAGE_EXP =
     assert(re.compile([[background-image:url\('([^']+)'\)]]))
 local CANONICAL_DOMAIN = "t.me"
 
-local function normalize_tg_uri(uri)
+local function match_tg_uri(uri)
     local match, _, _, chat_name, post_id = TG_URI_EXP:search(uri)
     if not match or not post_id then
         return nil
     end
-    return "https://t.me/%s/%s" % { chat_name, post_id }
+    return chat_name, post_id
 end
 
 local function normalize_uri(uri)
-    local result = normalize_tg_uri(uri)
-    if not result then
+    local chat_name, post_id = match_tg_uri(uri)
+    if not chat_name then
         return uri
     end
-    return result
+    return "https://t.me/%s/%s" % { chat_name, post_id }, chat_name, post_id
 end
 
 local function can_process_uri(uri)
-    local norm = normalize_tg_uri(uri)
-    return norm ~= nil
+    local ok = match_tg_uri(uri)
+    return ok ~= nil
 end
 
 local function first(list)
@@ -159,9 +159,128 @@ local function scrape_media_data(root)
     return results
 end
 
----@type ScraperProcess
-local function process_uri(uri)
-    local norm_uri = normalize_tg_uri(uri)
+local function map_cache_video(author, post, uri)
+    local media = post.media
+    local thumb = media.thumbnail
+    return {
+        {
+            authors = { author },
+            canonical_domain = CANONICAL_DOMAIN,
+            height = media.height,
+            width = media.width,
+            kind = post.media_kind == "video" and DbUtil.k.ImageKind.Video
+                or DbUtil.k.ImageKind.Animation,
+            media_url = Bot.api.get_file_url(media.file_id),
+            mime_type = media.mime_type,
+            this_source = uri,
+            thumbnails = {
+                {
+                    raw_uri = Bot.api.get_file_url(thumb.file_id),
+                    mime_type = "image/jpeg",
+                    width = thumb.width,
+                    height = thumb.height,
+                    scale = 1,
+                },
+            },
+        },
+    }
+end
+
+local function map_cache_image(author, post, uri)
+    local largest = table.reduce(post.media, function(acc, next)
+        if acc then
+            if next.width > acc.width and next.height > acc.height then
+                return next
+            else
+                return acc
+            end
+        else
+            return next
+        end
+    end)
+    if not largest then
+        return nil,
+            PipelineErrorPermanent("No valid photos in Telegram photo message?")
+    end
+    return {
+        {
+            authors = { author },
+            canonical_domain = CANONICAL_DOMAIN,
+            height = largest.height,
+            width = largest.width,
+            kind = DbUtil.k.ImageKind.Image,
+            media_url = Bot.api.get_file_url(largest.file_id),
+            mime_type = "image/jpeg",
+            this_source = uri,
+        },
+    }
+end
+
+local function try_from_cache(chat_name, chat_id, uri)
+    local cache = DbUtil.TGForwardCache:new()
+    local post, p_err = cache:lookUpChannelPost(chat_name, chat_id)
+    if not post then
+        return nil, PipelineErrorPermanent(p_err)
+    end
+    if post == cache.conn.NONE then
+        return nil,
+            PipelineErrorPermanent("Telegram message not found in cache")
+    end
+    local author = {
+        display_name = post.title,
+        handle = post.username,
+        profile_url = "https://t.me/" .. post.username,
+    }
+    if post.media_kind == "photo" then
+        return map_cache_image(author, post, uri)
+    elseif post.media_kind == "video" then
+        return map_cache_video(author, post, uri)
+    elseif post.media_kind == "animation" then
+        return map_cache_video(author, post, uri)
+    elseif post.media_kind == "document" then
+        local media = post.media
+        local mime = media.mime_type
+        local kind = FsTools.MIME_TO_KIND[mime]
+        if not kind then
+            return nil,
+                PipelineErrorPermanent(
+                    "Unsupported document MIME type: " .. mime
+                )
+        end
+        local thumbs = nil
+        if media.thumbnail then
+            thumbs = {
+                {
+                    raw_uri = Bot.api.get_file_url(media.thumbnail),
+                    mime_type = "image/jpeg",
+                    width = media.thumbnail.width,
+                    height = media.thumbnail.height,
+                    scale = 1,
+                },
+            }
+        end
+        return {
+            {
+                authors = { author },
+                canonical_domain = CANONICAL_DOMAIN,
+                height = 0,
+                width = 0,
+                kind = kind,
+                media_url = Bot.api.get_file_url(media.file_id),
+                mime_type = mime,
+                this_source = uri,
+                thumbnails = thumbs,
+            },
+        }
+    else
+        return nil,
+            PipelineErrorPermanent(
+                "Unsupported message type: " .. post.media_kind
+            )
+    end
+end
+
+local function try_from_web_preview(uri, norm_uri)
     if not norm_uri then
         return nil, PipelineErrorPermanent("Invalid Telegram URL")
     end
@@ -211,6 +330,19 @@ local function process_uri(uri)
         return nil, errmsg
     end
     return data
+end
+
+---@type ScraperProcess
+local function process_uri(uri)
+    local norm_uri, chat_name, chat_id = normalize_uri(uri)
+    local cached_message, cache_err = try_from_cache(chat_name, chat_id, uri)
+    if cached_message then
+        return cached_message
+    else
+        assert(cache_err ~= nil)
+        Log(kLogInfo, cache_err.description)
+    end
+    return try_from_web_preview(uri, norm_uri)
 end
 
 return {
