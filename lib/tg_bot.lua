@@ -40,7 +40,14 @@ end
 
 local function handle_chatid(message)
     local chat_id = message.chat.id
-    api.reply_to_message(message, "The ID of this chat is %d" % { chat_id })
+    local negative_warn = chat_id < 0 and " (the negative sign is important)"
+        or ""
+    api.reply_to_message(
+        message,
+        "The ID of this chat is `%d`%s" % { chat_id, negative_warn },
+        nil,
+        "MarkdownV2"
+    )
 end
 
 function bot.get_all_links_from_message(message)

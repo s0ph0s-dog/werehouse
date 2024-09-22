@@ -146,8 +146,8 @@ function api.send_message(
     return ok, err
 end
 
-function api.reply_to_message(message, text)
-    return api.send_message(message, text, nil, nil, nil, nil, nil, nil, {
+function api.reply_to_message(message, text, message_thread_id, parse_mode)
+    return api.send_message(message, text, message_thread_id, parse_mode, nil, nil, nil, nil, {
         message_id = message.message_id,
     })
 end
