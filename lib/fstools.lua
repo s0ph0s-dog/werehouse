@@ -118,26 +118,30 @@ local function list_all_image_files()
 end
 
 local function for_each_image_file(fn)
-    for d1_name, d1_kind in assert(unix.opendir("./images")) do
+    local d1 = assert(unix.opendir("./images"))
+    for d1_name, d1_kind in d1 do
         if d1_name ~= "." and d1_name ~= ".." and d1_kind == unix.DT_DIR then
-            for d2_name, d2_kind in assert(unix.opendir("./images/" .. d1_name)) do
+            local d2 = assert(unix.opendir("./images/" .. d1_name))
+            for d2_name, d2_kind in d2 do
                 if
                     d2_name ~= "."
                     and d2_name ~= ".."
                     and d2_kind == unix.DT_DIR
                 then
                     local parent_path = "./images/%s/%s" % { d1_name, d2_name }
-                    for file_name, file_kind in
-                        assert(unix.opendir(parent_path))
-                    do
+                    local parent_dir = assert(unix.opendir(parent_path))
+                    for file_name, file_kind in parent_dir do
                         if file_kind == unix.DT_REG then
                             fn(file_name, "%s/%s" % { parent_path, file_name })
                         end
                     end
+                    parent_dir:close()
                 end
             end
+            d2:close()
         end
     end
+    d1:close()
 end
 
 local function for_each_queue_file(user, fn)
@@ -148,13 +152,16 @@ local function for_each_queue_file(user, fn)
     for d1_name, d1_kind in qdir do
         if d1_name ~= "." and d1_name ~= ".." and d1_kind == unix.DT_DIR then
             local parent_path = "./queue/%s/%s" % { user, d1_name }
-            for file_name, file_kind in assert(unix.opendir(parent_path)) do
+            local parent_dir = assert(unix.opendir(parent_path))
+            for file_name, file_kind in parent_dir do
                 if file_kind == unix.DT_REG then
                     fn(file_name, "%s/%s" % { parent_path, file_name })
                 end
             end
+            parent_dir:close()
         end
     end
+    qdir:close()
 end
 
 return {
