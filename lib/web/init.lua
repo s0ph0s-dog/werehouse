@@ -2948,8 +2948,19 @@ local function accept_edit_share_ping_list(
         type = r.params.selected_service,
         chat_id = tonumber(r.params.chat_id),
     }
-    local SP = "add_share_ping_list"
+    local SP = "edit_share_ping_list"
     Model:create_savepoint(SP)
+    local meta_ok, meta_err = Model:updateSharePingListMetadata(
+        spl_id,
+        r.params.name,
+        share_data,
+        r.params.attribution == "true"
+    )
+    if not meta_ok then
+        Model:rollback(SP)
+        Log(kLogInfo, meta_err)
+        return Fm.serve500()
+    end
     -- Delete entries first (to cascade-delete their pl_entry_x_tag rows)
     local de_ok, de_err = Model:deleteSPLEntriesById(delete_entry_ids)
     if not de_ok then

@@ -1048,6 +1048,9 @@ local queries = {
         update_pending_share_record_with_date_now = [[UPDATE "share_records"
             SET "shared_at" = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
             WHERE "share_id" = ?;]],
+        update_spl_entry_metadata = [[UPDATE "share_ping_list"
+            SET "name" = ?, "share_data" = ?, "send_witH_attribution" = ?
+            WHERE "spl_id" = ?;]],
     },
 }
 
@@ -2393,6 +2396,13 @@ function Model:createSharePingList(name, share_data, send_with_attribution)
         return nil, err
     end
     return id.spl_id
+end
+
+function Model:updateSharePingListMetadata(spl_id, name, share_data, send_with_attribution)
+    if type(share_data) ~= "string" then
+        share_data = EncodeJson(share_data)
+    end
+    return self.conn:execute(queries.model.update_spl_entry_metadata, name, share_data, send_with_attribution, spl_id)
 end
 
 function Model:getAllSharePingLists()
