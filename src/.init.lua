@@ -38,6 +38,10 @@ local function sessionMaintenance()
     return Accounts:sessionMaintenance()
 end
 
+local function deletedFileCleanup()
+    return DbUtil.remove_deleted_files()
+end
+
 function OnWorkerStart()
     Accounts = DbUtil.Accounts:new()
 
@@ -63,6 +67,7 @@ ProgramMaxPayloadSize(10 * 1024 * 1024)
 
 Fm.setSchedule("* * * * *", ScraperPipeline.process_all_queues)
 Fm.setSchedule("50 * * * *", sessionMaintenance)
+Fm.setSchedule("25 * * * *", deletedFileCleanup)
 
 Bot.setup(os.getenv("TG_BOT_TOKEN"), true, ScraperPipeline.can_process_uri)
 Bot.run()

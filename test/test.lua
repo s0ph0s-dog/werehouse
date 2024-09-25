@@ -164,6 +164,64 @@ function TestFunctools:testZipWorks()
     luaunit.assertEquals(result, expected)
 end
 
+function TestFunctools:testSearchWorks()
+    local input1 = { needle = "a" }
+    local input2 = { hay = "z", hay2 = "y", hay3 = "x", needle = "a" }
+    local input3 = { { hay = "z" }, { hay = "y" }, { needle = "a" } }
+    local expected = { "a" }
+    luaunit.assertEquals(table.search(input1, { "needle" }), expected)
+    luaunit.assertEquals(table.search(input2, { "needle" }), expected)
+    luaunit.assertEquals(table.search(input3, { "needle" }), expected)
+    local input4 = {
+        data = {
+            {
+                foobar = {
+                    needle = "a",
+                    data2 = {
+                        {
+                            needle = "b",
+                        },
+                    },
+                },
+            },
+            {
+                foobar = {
+                    needle = "c",
+                    data2 = {
+                        {
+                            needle = "d",
+                        },
+                    },
+                },
+            },
+        },
+    }
+    local expected4 = { "a", "b", "c", "d" }
+    local result4 = table.search(input4, { "needle" })
+    table.sort(result4)
+    luaunit.assertEquals(result4, expected4)
+end
+
+function TestFunctools:testSearchWorksOnRealData()
+    local input =
+        DecodeJson(Slurp("./test/help_ask_example_for_tablesearch.json"))
+    local needles = { "media_file", "image_file" }
+    local expected = {
+        "zssdmoU6WmaAb0WCOMyRQRmSJL4aFF0AIUzsEAJSp1s=.jpg",
+        "FpZDd1b5WLxN8-2-t8vzUX1BM9GrRjD7UkPWKQ2V6hE=.webp",
+        "rPQUzTQflKBJDBKHIQrnAeRGHnYCwevOXaDfj5zZuHo=.jpg",
+        "vArKwrvITa6oQxrL-LXzOB2ySUYX42WZzUKvrM7N69s=.webp",
+        "zssdmoU6WmaAb0WCOMyRQRmSJL4aFF0AIUzsEAJSp1s=.jpg",
+        "FpZDd1b5WLxN8-2-t8vzUX1BM9GrRjD7UkPWKQ2V6hE=.webp",
+        "l3glZKJIjFggwkShc0JvF7vBNq0s5daIAmEX9AVfpxY=.jpg",
+        "GoNKmIcPuDsQCkMAmqaKBThaOCp10Ldslc2Z3fQHdXY=.webp",
+    }
+    table.sort(expected)
+    local result = table.search(input, needles)
+    table.sort(result)
+    luaunit.assertEquals(result, expected)
+end
+
 ---@alias MockData {whenCalledWith: string, thenReturn: any[]}
 
 ---@param data MockData[]

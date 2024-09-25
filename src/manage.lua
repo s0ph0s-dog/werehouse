@@ -51,29 +51,6 @@ local function help()
     )
 end
 
-local function for_each_user(fn)
-    local accounts = DbUtil.Accounts:new()
-    local users, users_err = accounts:getAllUserIds()
-    accounts.conn:close()
-    if not users then
-        error(users_err)
-        return nil
-    end
-    for i = 1, #users do
-        local user = users[i]
-        print(
-            "Checking records for user %s (%d of %d)…"
-                % { user.user_id, i, #users }
-        )
-        local model = DbUtil.Model:new(nil, user.user_id)
-        local rc = fn(i, user, model)
-        model.conn:close()
-        if rc ~= 0 then
-            return rc
-        end
-    end
-end
-
 local function db_migrate(other_args)
     local migrate_opts = {
         delete = true,
@@ -129,7 +106,7 @@ end
 
 local function update_image_sizes(other_args)
     local dry_run = other_args[1] == "-d"
-    for_each_user(function(_, user, model)
+    DbUtil.for_each_user(function(_, user, model)
         local images, images_err = model:getAllImagesForSizeCheck()
         if not images then
             print("Failed :(")
@@ -241,7 +218,7 @@ local function hash(other_args)
         )
         return 1
     end
-    for_each_user(function(_, user, model)
+    DbUtil.for_each_user(function(_, user, model)
         local images, images_err = model.conn:fetchAll(
             "SELECT image_id, file FROM images WHERE image_id NOT IN (SELECT image_id FROM image_gradienthashes);"
         )
@@ -342,7 +319,7 @@ local function thumbnail(other_args)
         )
         return 1
     end
-    for_each_user(function(_, user, model)
+    DbUtil.for_each_user(function(_, user, model)
         local images, images_err = model.conn:fetchAll(
             "SELECT image_id, file FROM images WHERE image_id NOT IN (SELECT DISTINCT image_id FROM thumbnails);"
         )
@@ -399,7 +376,7 @@ local function thumbnail(other_args)
 end
 
 local function redo_bad_disambig_req(_)
-    for_each_user(function(_, _, model)
+    DbUtil.for_each_user(function(_, _, model)
         local query =
             "select qid from queue where substr(disambiguation_request, 1, 1) = '[' OR disambiguation_request = '';"
         local results, err = model.conn:fetchAll(query)
@@ -476,7 +453,7 @@ local function clean_orphan_files(other_args)
         local file_name = image_files[i]
         image_set[file_name] = true
     end
-    for_each_user(function(_, _, model)
+    DbUtil.for_each_user(function(_, _, model)
         local query = "SELECT file FROM images;"
         local all_files_for_user, err = model.conn:fetchAll(query)
         if not all_files_for_user then
@@ -517,7 +494,7 @@ local function fix_0wh(other_args)
         )
         return
     end
-    for_each_user(function(_, _, model)
+    DbUtil.for_each_user(function(_, _, model)
         local SP_DIMFIX = "fix_dimensions_for_images"
         local query =
             "SELECT image_id, file FROM images WHERE width < 10 OR height < 10;"
@@ -571,7 +548,7 @@ local function calc_queue_wh(other_args)
         )
         return
     end
-    for_each_user(function(_, _, model)
+    DbUtil.for_each_user(function(_, _, model)
         local query = "SELECT qid, image FROM queue WHERE image IS NOT NULL;"
         local update =
             "UPDATE queue SET image_width = ?, image_height = ? WHERE qid = ?;"
@@ -599,7 +576,7 @@ end
 
 local function queue2_migrate(other_args)
     local dry_run = other_args[1] == "-d"
-    for_each_user(function(_, _, model)
+    DbUtil.for_each_user(function(_, _, model)
         local SP = "migrate_queue_to_queue2"
         model:create_savepoint(SP)
         local queue2_query =
@@ -668,7 +645,7 @@ end
 
 local function clean_sources(other_args)
     local dry_run = other_args[1] == "-d"
-    for_each_user(function(_, _, model)
+    DbUtil.for_each_user(function(_, _, model)
         local SP = "clean_sources"
         model:create_savepoint(SP)
         local all_sources_q = [[select source_id, link from sources;]]
@@ -711,7 +688,7 @@ local function clean_sources(other_args)
 end
 
 local function reapply_tags_from_rules(_)
-    for_each_user(function(_, _, model)
+    DbUtil.for_each_user(function(_, _, model)
         local SP = "reapply_tags_from_rules"
         model:create_savepoint(SP)
         local delete_q =
@@ -739,6 +716,10 @@ local function reapply_tags_from_rules(_)
     end)
 end
 
+local function clean_deleted_files(_)
+    DbUtil.remove_deleted_files()
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
@@ -754,6 +735,7 @@ local commands = {
     queue2_migrate = queue2_migrate,
     clean_sources = clean_sources,
     reapply_tags_from_rules = reapply_tags_from_rules,
+    clean_deleted_files = clean_deleted_files,
 }
 
 local remaining_args = arg

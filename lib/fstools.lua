@@ -117,6 +117,46 @@ local function list_all_image_files()
     return image_files
 end
 
+local function for_each_image_file(fn)
+    for d1_name, d1_kind in assert(unix.opendir("./images")) do
+        if d1_name ~= "." and d1_name ~= ".." and d1_kind == unix.DT_DIR then
+            for d2_name, d2_kind in assert(unix.opendir("./images/" .. d1_name)) do
+                if
+                    d2_name ~= "."
+                    and d2_name ~= ".."
+                    and d2_kind == unix.DT_DIR
+                then
+                    local parent_path = "./images/%s/%s" % { d1_name, d2_name }
+                    for file_name, file_kind in
+                        assert(unix.opendir(parent_path))
+                    do
+                        if file_kind == unix.DT_REG then
+                            fn(file_name, "%s/%s" % { parent_path, file_name })
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function for_each_queue_file(user, fn)
+    local qdir = unix.opendir("./queue/" .. user)
+    if not qdir then
+        return
+    end
+    for d1_name, d1_kind in qdir do
+        if d1_name ~= "." and d1_name ~= ".." and d1_kind == unix.DT_DIR then
+            local parent_path = "./queue/%s/%s" % { user, d1_name }
+            for file_name, file_kind in assert(unix.opendir(parent_path)) do
+                if file_kind == unix.DT_REG then
+                    fn(file_name, "%s/%s" % { parent_path, file_name })
+                end
+            end
+        end
+    end
+end
+
 return {
     save_image = save_image,
     save_queue = save_queue,
@@ -125,6 +165,8 @@ return {
     make_image_path_from_filename = make_image_path_from_filename,
     make_queue_path_from_filename = make_queue_path_from_filename,
     list_all_image_files = list_all_image_files,
+    for_each_image_file = for_each_image_file,
+    for_each_queue_file = for_each_queue_file,
     MIME_TO_EXT = MIME_TO_EXT,
     MIME_TO_KIND = MIME_TO_KIND,
 }

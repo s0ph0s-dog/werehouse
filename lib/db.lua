@@ -2398,11 +2398,22 @@ function Model:createSharePingList(name, share_data, send_with_attribution)
     return id.spl_id
 end
 
-function Model:updateSharePingListMetadata(spl_id, name, share_data, send_with_attribution)
+function Model:updateSharePingListMetadata(
+    spl_id,
+    name,
+    share_data,
+    send_with_attribution
+)
     if type(share_data) ~= "string" then
         share_data = EncodeJson(share_data)
     end
-    return self.conn:execute(queries.model.update_spl_entry_metadata, name, share_data, send_with_attribution, spl_id)
+    return self.conn:execute(
+        queries.model.update_spl_entry_metadata,
+        name,
+        share_data,
+        send_with_attribution,
+        spl_id
+    )
 end
 
 function Model:getAllSharePingLists()
@@ -3157,6 +3168,94 @@ function TGForwardCache:clean(secs_in_past)
     return self.conn:excute(q, secs_in_past)
 end
 
+local function for_each_user(fn)
+    local accounts = DbUtil.Accounts:new()
+    local users, users_err = accounts:getAllUserIds()
+    accounts.conn:close()
+    if not users then
+        error(users_err)
+        return nil
+    end
+    for i = 1, #users do
+        local user = users[i]
+        print(
+            "Checking records for user %s (%d of %d)…"
+                % { user.user_id, i, #users }
+        )
+        local model = DbUtil.Model:new(nil, user.user_id)
+        local rc = fn(i, user, model)
+        model.conn:close()
+        if rc ~= 0 then
+            return rc
+        end
+    end
+end
+
+local function remove_deleted_files()
+    local recordFileNamesFoundInUse = {}
+    local record_files_q = [[SELECT "file" FROM "images";]]
+    local queue_img_q = [[SELECT "image" FROM "queue_images";]]
+    local queue_help_q =
+        [[SELECT "help_ask" FROM "queue2" WHERE help_ask IS NOT NULL;]]
+    local SP = "remove_deleted_files"
+    for_each_user(function(_, user, model)
+        local queueImagesFoundInUse = {}
+        model:create_savepoint(SP)
+        local record_files, rf_err = model.conn:fetchAll(record_files_q)
+        if not record_files then
+            model:rollback(SP)
+            Log(kLogInfo, "Unable to query for all files: " .. rf_err)
+            return 1
+        end
+        for i = 1, #record_files do
+            recordFileNamesFoundInUse[record_files[i].file] = true
+        end
+        local qimg, qimg_err = model.conn:fetchAll(queue_img_q)
+        if not qimg then
+            model:rollback(SP)
+            Log(kLogInfo, "Unable to query for all queue images: " .. qimg_err)
+            return 1
+        end
+        for i = 1, #qimg do
+            queueImagesFoundInUse[qimg[i].image] = true
+        end
+        local qhelp, qh_err = model.conn:fetchAll(queue_help_q)
+        if not qhelp then
+            model:rollback(SP)
+            Log(
+                kLogInfo,
+                "Unable to query for all queue entries with help requests: "
+                    .. qh_err
+            )
+            return 1
+        end
+        for i = 1, #qhelp do
+            local json = DecodeJson(qhelp[i].help_ask)
+            local filenames = table.search(json, { "media_file", "image_file" })
+            for j = 1, #filenames do
+                queueImagesFoundInUse[filenames[j]] = true
+            end
+        end
+        FsTools.for_each_queue_file(user.user_id, function(file, path)
+            if not queueImagesFoundInUse[file] then
+                unix.unlink(path)
+                Log(
+                    kLogInfo,
+                    "Deleted no longer referenced queue file: " .. path
+                )
+            end
+        end)
+        model:release_savepoint(SP)
+        return 0
+    end)
+    FsTools.for_each_image_file(function(file, path)
+        if not recordFileNamesFoundInUse[file] then
+            unix.unlink(path)
+            Log(kLogInfo, "Deleted no longer referenced record file: " .. path)
+        end
+    end)
+end
+
 local ImageKind = {
     Image = 1,
     Video = 2,
@@ -3198,6 +3297,8 @@ return {
     Accounts = Accounts,
     Model = Model,
     TGForwardCache = TGForwardCache,
+    remove_deleted_files = remove_deleted_files,
+    for_each_user = for_each_user,
     -- k is for konstant! I passed spelling :)
     k = {
         ImageKind = ImageKind,

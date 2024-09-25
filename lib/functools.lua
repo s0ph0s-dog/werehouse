@@ -406,3 +406,31 @@ function table.uniq(sequence)
     end
     return result
 end
+
+function table.search(t, keys)
+    if type(keys) ~= "table" then
+        keys = { keys }
+    end
+    local results = {}
+    if type(t) == "table" and #t > 0 then
+        for i = 1, #t do
+            table.extend(results, table.search(t[i], keys))
+        end
+    elseif type(t) == "table" and next(t) then
+        for k, v in pairs(t) do
+            local found = false
+            for i = 1, #keys do
+                if k == keys[i] then
+                    found = true
+                    results[#results + 1] = v
+                end
+            end
+            if not found then
+                table.extend(results, table.search(v, keys))
+            end
+        end
+    else
+        -- Nothing needs to be done; the results list is empty already.
+    end
+    return results
+end
