@@ -1351,14 +1351,19 @@ function Model:enqueueImage(mime_type, image_data)
         end
     end
     local filename = FsTools.save_queue(image_data, mime_type, self.user_id)
+    local SP = "enqueue_image"
+    self:create_savepoint(SP)
     local q_record, qerr =
         self.conn:fetchOne(queries.model.insert_image_into_queue)
     Log(kLogDebug, "q_record: " .. EncodeJson(q_record))
     if not q_record then
         Log(kLogInfo, "error while adding queue record for image: " .. qerr)
+        self:rollback(SP)
         return nil, qerr
     end
-    local imgok, imgerr = self.conn:execute(
+    local ok, imgok, imgerr = pcall(
+        self.conn.execute,
+        self.conn,
         queries.model.insert_image_file_into_queue,
         q_record.qid,
         filename,
@@ -1367,13 +1372,20 @@ function Model:enqueueImage(mime_type, image_data)
         height
     )
     Log(kLogDebug, "imgok: " .. EncodeJson(imgok))
+    if not ok then
+        self:rollback(SP)
+        Log(kLogInfo, "constraint violation when enqueing image: " .. imgok)
+        return nil, "An exact copy of this file is already in the queue."
+    end
     if not imgok then
+        self:rollback(SP)
         Log(
             kLogInfo,
             "error while adding queue_image record for image: " .. imgerr
         )
         return nil, imgerr
     end
+    self:release_savepoint(SP)
     return q_record
 end
 
