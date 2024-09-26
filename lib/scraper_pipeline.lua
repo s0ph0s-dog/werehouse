@@ -263,7 +263,12 @@ local function p_fetch(model, queue_entry, task)
                 or Nu.guess_mime_from_url(scraped_data.media_url)
                 or "image/jpeg"
             scraped_data.media_data = media_data
-            scraped_data.mime_type = mime_type
+            if
+                mime_type ~= "application/octet-stream"
+                or not scraped_data.mime_type
+            then
+                scraped_data.mime_type = mime_type
+            end
             local thumbnails = scraped_data.thumbnails or {}
             for k = 1, #thumbnails do
                 local thumbnail = thumbnails[k]
@@ -276,7 +281,12 @@ local function p_fetch(model, queue_entry, task)
                     or Nu.guess_mime_from_url(thumbnail.raw_uri)
                     or "image/jpeg"
                 thumbnail.image_data = image_data
-                thumbnail.mime_type = thumb_mime
+                if
+                    thumb_mime ~= "application/octet-stream"
+                    or not thumbnail.mime_type
+                then
+                    thumbnail.mime_type = thumb_mime
+                end
             end
         end
     end

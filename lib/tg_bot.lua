@@ -286,8 +286,9 @@ local function handle_enqueue(message)
             Log(kLogInfo, tostring(photo_err))
             return
         end
+        -- Telegram images are always image/jpeg, so the MIME type is not included anywhere. The server response is application/octet-stream, which is not helpful.
         local queue_entry, err =
-            model:enqueueImage(photo_data.mime_type, photo_data.data)
+            model:enqueueImage("image/jpeg", photo_data.data)
         if not queue_entry then
             Log(kLogInfo, tostring(err))
             api.reply_to_message(
