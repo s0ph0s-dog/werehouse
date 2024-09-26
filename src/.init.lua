@@ -19,6 +19,8 @@ if session_key then
     Fm.sessionOptions.secret = Fm.decodeBase64()
 end
 
+SESSION_MAX_DURATION_SECS = 30 * 24 * 60 * 60
+
 ServerVersion = string.format(
     "%s/%s; redbean/%s",
     about.NAME,
