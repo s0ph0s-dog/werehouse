@@ -2899,8 +2899,8 @@ end
 
 function Accounts:sessionMaintenance()
     local now = unix.clock_gettime()
-    -- Expire all sessions that have not been used in 7 days.
-    local expiry_point = now - (7 * 24 * 60 * 60)
+    -- Expire all sessions that have not been used in 30 days.
+    local expiry_point = now - (30 * 24 * 60 * 60)
     local delete_count, err
     self.conn:execute(
         queries.accounts.delete_sessions_older_than_stamp,
