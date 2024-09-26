@@ -9,3 +9,4 @@ images/*
 *.paw
 *.toolbox
 /queue
+/lib/third_party/debugger.lua
