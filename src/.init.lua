@@ -15,9 +15,14 @@ Bot = require("tg_bot")
 GifTools = require("giftools")
 
 local session_key = os.getenv("SESSION_KEY")
+Fm.sessionOptions.name = "__Host-session"
 if session_key then
     Fm.sessionOptions.secret = Fm.decodeBase64()
 end
+Fm.cookieOptions.httponly = true
+Fm.cookieOptions.secure = true
+Fm.cookieOptions.samesite = "Strict"
+Fm.cookieOptions.path = "/"
 
 SESSION_MAX_DURATION_SECS = 30 * 24 * 60 * 60
 

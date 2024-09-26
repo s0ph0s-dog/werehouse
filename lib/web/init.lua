@@ -193,11 +193,10 @@ end
 local COOKIE_HASH = "SHA256"
 local COOKIE_FORMAT = "%s.%s.%s"
 local COOKIE_PATTERN = "(.-)%.(.-)%.(.+)"
-local COOKIE_NAME = "login"
+local COOKIE_NAME = "__Host-login"
 local COOKIE_OPTIONS = {
-    MaxAge = 10 * 365 * 24 * 60 * 60,
     Path = "/",
-    Secure = false,
+    Secure = true,
     HttpOnly = true,
     SameSite = "Strict",
 }
@@ -209,9 +208,10 @@ local function set_login_cookie(r, value)
         EncodeBase64(GetCryptoHash(COOKIE_HASH, value, COOKIE_KEY))
     local cookie_value = COOKIE_FORMAT:format(value, COOKIE_HASH, signature)
     if value then
+        local max_age = unix.clock_gettime() + SESSION_MAX_DURATION_SECS
         r.cookies[COOKIE_NAME] = {
             cookie_value,
-            maxage = COOKIE_OPTIONS.MaxAge,
+            maxage = max_age,
             path = COOKIE_OPTIONS.Path,
             secure = COOKIE_OPTIONS.Secure,
             httponly = COOKIE_OPTIONS.HttpOnly,
