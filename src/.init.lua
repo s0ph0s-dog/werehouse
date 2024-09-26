@@ -76,7 +76,7 @@ Fm.setSchedule("* * * * *", ScraperPipeline.process_all_queues)
 Fm.setSchedule("50 * * * *", sessionMaintenance)
 Fm.setSchedule("25 * * * *", deletedFileCleanup)
 
-Bot.setup(os.getenv("TG_BOT_TOKEN"), true, ScraperPipeline.can_process_uri)
+Bot.setup(os.getenv("TG_BOT_TOKEN"), false, ScraperPipeline.can_process_uri)
 Bot.run()
 
 web.setup()
