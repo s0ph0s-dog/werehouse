@@ -10,3 +10,5 @@ images/*
 *.toolbox
 /queue
 /lib/third_party/debugger.lua
+/cert.pem
+/key.pem
