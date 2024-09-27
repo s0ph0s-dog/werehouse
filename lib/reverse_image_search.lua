@@ -180,8 +180,7 @@ local function search(image, mime_type)
         return fuzzysearch_results
     end
     if #fluffle_results == 0 and #fuzzysearch_results == 0 then
-        return nil,
-            "No sources for this image found in the FuzzySearch or Fluffle.xyz databases."
+        return {}
     end
     return nil, fluffle_err + "; " + fuzzysearch_err
 end

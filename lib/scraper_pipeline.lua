@@ -178,20 +178,21 @@ local function p_scrape(model, queue_entry, task)
     if task.type == PipelineTaskType.LookUp then
         ---@cast task PipelineTaskLookUp
         local sources, ris_err = Ris.search(task.image_data, task.mime_type)
-        if sources then
+        if not sources then
+            return nil, PipelineErrorPermanent(ris_err)
+        end
+        sources[#sources + 1] = queue_entry.tg_source_link
+        if #sources > 0 then
             task = {
                 type = PipelineTaskType.Scrape,
                 qid = task.qid,
                 sources = sources,
             }
-        elseif queue_entry.tg_source_link then
-            task = {
-                type = PipelineTaskType.Scrape,
-                qid = task.qid,
-                sources = { queue_entry.tg_source_link },
-            }
         else
-            return nil, PipelineErrorPermanent(ris_err)
+            return nil,
+                PipelineErrorPermanent(
+                    "No sources found for this image in the FuzzySearch or Fluffle.xyz databases."
+                )
         end
     end
     if task.type ~= PipelineTaskType.Scrape then
