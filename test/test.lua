@@ -1830,6 +1830,8 @@ function TestScraperPipeline:testValidCohostLinks()
         "https://cohost.org/Puptini/post/5584885-did-you-wonder-where"
     local inputLoggedInOnly =
         "https://cohost.org/infinityio/post/4685920-div-style-flex-dir"
+    local inputAttachmentRows =
+        "https://cohost.org/keffotin/post/7860291-swell-day-for-a-swim"
     local tests = {
         {
             input = inputSFW,
@@ -1952,6 +1954,74 @@ function TestScraperPipeline:testValidCohostLinks()
                 ),
             },
         },
+        {
+            input = inputAttachmentRows,
+            expected = {
+                table.map({
+                    {
+                        media_url = "https://staging.cohostcdn.org/attachment/74471387-a32a-4c02-bc4a-116b9948e68b/swell%20day%20for%20a%20swim%20p1.png",
+                        height = 2100,
+                        width = 1700,
+                    },
+                    {
+                        media_url = "https://staging.cohostcdn.org/attachment/f180ce9d-bf62-4a26-afab-af2365028580/swell%20day%20for%20a%20swim%20p2.png",
+                        height = 1900,
+                        width = 1650,
+                    },
+                    {
+                        media_url = "https://staging.cohostcdn.org/attachment/a42a020e-9830-461c-af23-16b6c6e857ca/swell%20day%20for%20a%20swim%20p3.png",
+                        height = 2100,
+                        width = 2060,
+                    },
+                }, function(img_info)
+                    return {
+                        kind = DbUtil.k.ImageKind.Image,
+                        authors = {
+                            {
+                                display_name = "Keffo 🔞",
+                                handle = "keffotin",
+                                profile_url = "https://cohost.org/keffotin",
+                            },
+                        },
+                        canonical_domain = "cohost.org",
+                        incoming_tags = {
+                            "keffotin",
+                            "nsfw art",
+                            "furry nsfw",
+                            "patreon",
+                            "sequence",
+                            "animal crossing",
+                            "ACNH",
+                            "isabelle",
+                            "Sable Able",
+                            "shortstack",
+                            "chubby",
+                            "girlcock",
+                            "huge cock",
+                            "huge balls",
+                            "big belly",
+                            "Swimsuit",
+                            "inflation",
+                            "cumflation",
+                            "excessive cum",
+                            "Wardrobe Malfunction",
+                            "blowjob",
+                            "underwater sex",
+                            "facial",
+                            "belly inflation",
+                            "if you think i'm gonna post my porn to a site that dies in 3 days you're GODDAMN RIGHT",
+                            "a little treat for the real superfreaks who are sticking it out to the end and not going anywhere else",
+                        },
+                        rating = DbUtil.k.Rating.Explicit,
+                        this_source = "https://cohost.org/keffotin/post/7860291-swell-day-for-a-swim",
+                        media_url = img_info.media_url,
+                        height = img_info.height,
+                        width = img_info.width,
+                    }
+                end),
+                nil,
+            },
+        },
     }
     local mocks = {
         fetch_mock_head_html_200(inputSFW),
@@ -1968,6 +2038,10 @@ function TestScraperPipeline:testValidCohostLinks()
         {
             whenCalledWith = "https://cohost.org/api/v1/trpc/posts.singlePost?batch=1&input=%7B%220%22%3A%7B%22handle%22%3A%22infinityio%22%2C%22postId%22%3A4685920%7D%7D",
             thenReturn = { 200, {}, Slurp("test/cohost_loggedinonly.json") },
+        },
+        {
+            whenCalledWith = "https://cohost.org/api/v1/trpc/posts.singlePost?batch=1&input=%7B%220%22%3A%7B%22handle%22%3A%22keffotin%22%2C%22postId%22%3A7860291%7D%7D",
+            thenReturn = { 200, {}, Slurp("test/cohost_attachment_row.json") },
         },
     }
     process_entry_framework_generic(

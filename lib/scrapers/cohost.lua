@@ -28,10 +28,23 @@ local function process_attachment_blocks(post)
     if not post.blocks then
         return nil
     end
-    local attachment_blocks = table.filter(post.blocks, function(item)
+    local attachments = table.filter(post.blocks, function(item)
         return item.type == "attachment" and item.attachment.kind == "image"
     end)
-    if #attachment_blocks < 1 then
+    local row_attachments = table.reduce(
+        table.filter(post.blocks, function(item)
+            return item.type == "attachment-row"
+        end),
+        function(acc, next)
+            if not acc then
+                return next.attachments
+            else
+                return table.extend(acc, next.attachments)
+            end
+        end
+    )
+    table.extend(attachments, row_attachments)
+    if #attachments < 1 then
         return nil
     end
     if
@@ -54,7 +67,7 @@ local function process_attachment_blocks(post)
         profile_url = "https://cohost.org/" .. post.postingProject.handle,
         display_name = displayName,
     }
-    return table.maperr(attachment_blocks, function(block)
+    return table.maperr(attachments, function(block)
         ---@type ScrapedSourceData
         local result = {
             kind = DbUtil.k.ImageKind.Image,
