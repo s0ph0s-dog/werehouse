@@ -1,0 +1,32 @@
+{% function block.content() %}
+<h1>Sharing</h1>
+<p>Werehouse currently supports sharing to Telegram. I plan to eventually support sharing to Discord, but haven’t gotten to it yet.</p>
+<p>There are two ways Werehouse can share to Telegram:</p>
+<ol>
+    <li><strong>Linked Account:</strong><br />If you have <a href="/account#linked-tg">linked a Telegram account with your Werehouse account</a>, you can choose to have Werehouse send that record to you on Telegram, in the chat with WerehouseBot.  This option works well for times when you’d like to forward something directly to a friend, or for group chats where it would be improper or frowned upon to add WerehouseBot.</li>
+    <li><strong>Share Options:</strong><br />If you have <a href="/account#sopl">added a Share Option in your account settings</a>, you can have Werehouse send a record directly to a group chat or channel.  If you configure the Share Option with a Ping List, Werehouse can even automatically @-mention folks in the chat who might enjoy the record you’ve shared!</li>
+</ol>
+<h2>Linked Account</h2>
+<p>To link a Telegram account with Werehouse, send a message that says <tt>/start</tt> to <a href="https://t.me/werehouse_archive_bot">@WerehouseBot</a> on Telegram.  The bot will send you back a link that should show you a confirmation dialog (and possibly a login page, if you're not already logged in to Werehouse in the browser window that opens).</p>
+<p>Once you have linked a Telegram account, it will appear in the drop-down menu anywhere that you can share a record (or record group).</p>
+<h2>Share Options</h2>
+<p>To add a share option:</p>
+<ol>
+    <li>Click the <q>Add a Share Option…</q> link under <q>Share Options and Ping Lists</q> on your <a href="/account#sopl">account settings</a> page.</li>
+    <li>Choose a name for the share option (which will only ever be shown to you).</li>
+    <li>Enter the Telegram chat ID of the chat or channel that you want Werehouse to send records to.  Since this is a fairly esoteric detail, WerehouseBot has a command to help.  Once you have added it to the group or channel (or convinced the admins to do it for you), you can send <tt>/chatid</tt>, and WerehouseBot will reply with the ID of the chat.</li>
+</ol>
+<p>If you would like to also have Werehouse @-mention (also sometimes called <q>ping</q>) specific members of the chat when Werehouse is sending something that they might like, you can add a ping list to the share option.</p>
+<ol>
+    <li>Click the disclosure triangle that says <q>Include a ping list…</q>.</li>
+    <li>Enter the full username (<em>including the <tt>@</tt> symbol</em>) of a chat member you’d like Werehouse to automatically mention.</li>
+    <li>Click <q>Add Tags…</q>.  A new set of fields will appear below the username.</li>
+    <li>Enter all the tags from your archive that the chat member is interested in.  If you enter a tag name that doesn’t exist already, Werehouse will create it for you.</li>
+    <li>Enter all the tags from your archive that the chat member is <strong>not</strong> interested in.  The same rule about creating tags applies here too.</li>
+</ol>
+<p>Here’s how the sharing system works: When you share a record from your archive using a share option that includes a ping list, Werehouse will reply to the initial share message with another message that pings/mentions the usernames who:</p>
+<ul>
+  <li>like <i>at least one</i> tag for that record, and</li>
+  <li>dislike <i>none</i> of the tags for that record.</li>
+</ul>
+{% end %}{% render("layouts/main", { title = "Help", user = user }) %}

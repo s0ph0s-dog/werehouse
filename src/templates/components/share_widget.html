@@ -18,6 +18,9 @@
     <input type="submit" name="share" value="Share…" />
   </span>
 </form>
+{% if #share_ping_lists < 1 then %}
+<p>If you want to share to a group or channel, add a Share Option in <a href="/account#sopl">your account settings</a>.</p>
+{% end %}
 {% end %}
 {% if share_records and #share_records > 0 then %}
 <ul>

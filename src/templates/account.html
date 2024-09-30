@@ -9,7 +9,7 @@
   <li>{%& tag_count %} tags</li>
   <li>{%& string.format("%.02f MB", data_size / 1024 / 1024 ) %} of data</li>
 </ul>
-<h1>Linked Telegram Accounts</h1>
+<h1 id="linked-tg">Linked Telegram Accounts</h1>
 {% if #telegram_accounts > 0 then %}
 <ul>
   {% for i = 1, #telegram_accounts do local tg_acct = telegram_accounts[i] %}
@@ -31,7 +31,7 @@
   >
   and click the link it sends you.
 </p>
-<h1>Share Options and Ping Lists</h1>
+<h1 id="sopl">Share Options and Ping Lists</h1>
 <p>
   Configure the groups or channels you would like to be able to share archive
   entries to. Optionally, you can also add your friends’ usernames and tags that
