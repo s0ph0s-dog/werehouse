@@ -8,7 +8,7 @@ groups }) %}
     DbUtilK.ImageKind}) %}
   </div>
   <div class="sidebar" hx-boost="true">
-    <a class="edit" href="/image/{%& image.image_id %}/edit">Edit</a>
+    <a class="edit" href="/image/{%& image.image_id %}/edit">Edit…</a>
     <h1>Metadata</h1>
     <ul>
       <li>Saved at: <time>{%& image.saved_at %}</time></li>
@@ -35,7 +35,7 @@ groups }) %}
     {% if #tags == 0 then %}
     <p>
       No tags for this record yet{% if incoming_tags and #incoming_tags > 0 then
-      %}, but the scraper found some suggestions{% end %}.
+      %}, but the scraper found some suggestions{% end %}.  You can add them by clicking <a href="/image/{%& image.image_id %}/edit"><q>Edit…</q> above (or here)</a>.
     </p>
     {% else %}
     <ul>
