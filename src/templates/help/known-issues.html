@@ -1,0 +1,18 @@
+{% function block.content() %}
+<h1>Known Issues</h1>
+<ul>
+    <li>Search has not been implemented yet. I’m figuring out how it should work.</li>
+    <li>Deleting your account does not work yet.</li>
+    <li>Downloading your data does not work yet.</li>
+    <li>There is no way to filter your archive to show only records with a specific category.</li>
+    <li>When a request fails, the dialog that appears in your browser says that the server said “.”, rather than an actual error message.</li>
+    <li>The two pages which allow file uploads do not yet support drag-and-drop.</li>
+    <li>When sharing to Telegram, instead of resizing images to fit within Telegram’s limits, Werehouse just fails.</li>
+    <li>There is no way to merge tags/groups/artists/etc. that are on different pages.</li>
+    <li>It is not possible to undo a mistaken operation.</li>
+    <li>When installed as a Progressive Web App, Werehouse does not reload when resuming from inactive.</li>
+    <li>The text in the interface is not aligned to a baseline grid.</li>
+    <li>The help/documentation is insufficient.</li>
+    <li>Something is causing tags to build up, causing the “Tag Changes” dialog to accumulate changes over time.</li>
+</ul>
+{% end %}{% render("layouts/main", { title = "Help", user = user }) %}
