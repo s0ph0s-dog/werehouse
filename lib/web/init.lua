@@ -881,25 +881,21 @@ local accept_edit_image = login_required(function(r, user_record)
                 return Fm.serve500()
             end
         end
-        -- Done!
-        return Fm.serveRedirect("/image/" .. r.params.image_id, 302)
-    end
-    if r.params.make_rules then
+        -- Create tag rules.
         local itids = r.params.itids
         if not itids or #itids < 1 then
-            return Fm.serveError(
-                400,
-                "Must select at least one found tag to make a rule out of"
-            )
+            return Fm.serveRedirect("/image/" .. r.params.image_id, 302)
         end
         local params = table.map(itids, function(i)
             return { "itids[]", i }
         end)
-        local redirect_url = EncodeUrl {
+        local tr_redirect_url = EncodeUrl {
+            scheme = "https",
             path = "/tag-rule/add-bulk",
             params = params,
         }
-        return Fm.serveRedirect(302, redirect_url)
+        r.session.retarget_to = "dialog"
+        return Fm.serveRedirect(302, tr_redirect_url)
     end
     return render_image_internal(r, user_record)
 end)
@@ -1377,6 +1373,10 @@ local render_add_tag_rule_bulk = login_required(function(r, user_record)
     }
     add_htmx_param(r, params)
     add_form_path(r, params)
+    if r.session.retarget_to then
+        r.headers["HX-Retarget"] = r.session.retarget_to
+        r.headers["HX-Replace-Url"] = "false"
+    end
     return Fm.serveContent("tag_rule_bulk_add", params)
 end)
 

@@ -101,7 +101,6 @@
         </li>
         {% end %}
       </ul>
-      <button formnovalidate type="submit" name="make_rules" value="make_rules" hx-post="{%& form_path %}" hx-target="dialog">Create Rules and Add Tags…</button>
       </details>
       {% end %}
       <h1>Sources</h1>
@@ -152,7 +151,7 @@
         /><input
           type="submit"
           name="save"
-          value="Save"
+          value="Save…"
           hx-post="{%& form_path %}"
           hx-target="body"
           hx-push-url="true"
