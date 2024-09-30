@@ -18,7 +18,7 @@
 <ul>
   {% for i = 1, #handles do local handle = handles[i] %}
   <li>
-    <a href="{%& handle.profile_url %}"
+    <a target="_blank" href="{%& handle.profile_url %}"
       >{%& handle.handle %} on {%& handle.domain %}</a
     >
   </li>

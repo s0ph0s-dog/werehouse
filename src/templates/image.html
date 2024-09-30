@@ -54,7 +54,7 @@ groups }) %}
     <ul>
       {% for _, source in ipairs(sources) do %}
       <li>
-        <a href="{%& source.link %}">{%& ParseUrl(source.link).host %}</a>
+        <a target="_blank" href="{%& source.link %}">{%& ParseUrl(source.link).host %}</a>
       </li>
       {% end %}
     </ul>

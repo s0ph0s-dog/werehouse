@@ -18,13 +18,13 @@
 <form method="POST" action="{%& form_path %}" hx-boost="true">
   {% for source_idx, source in ipairs(help_ask.decoded) do %}
   <h3>
-    <a href="{%& source[1].this_source %}">{%& source[1].this_source %}</a>
+    <a target="_blank" href="{%& source[1].this_source %}">{%& source[1].this_source %}</a>
   </h3>
   <ol class="list-item-block">
     {% for image_idx, image in ipairs(source) do %}
     <li>
       <div>
-        <a href="{%& image.media_url %}">
+        <a target="_blank" href="{%& image.media_url %}">
           <img
             src="/queue-image/{%& image.media_file %}"
             height="{%& image.height %}"
@@ -50,7 +50,7 @@
               <li>Content hash: {%& duplicate.similarity %}% similar</li>
               {% end %} {% for ms_idx = 1, #duplicate.matched_sources do local ms
               = duplicate.matched_sources[ms_idx] %}
-              <li>Matched source: <a href="{%& ms %}">{%& ms %}</a></li>
+              <li>Matched source: <a target="_blank" href="{%& ms %}">{%& ms %}</a></li>
               {% end %}
             </ul>
           </li>

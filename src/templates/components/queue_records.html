@@ -40,7 +40,7 @@
     <div class="queue-stack">
       <div><strong>{%& block.status_text(item) %}</strong></div>
       {% if item.link then %}
-      <a href="{%& item.link %}">{%& item.link %}</a>
+      <a target="_blank" href="{%& item.link %}">{%& item.link %}</a>
       {% end %}{% if item.image then %}
       <div>
         <img

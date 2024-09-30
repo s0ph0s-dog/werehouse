@@ -14,7 +14,7 @@
 <ul>
   {% for i = 1, #telegram_accounts do local tg_acct = telegram_accounts[i] %}
   <li>
-    <a href="https://t.me/{%& tg_acct.tg_username %}"
+    <a target="_blank" href="https://t.me/{%& tg_acct.tg_username %}"
       >@{%& tg_acct.tg_username %}</a
     >
     ({%& tg_acct.tg_userid %})
@@ -26,7 +26,7 @@
 {% end %}
 <p>
   To link a Telegram account, send <code>/start</code> to
-  <a href="https://t.me/werehouse_archive_bot"
+  <a target="_blank" href="https://t.me/werehouse_archive_bot"
     >WerehouseBot (@werehouse_archive_bot)</a
   >
   and click the link it sends you.
