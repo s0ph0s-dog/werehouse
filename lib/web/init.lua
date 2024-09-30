@@ -1376,6 +1376,7 @@ local render_add_tag_rule_bulk = login_required(function(r, user_record)
     if r.session.retarget_to then
         r.headers["HX-Retarget"] = r.session.retarget_to
         r.headers["HX-Replace-Url"] = "false"
+        r.session.retarget_to = nil
     end
     return Fm.serveContent("tag_rule_bulk_add", params)
 end)

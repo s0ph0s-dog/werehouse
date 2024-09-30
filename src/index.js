@@ -218,7 +218,7 @@ if (!refresherBound) {
       const regainedFocusAt = new Date();
       const elapsed = regainedFocusAt - lostFocusAt;
       const dialog = document.getElementsByTagName("dialog")[0];
-      if (elapsed > (60 * 1000) && dialog && !dialog.open) {
+      if (elapsed > (5 * 60 * 1000) && dialog && !dialog.open) {
         window.location.reload();
       }
     }
