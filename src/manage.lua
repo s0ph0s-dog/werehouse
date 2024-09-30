@@ -720,6 +720,37 @@ local function clean_deleted_files(_)
     DbUtil.remove_deleted_files()
 end
 
+local function hash_thumbs()
+    DbUtil.for_each_user(function(_, _, model)
+        local SP = "hash_thumbs"
+        model:create_savepoint(SP)
+        local get_q =
+            [[SELECT thumbnail_id, thumbnail FROM thumbnails WHERE thumbnail_hash IS NULL;]]
+        local update_q =
+            [[UPDATE thumbnails SET thumbnail_hash = ? WHERE thumbnail_id = ?;]]
+        local all_unhashed_thumbs, aut_err = model.conn:fetchAll(get_q)
+        if not all_unhashed_thumbs then
+            model:rollback(SP)
+            Log(kLogWarn, aut_err)
+            return 1
+        end
+        for i = 1, #all_unhashed_thumbs do
+            local thumb = all_unhashed_thumbs[i]
+            local t_hash =
+                EncodeBase64(GetCryptoHash("SHA256", thumb.thumbnail))
+            local u_ok, u_err =
+                model.conn:execute(update_q, t_hash, thumb.thumbnail_id)
+            if not u_ok then
+                model:rollback(SP)
+                Log(kLogWarn, u_err)
+                return 1
+            end
+        end
+        model:release_savepoint(SP)
+        return 0
+    end)
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
@@ -736,6 +767,7 @@ local commands = {
     clean_sources = clean_sources,
     reapply_tags_from_rules = reapply_tags_from_rules,
     clean_deleted_files = clean_deleted_files,
+    hash_thumbs = hash_thumbs,
 }
 
 local remaining_args = arg

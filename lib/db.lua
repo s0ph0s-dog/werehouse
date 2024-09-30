@@ -310,6 +310,7 @@ local user_setup = [[
         "thumbnail_id" INTEGER NOT NULL UNIQUE,
         "image_id" INTEGER NOT NULL,
         "thumbnail" BLOB NOT NULL,
+        "thumbnail_hash" TEXT,
         "width" INTEGER NOT NULL,
         "height" INTEGER NOT NULL,
         "scale" INTEGER NOT NULL,
@@ -842,7 +843,7 @@ local queries = {
             INNER JOIN tags ON pl_entry_negative_tags.tag_id = tags.tag_id
             WHERE share_ping_list_entry.spl_id = ?]],
         get_thumbnail_by_id = [[SELECT
-                thumbnail_id, thumbnail, width, height, scale, mime_type
+                thumbnail_id, thumbnail, thumbnail_hash, width, height, scale, mime_type
             FROM thumbnails WHERE thumbnail_id = ?;]],
         get_approximately_equal_image_hashes = [[SELECT image_id, h1, h2, h3, h4
             FROM image_gradienthashes
@@ -940,8 +941,8 @@ local queries = {
         insert_negative_tag = [[INSERT OR IGNORE INTO pl_entry_negative_tags
             (spl_entry_id, tag_id) VALUES (?, ?);]],
         insert_thumbnail = [[INSERT INTO "thumbnails"
-            ( "image_id", "thumbnail", "width", "height", "scale", "mime_type" )
-            VALUES (?, ?, ?, ?, ?, ?);]],
+            ( "image_id", "thumbnail", "thumbnail_hash", "width", "height", "scale", "mime_type" )
+            VALUES (?, ?, ?, ?, ?, ?, ?);]],
         insert_image_hash = [[INSERT INTO "image_gradienthashes"
             ("image_id", "h1", "h2", "h3", "h4")
             VALUES (?, ?, ?, ?, ?);]],
@@ -1609,10 +1610,12 @@ function Model:insertThumbnailForImage(
     scale,
     mime_type
 )
+    local hash = EncodeBase64(GetCryptoHash("SHA256", thumbnail_data))
     return self.conn:execute(
         queries.model.insert_thumbnail,
         image_id,
         thumbnail_data,
+        hash,
         width,
         height,
         scale,

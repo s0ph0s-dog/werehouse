@@ -422,10 +422,14 @@ local render_thumbnail_file = login_required(function(r, _)
         Log(kLogDebug, errmsg)
         return Fm.serve404()
     end
+    if r.headers["If-None-Match"] == result.thumbnail_hash then
+        return Fm.serveResponse(304)
+    end
     r.headers.ContentType = result.mime_type
     return Fm.serveResponse(200, {
         ContentType = result.mime_type,
-        ["Cache-Control"] = "private, max-age=31536000",
+        ETag = result.thumbnail_hash,
+        ["Cache-Control"] = "max-age=3600",
     }, result.thumbnail)
 end)
 
