@@ -187,3 +187,21 @@ htmx.on('htmx:confirm', (evt) => {
     }
   }
 });
+
+let refresherBound = false;
+let lostFocusAt = null;
+if (!refresherBound) {
+  document.addEventListener("visibilitychange", (evt) => {
+    if (document.hidden) {
+      lostFocusAt = new Date();
+    } else {
+      const regainedFocusAt = new Date();
+      const elapsed = regainedFocusAt - lostFocusAt;
+      const dialog = document.getElementsByTagName("dialog")[0];
+      if (elapsed > (60 * 1000) && dialog && !dialog.open) {
+        window.location.reload();
+      }
+    }
+  });
+  refresherBound = true;
+}
