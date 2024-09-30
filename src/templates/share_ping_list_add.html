@@ -26,7 +26,7 @@
 </li>
 {% end end end %} {% function block.content() %}
 <form class="vbox" method="POST" action="{%& form_path %}" hx-boost="true">
-  <input type="submit" name="dummy_submit" value="dummy_submit" style="display:none" hx-post="{%& form_path %}" hx-target="dialog" />
+  <input type="submit" name="dummy_submit" value="dummy_submit" class="hidden" hx-post="{%& form_path %}" hx-target="dialog" />
   <label
     >Name:
     <input
@@ -51,7 +51,7 @@
   </label>
   {% if not incoming_service or incoming_service == "Telegram" then %}
   <label
-    ><span style="display: inline"
+    ><span class="inline"
       >Chat ID (ask @werehouse_archive_bot with <tt>/chatid</tt>):</span
     >
     <input required type="number" name="chat_id" value="{%& chat_id %}" />

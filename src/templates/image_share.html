@@ -50,22 +50,5 @@
     <input type="submit" name="share" value="Share" />
   </span>
 </form>
-<script>
-  document.querySelectorAll("[data-once]").forEach((el) => {
-    const buttons = el.querySelectorAll('input[type="submit"]');
-    el.addEventListener("submit", (event) => {
-      buttons.forEach((b) => {
-        b.setAttribute("aria-disabled", "true");
-        b.classList.add("btn-disabled");
-        b.addEventListener("click", (event) => {
-          if (b.getAttribute("aria-disabled") === "true") {
-            event.preventDefault();
-            return;
-          }
-        });
-      });
-    });
-  });
-</script>
 {% end %}{% render("layouts/dialog", { title = "Share " .. (ig_id or
 image.image_id), hx = hx }) %}

@@ -1,5 +1,5 @@
 {% for _, ig in ipairs(groups) do %}
-<div class="pages group">
+<div hx-boost="true" class="pages group">
   {% if ig.siblings and ig.siblings.prev then %}
   <a href="/image/{%& ig.siblings.prev %}">←&nbsp;Previous</a>{% else
   %}<span>←&nbsp;Previous</span>{% end %}<a href="/image-group/{%& ig.ig_id %}"

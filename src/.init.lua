@@ -38,6 +38,12 @@ ProgramBrand(ServerVersion)
 ProgramContentType("webmanifest", "application/manifest+json")
 ProgramCache(60 * 60 * 24 * 365, "private")
 
+ProgramHeader("Cross-Origin-Opener-Policy", "same-origin")
+ProgramHeader("Content-Security-Policy", "default-src 'self'; media-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'sha256-FkfU4IjCqDmMVOBt94TJzRp6bFcSupCo2v+Wil70YLI=' 'sha256-bsV5JivYxvGywDAZ22EZJKBFip65Ng9xoJVLbBg7bdo='; object-src 'none'; report-uri /csp-report")
+ProgramHeader("Strict-Transport-Security", "max-age=31536000")
+ProgramHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+ProgramHeader("Referrer-Policy", "strict-origin-when-cross-origin")
+
 Accounts = DbUtil.Accounts:new()
 Accounts:bootstrapInvites()
 

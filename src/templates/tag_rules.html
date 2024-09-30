@@ -13,7 +13,7 @@ function(m) return "<wbr />" .. m end) end %} {% function block.content() %}
 {% else %}
 <form method="POST" hx-boost="true" hx-swap="show:none">
   {% if error and type(error) == "string" then %}
-  <p style="color: red">{%& error %}</p>
+  <p class="error">{%& error %}</p>
   {% end %}
   <span class="buttons sticky-top"
     ><input type="reset" value="Deselect All" /><button

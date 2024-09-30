@@ -3328,6 +3328,11 @@ local render_archive = login_required(function(r, user_record)
     return Fm.serveContent("archive", params)
 end)
 
+local function accept_csp_report(r)
+    Log(kLogWarn, "Content-Security-Policy Report: " .. r.body)
+    return Fm.serveResponse(204)
+end
+
 local function setup_static()
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
     Fm.setRoute("/icon.svg", Fm.serveAsset)
@@ -3462,6 +3467,7 @@ local function setup()
     setup_tags()
     setup_account()
     Fm.setRoute("/help(/:page)", render_help)
+    Fm.setRoute("/csp-report", accept_csp_report)
 end
 
 local function run()

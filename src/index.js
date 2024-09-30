@@ -143,7 +143,6 @@ htmx.onLoad((content) => {
   let cancelButtons = content.querySelectorAll('[name="cancel"]');
   cancelButtons.forEach((btn) => {
     btn.addEventListener("click", (e) => {
-      console.log("cancelling");
       const closest_dialog = btn.closest("dialog");
       if (closest_dialog) {
         closest_dialog.close();
@@ -152,6 +151,27 @@ htmx.onLoad((content) => {
   });
   const taggers = content.querySelectorAll("[data-tagger-name]");
   taggers.forEach(tagger_setup);
+  document.querySelectorAll("[data-video-loop-toggler]").forEach(el => {
+    const vp = document.querySelector("[data-video-loop-toggled]");
+    el.addEventListener("change", event => {
+      vp.loop = event.srcElement.checked;
+    })
+  });
+  document.querySelectorAll("[data-once]").forEach((el) => {
+    const buttons = el.querySelectorAll('input[type="submit"]');
+    el.addEventListener("submit", (event) => {
+      buttons.forEach((b) => {
+        b.setAttribute("aria-disabled", "true");
+        b.classList.add("btn-disabled");
+        b.addEventListener("click", (event) => {
+          if (b.getAttribute("aria-disabled") === "true") {
+            event.preventDefault();
+            return;
+          }
+        });
+      });
+    });
+  });
 });
 
 // Remove dialogs from the page before saving history, so that they don't end
