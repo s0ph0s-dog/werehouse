@@ -139,7 +139,7 @@ function tagger_setup(tagger) {
   });
 }
 
-function close_dialog_when_cancel_clicked() {
+function close_dialog_when_cancel_clicked(content) {
   let cancelButtons = content.querySelectorAll('[name="cancel"]');
   cancelButtons.forEach((btn) => {
     btn.addEventListener("click", (e) => {
@@ -151,12 +151,12 @@ function close_dialog_when_cancel_clicked() {
   });
 }
 
-function setup_taggers() {
+function setup_taggers(content) {
   const taggers = content.querySelectorAll("[data-tagger-name]");
   taggers.forEach(tagger_setup);
 }
 
-function toggle_video_player_looping() {
+function toggle_video_player_looping(content) {
   document.querySelectorAll("[data-video-loop-toggler]").forEach(el => {
     const vp = document.querySelector("[data-video-loop-toggled]");
     el.addEventListener("change", event => {
@@ -165,7 +165,7 @@ function toggle_video_player_looping() {
   });
 }
 
-function prevent_multiple_submits_from_specified_buttons() {
+function prevent_multiple_submits_from_specified_buttons(content) {
   document.querySelectorAll("[data-once]").forEach((el) => {
     const buttons = el.querySelectorAll('input[type="submit"]');
     el.addEventListener("submit", (event) => {
@@ -183,7 +183,7 @@ function prevent_multiple_submits_from_specified_buttons() {
   });
 }
 
-function indicate_save_opens_dialog_when_incoming_tags_checked() {
+function indicate_save_opens_dialog_when_incoming_tags_checked(content) {
   const incoming_tags_list = document.getElementById("incoming_tags_list");
   const save_btn = document.getElementById("save_btn");
   if (incoming_tags_list && save_btn) {
@@ -202,11 +202,11 @@ function indicate_save_opens_dialog_when_incoming_tags_checked() {
 }
 
 htmx.onLoad((content) => {
-  close_dialog_when_cancel_clicked();
-  setup_taggers();
-  toggle_video_player_looping();
-  prevent_multiple_submits_from_specified_buttons();
-  indicate_save_opens_dialog_when_incoming_tags_checked();
+  close_dialog_when_cancel_clicked(content);
+  setup_taggers(content);
+  toggle_video_player_looping(content);
+  prevent_multiple_submits_from_specified_buttons(content);
+  indicate_save_opens_dialog_when_incoming_tags_checked(content);
 });
 
 // Remove dialogs from the page before saving history, so that they don't end
