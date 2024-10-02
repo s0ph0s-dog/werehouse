@@ -139,7 +139,7 @@ function tagger_setup(tagger) {
   });
 }
 
-htmx.onLoad((content) => {
+function close_dialog_when_cancel_clicked() {
   let cancelButtons = content.querySelectorAll('[name="cancel"]');
   cancelButtons.forEach((btn) => {
     btn.addEventListener("click", (e) => {
@@ -149,14 +149,23 @@ htmx.onLoad((content) => {
       }
     });
   });
+}
+
+function setup_taggers() {
   const taggers = content.querySelectorAll("[data-tagger-name]");
   taggers.forEach(tagger_setup);
+}
+
+function toggle_video_player_looping() {
   document.querySelectorAll("[data-video-loop-toggler]").forEach(el => {
     const vp = document.querySelector("[data-video-loop-toggled]");
     el.addEventListener("change", event => {
       vp.loop = event.srcElement.checked;
     })
   });
+}
+
+function prevent_multiple_submits_from_specified_buttons() {
   document.querySelectorAll("[data-once]").forEach((el) => {
     const buttons = el.querySelectorAll('input[type="submit"]');
     el.addEventListener("submit", (event) => {
@@ -172,6 +181,32 @@ htmx.onLoad((content) => {
       });
     });
   });
+}
+
+function indicate_save_opens_dialog_when_incoming_tags_checked() {
+  const incoming_tags_list = document.getElementById("incoming_tags_list");
+  const save_btn = document.getElementById("save_btn");
+  if (incoming_tags_list && save_btn) {
+    save_btn.value = "Save";
+    incoming_tags_list.querySelectorAll("input").forEach((el) => {
+      el.addEventListener("change", () => {
+        const any_checked = incoming_tags_list.querySelectorAll("input:checked");
+        if (any_checked.length > 0) {
+          save_btn.value = "Save…";
+        } else {
+          save_btn.value = "Save";
+        }
+      });
+    });
+  }
+}
+
+htmx.onLoad((content) => {
+  close_dialog_when_cancel_clicked();
+  setup_taggers();
+  toggle_video_player_looping();
+  prevent_multiple_submits_from_specified_buttons();
+  indicate_save_opens_dialog_when_incoming_tags_checked();
 });
 
 // Remove dialogs from the page before saving history, so that they don't end

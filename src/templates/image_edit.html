@@ -91,7 +91,7 @@
       {% if incoming_tags and #incoming_tags > 0 then %}
       <h2>Tags found by the scraper</h2>
       <details open><summary>Hide/Show</summary>
-      <ul>
+      <ul id="incoming_tags_list">
         {% for i = 1, #incoming_tags do local inc_tag = incoming_tags[i] %}
         <li>
           <label class="inline">
@@ -149,6 +149,7 @@
           hx-target="body"
           hx-push-url="true"
         /><input
+          id="save_btn"
           type="submit"
           name="save"
           value="Save…"
