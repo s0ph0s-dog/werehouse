@@ -12,3 +12,4 @@ images/*
 /lib/third_party/debugger.lua
 /cert.pem
 /key.pem
+/tags
