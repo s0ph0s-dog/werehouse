@@ -51,7 +51,12 @@ local function save_image_generic(path_func, image_data, image_mime_type, bonus)
     local parent_dir, path = path_func(filename, bonus)
     Log(kLogInfo, "parent_dir: %s" % { parent_dir })
     unix.makedirs(parent_dir, 0755)
-    Barf(path, image_data, 0644, unix.O_WRONLY | unix.O_CREAT | unix.O_EXCL)
+    local w_ok, w_err =
+        Barf(path, image_data, 0644, unix.O_WRONLY | unix.O_CREAT | unix.O_EXCL)
+    if not w_ok then
+        unix.unlink(path)
+        return nil, "Error writing file: %s" % { w_err }
+    end
     return filename
 end
 

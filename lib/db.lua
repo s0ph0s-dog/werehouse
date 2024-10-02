@@ -1351,7 +1351,11 @@ function Model:enqueueImage(mime_type, image_data)
             Log(kLogWarn, "error while parsing image for enqueue:" .. i_err)
         end
     end
-    local filename = FsTools.save_queue(image_data, mime_type, self.user_id)
+    local filename, f_err =
+        FsTools.save_queue(image_data, mime_type, self.user_id)
+    if not filename then
+        return nil, f_err
+    end
     local SP = "enqueue_image"
     self:create_savepoint(SP)
     local q_record, qerr =
@@ -1511,7 +1515,11 @@ function Model:insertImage(image_data, mime_type, width, height, kind, rating)
             kind_override = DbUtil.k.ImageKind.Animation
         end
     end
-    local filename = FsTools.save_image(image_data, mime_type)
+    local filename, f_err = FsTools.save_image(image_data, mime_type)
+    print(filename, f_err)
+    if not filename then
+        return nil, f_err
+    end
     local ok, image, i_err = pcall(
         self.conn.fetchOne,
         self.conn,
@@ -1581,7 +1589,11 @@ function Model:replaceImage(image_id, image_data, mime_type, width, height)
         kLogVerbose,
         "Replaced the image because the newer version is larger or an equally-sized PNG"
     )
-    local filename = FsTools.save_image(image_data, mime_type)
+    local filename, f_err = FsTools.save_image(image_data, mime_type)
+    print(filename, f_err)
+    if not filename then
+        return nil, f_err
+    end
     local ok, image, i_err = pcall(
         self.conn.execute,
         self.conn,
