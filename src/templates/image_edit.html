@@ -62,7 +62,7 @@
           {% if pending_artists then for i = 1, #pending_artists do local artist = pending_artists[i] %}
             {% input_cell("text", "artist", artist, "all-artists", "Unlink", i) %}
           {% end end %}
-          <li data-tagger-e="insert"><input data-1p-ignore type="text" id="add_artist_field" name="pending_artists[]" data-tagger-field="add" list="all-artists" autocomplete="off" placeholder="Add Artist" /><input type="text" data-tagger-field="add-wkhack" class="focushack" /></li>
+          <li data-tagger-e="insert"><input data-1p-ignore type="text" id="add_artist_field" name="pending_artists[]" data-tagger-field="add" list="all-artists" autocomplete="off" placeholder="Add Artist by Name" /><input type="text" data-tagger-field="add-wkhack" class="focushack" /></li>
         </ul>
         <button type="submit" name="add_artist" value="add_artist" data-tagger-btn="add" formnovalidate>Add Another Artist…</button>
       </div>
