@@ -54,8 +54,15 @@ local function save_image_generic(path_func, image_data, image_mime_type, bonus)
     local w_ok, w_err =
         Barf(path, image_data, 0644, unix.O_WRONLY | unix.O_CREAT | unix.O_EXCL)
     if not w_ok then
-        unix.unlink(path)
-        return nil, "Error writing file: %s" % { w_err }
+        local errno = w_err:errno()
+        if errno == unix.ENOSPC then
+            unix.unlink(path)
+            return nil, "No storage space is left on the server!" % { w_err }
+        elseif errno == unix.EEXIST then
+            return filename
+        else
+            return nil, "Error while writing file: " .. tostring(w_err)
+        end
     end
     return filename
 end

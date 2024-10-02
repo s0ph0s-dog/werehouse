@@ -778,21 +778,33 @@ local function do_ask_help(model, queue_entry, task)
         local source_list = task.decoded[i]
         for j = 1, #source_list do
             local scraped_data = source_list[j]
-            local filename = FsTools.save_queue(
+            local filename, f_err = FsTools.save_queue(
                 scraped_data.media_data,
                 scraped_data.mime_type,
                 model.user_id
             )
+            if not filename then
+                return nil,
+                    PipelineErrorPermanent(
+                        "Unable to save scraped image file: " .. f_err
+                    )
+            end
             ---@cast scraped_data table
             scraped_data.media_file = filename
             scraped_data.media_data = nil
             for k = 1, #scraped_data.thumbnails or {} do
                 local thumbnail = scraped_data.thumbnails[k]
-                local thumb_file = FsTools.save_queue(
+                local thumb_file, tf_err = FsTools.save_queue(
                     thumbnail.image_data,
                     thumbnail.mime_type,
                     model.user_id
                 )
+                if not thumb_file then
+                    return nil,
+                        PipelineErrorPermanent(
+                            "Unable to save scraped thumbnail file: " .. tf_err
+                        )
+                end
                 thumbnail.image_file = thumb_file
                 thumbnail.image_data = nil
             end

@@ -612,11 +612,15 @@ local function queue2_migrate(other_args)
                 "Saving image for queue record " .. tostring(qimg.qid)
             )
             if not dry_run then
-                local filename = FsTools.save_queue(
+                local filename, f_err = FsTools.save_queue(
                     qimg.image,
                     qimg.image_mime_type,
                     model.user_id
                 )
+                if not filename then
+                    Log(kLogError, f_err)
+                    return 1
+                end
                 Log(kLogDebug, "Output filename: " .. filename)
                 local insert_ok, insert_err = model.conn:execute(
                     queue_image_insert,
