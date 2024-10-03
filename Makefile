@@ -112,6 +112,8 @@ LIBS_OUT := $(patsubst lib/%,$(SRV_DIR)/.lua/%,$(LIBS))
 TEST_LIBS_OUT := $(patsubst lib/%,$(SRV_DIR)/.lua/%,$(TEST_LIBS))
 CSSO_PATH := $(shell which csso)
 
+include Makefile.secret
+
 build: $(OUTPUT)
 
 clean:
