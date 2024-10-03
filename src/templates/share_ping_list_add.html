@@ -25,7 +25,7 @@
   </div>
 </li>
 {% end end end %} {% function block.content() %}
-<form class="vbox" method="POST" action="{%& form_path %}" hx-boost="true">
+<form class="vbox" method="POST" action="{%& form_path %}">
   <input type="submit" name="dummy_submit" value="dummy_submit" class="hidden" hx-post="{%& form_path %}" hx-target="dialog" />
   <label
     >Name:

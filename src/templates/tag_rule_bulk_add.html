@@ -9,7 +9,7 @@
   <option>{%& alltags[i].name %}</option>
   {% end %}
 </datalist>
-<form class="vbox" method="POST" action="{%& form_path %}" hx-boost="true">
+<form class="vbox" method="POST" action="{%& form_path %}">
   {% for i = 1, #incoming_tags do local it = incoming_tags[i] %}
   <div class="rule-box">
     <label

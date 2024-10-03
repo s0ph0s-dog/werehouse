@@ -3,7 +3,7 @@
   {%& pages.first_row %} to {%& pages.last_row %} of {%& pages.item_count %}
   total {%& kind_plural %}
 </p>
-<div class="pages" hx-boost="true">
+<div class="pages">
   {% if pages.before then %}<a href="?page={%& pages.before.num %}" hx-swap="show:top"
     >← Previous</a
   >{% end %} &nbsp; {% if pages.after then %}<a

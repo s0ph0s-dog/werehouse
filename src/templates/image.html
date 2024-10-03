@@ -7,7 +7,7 @@ groups }) %}
     {% render("components/record_view", {record = image, kind =
     DbUtilK.ImageKind}) %}
   </div>
-  <div class="sidebar" hx-boost="true">
+  <div class="sidebar">
     <a class="edit" href="/image/{%& image.image_id %}/edit">Edit…</a>
     <h1>Metadata</h1>
     <ul>

@@ -15,7 +15,7 @@
   them will be in a group together.
 </p>
 {% end %}
-<form method="POST" action="{%& form_path %}" hx-boost="true">
+<form method="POST" action="{%& form_path %}">
   {% for source_idx, source in ipairs(help_ask.decoded) do %}
   <h3>
     <a target="_blank" href="{%& source[1].this_source %}">{%& source[1].this_source %}</a>
