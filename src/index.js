@@ -186,8 +186,10 @@ function prevent_multiple_submits_from_specified_buttons(content) {
 function indicate_save_opens_dialog_when_incoming_tags_checked(content) {
   const incoming_tags_list = document.getElementById("incoming_tags_list");
   const save_btn = document.getElementById("save_btn");
-  if (incoming_tags_list && save_btn) {
+  if (save_btn) {
     save_btn.value = "Save";
+  }
+  if (incoming_tags_list) {
     incoming_tags_list.querySelectorAll("input").forEach((el) => {
       el.addEventListener("change", () => {
         const any_checked = incoming_tags_list.querySelectorAll("input:checked");
@@ -201,12 +203,64 @@ function indicate_save_opens_dialog_when_incoming_tags_checked(content) {
   }
 }
 
+function reorder_group(content) {
+  function swap_orders(first_row, second_row) {
+    const number_input = 'input[type="number"]';
+    const first_order = first_row.querySelector(number_input);
+    const second_order = second_row.querySelector(number_input);
+    let tmp = first_order.value;
+    first_order.value = second_order.value;
+    second_order.value = tmp;
+  }
+  function reorder_up(e) {
+    e.preventDefault();
+    // Get this tr
+    const myself = e.target.closest("tr");
+    // Get previous tr
+    const previous = myself.previousElementSibling;
+    if (previous === null) {
+      // If no previous tr, return
+      return;
+    }
+    swap_orders(myself, previous);
+    // Move this tr before the previous tr
+    previous.before(myself);
+  }
+  function reorder_down(e) {
+    e.preventDefault();
+    // Get this tr
+    const myself = e.target.closest("tr");
+    // Get next tr
+    const next_row = myself.nextElementSibling;
+    if (next_row === null) {
+      // If no previous tr, return
+      return;
+    }
+    swap_orders(myself, next_row);
+    // Move this tr before the previous tr
+    myself.before(next_row);
+  }
+  content.querySelectorAll(".reorder-up").forEach((elt) => {
+    elt.addEventListener("click", reorder_up);
+  });
+  content.querySelectorAll(".reorder-down").forEach((elt) => {
+    elt.addEventListener("click", reorder_down);
+  });
+  content.querySelectorAll(".reorder-remove").forEach((elt) => {
+    elt.addEventListener("click", (e) => {
+      const myself = e.target.closest("tr");
+      myself.parentElement.removeChild(myself);
+    });
+  });
+}
+
 htmx.onLoad((content) => {
   close_dialog_when_cancel_clicked(content);
   setup_taggers(content);
   toggle_video_player_looping(content);
   prevent_multiple_submits_from_specified_buttons(content);
   indicate_save_opens_dialog_when_incoming_tags_checked(content);
+  reorder_group(content);
 });
 
 // Remove dialogs from the page before saving history, so that they don't end
