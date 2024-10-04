@@ -1,6 +1,6 @@
 local TWITTER_URI_EXP = assert(
     re.compile(
-        [[^(https?://)?(twitter\.com|vxtwitter\.com|fxtwitter\.com|x\.com|fixupx\.com|fixvx\.com|nitter\.privacydev\.net|twittervx\.com)/([A-z0-9_]+/)?status/([A-z0-9]+)]]
+        [[^(https?://)?(twitter\.com|vxtwitter\.com|fxtwitter\.com|x\.com|fixupx\.com|fixvx\.com|nitter\.privacydev\.net|twittervx\.com|xcancel\.com)/([A-z0-9_]+/)?status/([A-z0-9]+)]]
     )
 )
 local SPLITEXT_EXP = assert(re.compile([[(.+)\.([a-z0-9]{3})$]]))

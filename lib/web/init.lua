@@ -452,7 +452,13 @@ local accept_enqueue = login_required(function(r)
     if r.params.cancel then
         return redirect
     end
-    if r.params.link and #r.params.link > 0 and r.params.multipart.image then
+    if
+        r.params.link
+        and #r.params.link > 0
+        and r.params.multipart.image
+        and r.params.multipart.image.filename
+        and #r.params.multipart.image.filename > 0
+    then
         return Fm.serveError(
             400,
             "Must provide either link or image, not both."
