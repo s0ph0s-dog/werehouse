@@ -183,7 +183,7 @@ local user_setup = [[
     CREATE TABLE IF NOT EXISTS "artists" (
         "artist_id" INTEGER NOT NULL UNIQUE,
         "manually_confirmed" INTEGER NOT NULL DEFAULT 0,
-        "name" TEXT NOT NULL UNIQUE,
+        "name" TEXT NOT NULL UNIQUE COLLATE NOCASE,
         PRIMARY KEY("artist_id")
     );
 

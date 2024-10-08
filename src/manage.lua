@@ -49,6 +49,13 @@ local function help()
     print(
         "- clean_sources (-d): Loop through every source in each user's database and clean up duplicates caused by slightly different URLs (trailing slashes, etc.)"
     )
+    print(
+        "- clean_deleted_files: Remove any files from images/ or queue/ that are not referenced by the database any longer"
+    )
+    print("- hash_thumbs: compute hashes of every thumbnail file (for ETags)")
+    print(
+        "- artist_mergecase (-d): Merge together artists whose names are the same (excluding capitalization differences)"
+    )
 end
 
 local function db_migrate(other_args)
@@ -755,6 +762,58 @@ local function hash_thumbs()
     end)
 end
 
+local function artist_mergecase(other_args)
+    local dry_run = other_args[1] == "-d"
+    ---@param model Model
+    DbUtil.for_each_user(function(_, _, model)
+        local SP = "artist_mergecase"
+        model:create_savepoint(SP)
+        local get_q = [[SELECT
+            a1.name AS first_name,
+            a1.artist_id AS first_id,
+            a2.name AS second_name,
+            a2.artist_id AS second_id
+        FROM artists as a1
+            INNER JOIN artists as a2 on a1.name like a2.name
+        WHERE a1.artist_id <> a2.artist_id AND a2.artist_id > a1.artist_id;]]
+        local dupe_pairs, dp_err = model.conn:fetchAll(get_q)
+        if not dupe_pairs then
+            Log(kLogWarn, dp_err)
+            return 1
+        end
+        Log(kLogInfo, "Found %d pairs of duplicates" % { #dupe_pairs })
+        for i = 1, #dupe_pairs do
+            local dupe_pair = dupe_pairs[i]
+            if dry_run then
+                Log(kLogInfo, "Would have merged %s (%d) into %s (%d)" % {
+                    dupe_pair.second_name,
+                    dupe_pair.second_id,
+                    dupe_pair.first_name,
+                    dupe_pair.first_id,
+                })
+            else
+                local ok, m_err = model:mergeArtists(
+                    dupe_pair.first_id,
+                    { dupe_pair.second_id }
+                )
+                if not ok then
+                    Log(kLogWarn, tostring(m_err))
+                    model:rollback(SP)
+                    return 1
+                end
+                Log(kLogVerbose, "Merged %s (%d) into %s (%d)" % {
+                    dupe_pair.second_name,
+                    dupe_pair.second_id,
+                    dupe_pair.first_name,
+                    dupe_pair.first_id,
+                })
+            end
+        end
+        model:release_savepoint(SP)
+        return 0
+    end)
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
@@ -772,6 +831,7 @@ local commands = {
     reapply_tags_from_rules = reapply_tags_from_rules,
     clean_deleted_files = clean_deleted_files,
     hash_thumbs = hash_thumbs,
+    artist_mergecase = artist_mergecase,
 }
 
 local remaining_args = arg
