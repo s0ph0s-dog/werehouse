@@ -68,6 +68,7 @@ SRCS := src/.init.lua \
     src/templates/artists.html \
     src/templates/help/index.html \
     src/templates/help/faq.html \
+    src/templates/help/getting-started.html \
     src/templates/help/vocab.html \
     src/templates/help/known-issues.html \
     src/templates/help/how-queue-works.html \

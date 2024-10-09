@@ -1,0 +1,112 @@
+{% function block.content() %}
+<h1>Getting Started</h1>
+<p>Hello!  Welcome to Werehouse :3</p>
+<p>Prior to building Werehouse, I was using a Telegram channel to archive
+  artwork that I wanted to be able to find again later.  While this
+  <em>worked</em>, I didn’t like that it was so hard to find things again, and
+  that it was dependent on Telegram continuing to provide infinite free storage.
+  This is the solution that I’ve built: an easily self-hostable web app that
+  archives artwork, supports tagging, and can even share entries from your
+  archive!</p>
+
+<h2>How to Archive</h2>
+<p>Werehouse supports archiving two different ways:</p>
+<ol>
+  <li>Automatically, through the queue; or</li>
+  <li>Manually, by uploading an image.</li>
+</ol>
+<p>The queue can archive videos found on sites like Twitter or Bluesky, but
+  manual archiving cannot.  For more information about how each of these
+  work—and why manual archiving is limited that way (sorry)—see <a
+  href="/help/how-queue-works">How It Works: Queue</a>.</p>
+
+<h2>What’s In Your Archive</h2>
+<p>Each entry in your archive is a single media file, with some metadata
+  attached:</p>
+<ul>
+  <li>Kind (Image, Video, Animation): Which kind of media file is it?</li>
+  <li>Dimensions: width and height</li>
+  <li>Archive Date: when you added it to your archive</li>
+  <li>Rating (General, Adult, Explicit, or Hard Kink): </li>
+  <li>Categories (Stash, Reference, Moodboard, Sharing, Own Art): why you saved
+    this artwork.  Unlike the above properties, an archive entry can be in
+    multiple categories at once (or none at all).  Here’s what they are for:
+    <ul>
+      <li>Stash: You just like it and want to keep it around!</li>
+      <li>Reference: The art is a reference guide of some kind, like a character
+        sheet or tips on how to draw hands.</li>
+      <li>Moodboard: You’re putting together a moodboard for an upcoming
+        commission and want to collect things together. For example, <q>Oooh, I
+        like how this piece depicts paw shoes,</q> or <q>the way this artist
+          used posterization and a duotone effect gives me an idea!</q></li>
+      <li>Sharing: You know someone who would like this!</li>
+      <li>Own Art: Either you made this, or it’s of your character.</li>
+    </ul>
+  </li>
+</ul>
+<p>There are also three other important kinds of information attached to records
+  in your archive, and they deserve their own sections.</p>
+<h3>Artists</h3>
+<p>Today’s fragmented social media landscape more-or-less requires artists to
+  post in many places.  In order to make sure artwork is saved in your archive
+  with proper attribution, Werehouse has an extensive artist management system
+  that helps you keep track of all of an artist’s accounts across various
+  websites, and automatically add their name to anything you save from any of
+  their accounts.  Werehouse tries its best to automate this, but there’s only
+  so much it can do without human judgment involved.</p>
+<p>To link an artist with an entry in your archive, just type in their name!
+  Up-to-date browsers will autocomplete based on all of the artists you already
+  have in your archive.  Once you’ve saved your changes to the record, you can
+  click the artist’s name to add profile URLs (if you know any).</p>
+<p>Sometimes, you’ll need to go through the list of artists in your archive and
+  merge together entries for artists that are actually the same artist.  The
+  artist list has a <q>Merge</q> button for exactly this purpose!  Right now,
+  there’s no way to search or re-order the list, but you can rename one of the
+  entries if it isn’t on the same page.  I’m working on a feature that
+  automatically finds artists with similar usernames and suggests them to you
+  for merging, but it isn’t ready yet.</p>
+<h3>Tags</h3>
+<p>Tags serve two purposes in Werehouse: helping you find things later, and
+  feeding into the sharing system so that you can @-mention folks in a group
+  chat when you share to it.</p>
+<p>Adding tags to something is a lot of work, so whenever you archive from a
+  source that already includes tags (such as FurAffinity or e621.net), Werehouse
+will also import those tags and add them to a list you can access from the
+  <q>Edit</q> menu of a record.  When you select tags from that list and save
+  the record, Werehouse will ask you which of your tags should be applied for
+  each of the incoming tags you selected, and then make a Tag Rule that
+  automatically applies those tags for you in the future!  (Now that I have
+  built up a library of 500-odd tag rules, I only have to do real tagging work
+  for things that I archive from social media sites that don’t support tagging.
+  It’s so much nicer!)</p>
+<p>When you share using a <a href="/help/vocab#d-ping-list">share option with a ping list</a>,
+  Werehouse will automatically @-mention people who you’ve configured as
+  interested in the tags on that record.  For more details about how to set that
+  up, check out the <a href="/help/sharing">help article on how sharing
+    works</a>.</p>
+<h3>Sources</h3>
+<p>Werehouse keeps track of all the sources it knows about for any particular
+  record.  It includes these when sharing, but also uses them to help you check
+  for duplicates in your archive. <!--TODO: When you add a source yourself,
+  Werehouse will automatically reformat the URL to a standard pattern (for
+  supported websites) so that the duplicate checker works most
+  effectively!--></p>
+
+<h2>Sharing</h2>
+<p>When you want to share something from your archive, <a
+  href="/help/sharing">check out the options for sharing</a>!</p>
+
+<h2>Learning More</h2>
+<p>I’m still working on writing documentation, but I do have a bunch of it
+  already!  The full list is <a href="/help">in the Help section</a>, but a good
+  reference is <a href="/help/vocab">the vocabulary page</a>—I try to use words
+  consistently throughout the interface, and this is a guide to what I meant by
+  each of them.</p>
+<p>And of course, if you have more questions that aren’t answered in the
+  documentation (or if the documentation is unclear/insufficent), <a
+href="https://github.com/s0ph0s-2/werehouse/issues/new">open an issue on
+    GitHub</a> or message me about it!  I’m quite happy to help :3</p>
+
+<p>Thank you for reading!</p>
+<p>- s0ph0s</p>
+{% end %}{% render("layouts/main", { title = "FAQs", user = user }) %}
