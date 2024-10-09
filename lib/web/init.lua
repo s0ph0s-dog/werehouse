@@ -461,6 +461,7 @@ local accept_enqueue = login_required(function(r)
     then
         return Fm.serveError(
             400,
+            nil,
             "Must provide either link or image, not both."
         )
     end
@@ -639,12 +640,12 @@ local render_image = login_required(function(r, user_record)
     set_after_dialog_action(r)
     if r.params.share then
         if not r.params.share_option then
-            return Fm.serveError(400, "Must provide share_option")
+            return Fm.serveError(400, nil, "Must provide share_option")
         end
         for share_option_str in r.params.share_option:gmatch("(%d+):") do
             local share_option = tonumber(share_option_str)
             if not share_option then
-                return Fm.serveError(400, "Invalid share option")
+                return Fm.serveError(400, nil, "Invalid share option")
             end
             local spl, spl_err = Model:getSharePingListById(share_option, true)
             if not spl then
@@ -652,7 +653,7 @@ local render_image = login_required(function(r, user_record)
                     kLogInfo,
                     "Error while looking up share ping list: %s" % { spl_err }
                 )
-                return Fm.serveError(400, "Invalid share option")
+                return Fm.serveError(400, nil, "Invalid share option")
             end
             local share_id, sh_err = Model:createPendingShareRecordForImage(
                 r.params.image_id,
@@ -674,7 +675,7 @@ local render_image = login_required(function(r, user_record)
         for tg_userid_str in r.params.share_option:gmatch("%((%d+)%)") do
             local tg_userid = tonumber(tg_userid_str)
             if not tg_userid then
-                return Fm.serveError(400, "Invalid Telegram user ID")
+                return Fm.serveError(400, nil, "Invalid Telegram user ID")
             end
             local tg_account, tg_err =
                 Accounts:getTelegramAccountByUserIdAndTgUserId(
@@ -687,7 +688,11 @@ local render_image = login_required(function(r, user_record)
                     "Error while looking up Telegram account for user %s: %s"
                         % { user_record.user_id, tg_err }
                 )
-                return Fm.serveError(400, "That isn't your Telegram account")
+                return Fm.serveError(
+                    400,
+                    nil,
+                    "That isn't your Telegram account"
+                )
             end
             local share_id, sh_err = Model:createPendingShareRecordForImage(
                 r.params.image_id,
@@ -750,14 +755,14 @@ local accept_edit_image = login_required(function(r, user_record)
     Log(kLogDebug, "Beginning validation & cleanup")
     local rating = tonumber(r.params.rating)
     if r.params.rating and not rating then
-        return Fm.serveError(400, "Bad rating")
+        return Fm.serveError(400, nil, "Bad rating")
     end
     r.params.rating = rating
     local categories = table.reduce(r.params.category or {}, function(acc, next)
         return (acc or 0) | (tonumber(next) or 0)
     end)
     if not categories and r.params.category then
-        return Fm.serveError(400, "Bad categories")
+        return Fm.serveError(400, nil, "Bad categories")
     end
     r.params.category = categories
     local pending_artists = r.params.pending_artists
@@ -819,7 +824,7 @@ local accept_edit_image = login_required(function(r, user_record)
         local image_id = r.params.image_id
         -- Image Metadata
         if not r.params.rating then
-            return Fm.serveError(400, "Missing rating")
+            return Fm.serveError(400, nil, "Missing rating")
         end
         local metadata_ok, metadata_err = Model:updateImageMetadata(
             image_id,
@@ -969,6 +974,7 @@ local render_image_share = login_required(function(r, user_record)
         if not tg_account then
             return Fm.serveError(
                 500,
+                nil,
                 "That Telegram account isn't linked to your account"
             )
         end
@@ -986,11 +992,11 @@ local render_image_share = login_required(function(r, user_record)
     end
     if r.params.cancel then
         if not r.params.share_id then
-            return Fm.serveError(400, "Must include share_id in request")
+            return Fm.serveError(400, nil, "Must include share_id in request")
         end
         local d_ok, d_err = Model:deleteShareRecords { r.params.share_id }
         if not d_ok then
-            Log(kLogInfo, d_err)
+            Log(kLogInfo, tostring(d_err))
             return Fm.serveError(500)
         end
         return Fm.serveRedirect("/image/" .. image_id, 302)
@@ -999,15 +1005,16 @@ local render_image_share = login_required(function(r, user_record)
         local token_ok, token_err =
             Model:updatePendingShareRecordWithDateNow(r.params.share_id)
         if not token_ok then
-            Log(kLogInfo, token_err)
+            Log(kLogInfo, tostring(token_err))
             return Fm.serveError(
                 400,
+                nil,
                 "The share token you used is invalid. Did you double-click the share button?"
             )
         end
         local share_ok, share_err = check_image_against_telegram_rules(image)
         if not share_ok then
-            return Fm.serveError(400, share_err)
+            return Fm.serveError(400, nil, share_err)
         end
         local _, file_path = FsTools.make_image_path_from_filename(image.file)
         local chat_id = (spl and spl.share_data.chat_id) or tg_userid
@@ -1124,6 +1131,7 @@ local render_image_group_share = login_required(function(r, user_record)
         if not tg_account then
             return Fm.serveError(
                 500,
+                nil,
                 "That Telegram account isn't linked to your account"
             )
         end
@@ -1150,7 +1158,7 @@ local render_image_group_share = login_required(function(r, user_record)
     end
     if r.params.cancel then
         if not r.params.share_id then
-            return Fm.serveError(400, "Must include share_id in request")
+            return Fm.serveError(400, nil, "Must include share_id in request")
         end
         local d_ok, d_err = Model:deleteShareRecords { r.params.share_id }
         if not d_ok then
@@ -1165,6 +1173,7 @@ local render_image_group_share = login_required(function(r, user_record)
             Log(kLogInfo, token_err)
             return Fm.serveError(
                 400,
+                nil,
                 "The share token you used is invalid. Did you double-click the share button?"
             )
         end
@@ -1182,7 +1191,7 @@ local render_image_group_share = login_required(function(r, user_record)
             end
         end
         if #rule_errors > 0 then
-            Fm.serveError(400, "Bad Request", rule_errors)
+            Fm.serveError(400, nil, rule_errors)
         end
         Bot.post_media_group(chat_id, images, r.params.ping_text)
         return Fm.serveRedirect("/image-group/" .. ig_id, 302)
@@ -1308,6 +1317,7 @@ local render_add_tag_rule_bulk = login_required(function(r, user_record)
         if not incoming_names or not incoming_domains or not tag_names then
             return Fm.serveError(
                 400,
+                nil,
                 "incoming_names[], incoming_domains[], and tag_names[] are all required parameters"
             )
         end
@@ -1317,6 +1327,7 @@ local render_add_tag_rule_bulk = login_required(function(r, user_record)
         then
             return Fm.serveError(
                 400,
+                nil,
                 "All three list parameters must contain the same number of values"
             )
         end
@@ -1359,6 +1370,7 @@ local render_add_tag_rule_bulk = login_required(function(r, user_record)
     if not itids then
         return Fm.serveError(
             400,
+            nil,
             "Must provide list of incoming tag IDs to create rules from"
         )
     end
@@ -1852,6 +1864,7 @@ local accept_edit_artist = login_required(function(r)
         if #pending_usernames ~= #pending_profile_urls then
             return Fm.serveError(
                 400,
+                nil,
                 "Number of usernames and profile URLs must match!"
             )
         end
@@ -1861,13 +1874,14 @@ local accept_edit_artist = login_required(function(r)
             if (#pending_username > 0) ~= (#pending_profile_url > 0) then
                 return Fm.serveError(
                     400,
+                    nil,
                     "Both the username and profile URL are mandatory."
                 )
             end
             if (#pending_username ~= 0) and (#pending_profile_url ~= 0) then
                 local domain = ParseUrl(pending_profile_url).host
                 if not domain then
-                    return Fm.serveError(400, "Invalid profile URL.")
+                    return Fm.serveError(400, nil, "Invalid profile URL.")
                 end
                 pending_handles[#pending_handles + 1] = {
                     pending_username,
@@ -1906,7 +1920,7 @@ local accept_edit_artist = login_required(function(r)
     if r.params.update then
         local artist_id = r.params.artist_id
         if not r.params.name then
-            return Fm.serveError(400, "Missing artist name")
+            return Fm.serveError(400, nil, "Missing artist name")
         end
         local verified = r.params.confirmed ~= nil
         local artist_ok, artist_err =
@@ -1953,17 +1967,18 @@ local accept_add_artist = login_required(function(r)
     local usernames = r.params.usernames
     local profile_urls = r.params.profile_urls
     if not r.params.name then
-        return Fm.serveError(400, "Artist name is required")
+        return Fm.serveError(400, nil, "Artist name is required")
     end
     if not usernames then
-        return Fm.serveError(400, "At least one username is required")
+        return Fm.serveError(400, nil, "At least one username is required")
     end
     if not profile_urls then
-        return Fm.serveError(400, "At least one profile URL is required")
+        return Fm.serveError(400, nil, "At least one profile URL is required")
     end
     if #usernames ~= #profile_urls then
         return Fm.serveError(
             400,
+            nil,
             "The number of usernames and profile URLs must match"
         )
     end
@@ -2049,12 +2064,12 @@ local render_image_group = login_required(function(r, user_record)
     end
     if r.params.share then
         if not r.params.share_option then
-            return Fm.serveError(400, "Must provide share_option")
+            return Fm.serveError(400, nil, "Must provide share_option")
         end
         for share_option_str in r.params.share_option:gmatch("(%d+):") do
             local share_option = tonumber(share_option_str)
             if not share_option then
-                return Fm.serveError(400, "Invalid share option")
+                return Fm.serveError(400, nil, "Invalid share option")
             end
             local spl, spl_err = Model:getSharePingListById(share_option, true)
             if not spl then
@@ -2062,7 +2077,7 @@ local render_image_group = login_required(function(r, user_record)
                     kLogInfo,
                     "Error while looking up share ping list: %s" % { spl_err }
                 )
-                return Fm.serveError(400, "Invalid share option")
+                return Fm.serveError(400, nil, "Invalid share option")
             end
             local share_id, sh_err =
                 Model:createPendingShareRecordForImageGroup(
@@ -2085,7 +2100,7 @@ local render_image_group = login_required(function(r, user_record)
         for tg_userid_str in r.params.share_option:gmatch("%((%d+)%)") do
             local tg_userid = tonumber(tg_userid_str)
             if not tg_userid then
-                return Fm.serveError(400, "Invalid Telegram user ID")
+                return Fm.serveError(400, nil, "Invalid Telegram user ID")
             end
             local tg_account, tg_err =
                 Accounts:getTelegramAccountByUserIdAndTgUserId(
@@ -2098,7 +2113,11 @@ local render_image_group = login_required(function(r, user_record)
                     "Error while looking up Telegram account for user %s: %s"
                         % { user_record.user_id, tg_err }
                 )
-                return Fm.serveError(400, "That isn't your Telegram account")
+                return Fm.serveError(
+                    400,
+                    nil,
+                    "That isn't your Telegram account"
+                )
             end
             local share_id, sh_err =
                 Model:createPendingShareRecordForImageGroup(
@@ -2199,6 +2218,7 @@ local accept_edit_image_group = login_required(function(r)
     if #image_ids ~= #new_orders then
         return Fm.serveError(
             400,
+            nil,
             "Must have the same number of image_ids as new_orders"
         )
     end
@@ -2213,7 +2233,7 @@ local accept_edit_image_group = login_required(function(r)
         end
     )
     if not new_orders_num then
-        return Fm.serveError(400, new_orders_err)
+        return Fm.serveError(400, nil, new_orders_err)
     end
     local normalized_images_orders =
         normalize_order_values(image_ids, new_orders_num)
@@ -2478,10 +2498,10 @@ local accept_add_tag = login_required(function(r)
         return Fm.serveRedirect("/tag", 302)
     end
     if not r.params.name then
-        return Fm.serveError(400, "Tag name is required")
+        return Fm.serveError(400, nil, "Tag name is required")
     end
     if not r.params.description then
-        return Fm.serveError(400, "Tag description is required")
+        return Fm.serveError(400, nil, "Tag description is required")
     end
     local tag_id, err = Model:createTag(r.params.name, r.params.description)
     if not tag_id then
@@ -2741,13 +2761,13 @@ local accept_add_tag_rule = login_required(function(r)
         return redirect
     end
     if not r.params.incoming_name then
-        return Fm.serveError(400, "Incoming tag name is required")
+        return Fm.serveError(400, nil, "Incoming tag name is required")
     end
     if not r.params.incoming_domain then
-        return Fm.serveError(400, "Incoming tag description is required")
+        return Fm.serveError(400, nil, "Incoming tag description is required")
     end
     if not r.params.tag_name then
-        return Fm.serveError(400, "Tag name is required")
+        return Fm.serveError(400, nil, "Tag name is required")
     end
     local tag_rule_id, err = Model:createTagRule(
         r.params.incoming_name,
@@ -2806,13 +2826,13 @@ local function accept_add_share_ping_list(
     pending_neg
 )
     if not not_emptystr(r.params.name) then
-        return Fm.serveError(400, "Invalid share option name")
+        return Fm.serveError(400, nil, "Invalid share option name")
     end
     if r.params.selected_service ~= "Telegram" then
-        return Fm.serveError(400, "Invalid service (must be 'Telegram')")
+        return Fm.serveError(400, nil, "Invalid service (must be 'Telegram')")
     end
     if not not_emptystr(r.params.chat_id) or not tonumber(r.params.chat_id) then
-        return Fm.serveError(400, "Invalid chat ID")
+        return Fm.serveError(400, nil, "Invalid chat ID")
     end
     local share_data = EncodeJson {
         type = r.params.selected_service,
@@ -2880,6 +2900,7 @@ local render_add_share_ping_list = login_required(function(r, user_record)
         if not h_idx then
             return Fm.serveError(
                 400,
+                nil,
                 "Invalid number for delete_pending_handle"
             )
         end
@@ -2944,16 +2965,16 @@ local function accept_edit_share_ping_list(
 )
     local spl_id = r.params.spl_id
     if not not_emptystr(spl_id) then
-        return Fm.serveError(400, "Invalid share option ID")
+        return Fm.serveError(400, nil, "Invalid share option ID")
     end
     if not not_emptystr(r.params.name) then
-        return Fm.serveError(400, "Invalid share option name")
+        return Fm.serveError(400, nil, "Invalid share option name")
     end
     if r.params.selected_service ~= "Telegram" then
-        return Fm.serveError(400, "Invalid service (must be 'Telegram')")
+        return Fm.serveError(400, nil, "Invalid service (must be 'Telegram')")
     end
     if not not_emptystr(r.params.chat_id) or not tonumber(r.params.chat_id) then
-        return Fm.serveError(400, "Invalid chat ID")
+        return Fm.serveError(400, nil, "Invalid chat ID")
     end
     local share_data = EncodeJson {
         type = r.params.selected_service,
@@ -3043,7 +3064,7 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
     local spl, spl_err = Model:getSharePingListById(r.params.spl_id)
     if not spl then
         Log(kLogInfo, spl_err)
-        return Fm.serveError(400, "Invalid share option ID")
+        return Fm.serveError(400, nil, "Invalid share option ID")
     end
     local entries, positive_tags, negative_tags =
         Model:getEntriesForSPLById(r.params.spl_id)
@@ -3097,6 +3118,7 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
         if not h_idx then
             return Fm.serveError(
                 400,
+                nil,
                 "Invalid number for delete_pending_handle"
             )
         end
@@ -3112,7 +3134,11 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
     elseif r.params.delete_entry_handle then
         local entry_id = tonumber(r.params.delete_entry_handle)
         if not entry_id then
-            return Fm.serveError(400, "Invalid number for delete_entry_handle")
+            return Fm.serveError(
+                400,
+                nil,
+                "Invalid number for delete_entry_handle"
+            )
         end
         delete_entry_ids[#delete_entry_ids + 1] = entry_id
         -- Deleting from the output lists is handled below.
