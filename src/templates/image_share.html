@@ -46,7 +46,7 @@
       hx-post="{%& form_path %}"
       hx-swap="none"
     />
-    <input type="submit" name="share" value="Share" />
+    <input type="submit" name="share" value="Share" data-telegram-slow />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Share " .. (ig_id or

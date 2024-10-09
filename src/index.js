@@ -254,6 +254,17 @@ function reorder_group(content) {
   });
 }
 
+function telegram_slow_alert(content) {
+  content.querySelectorAll("[data-telegram-slow]").forEach((elt) => {
+    elt.addEventListener("click", (e) => {
+      setTimeout(() => {
+        alert("Telegram is taking a long time to send this one. I'll keep trying in the background. (It might take up to a minute to actually send :/)")
+        window.location.reload();
+      }, 1000);
+    });
+  });
+}
+
 htmx.onLoad((content) => {
   close_dialog_when_cancel_clicked(content);
   setup_taggers(content);
@@ -261,6 +272,7 @@ htmx.onLoad((content) => {
   prevent_multiple_submits_from_specified_buttons(content);
   indicate_save_opens_dialog_when_incoming_tags_checked(content);
   reorder_group(content);
+  telegram_slow_alert(content);
 });
 
 // Remove dialogs from the page before saving history, so that they don't end
@@ -314,3 +326,4 @@ if (!refresherBound) {
   });
   refresherBound = true;
 }
+// vim: ts=2 sw=2
