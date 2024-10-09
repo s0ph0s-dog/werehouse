@@ -174,6 +174,9 @@ local function accept_invite(r)
         return Fm.serve400()
     end
     Log(kLogInfo, "Registration success!")
+    r.session.toast = {
+        msg = 'Welcome to Werehouse! Check out the <a href="/help/getting-started">Getting Started</a> guide.',
+    }
     return Fm.serveRedirect("/login", 302)
 end
 
@@ -269,6 +272,8 @@ local function login_required(handler)
             Log(kLogDebug, user_err)
             return Fm.serve500()
         end
+        Fm.setTemplateVar("toast", r.session.toast)
+        r.session.toast = nil
         return handler(r, user_record)
     end
 end
@@ -293,6 +298,8 @@ local function login_optional(handler)
                     Log(kLogDebug, user_err)
                     return Fm.serve500()
                 end
+                Fm.setTemplateVar("toast", r.session.toast)
+                r.session.toast = nil
             else
                 Log(kLogInfo, tostring(errmsg))
             end
@@ -319,7 +326,7 @@ local function accept_login(r)
         Log(
             kLogVerbose,
             "Denying attempted login for %s due to error from argon2: %s"
-                % { r.params.username, verify_err }
+                % { tostring(r.params.username), tostring(verify_err) }
         )
         return Fm.serveRedirect("/login", 302)
     end

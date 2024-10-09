@@ -27,6 +27,11 @@
     {% end %}
   </span>
 </nav>
+{% if vars.toast then %}
+<div class="toast {$& vars.toast.class or 'info' %}">
+  <p>{%= vars.toast.msg %}</p>
+</div>
+{% end %}
 {% end %}{% function block.footer() %}
 <footer class="ignore-safe-area">
   <a href="https://github.com/s0ph0s-2/werehouse">Source Code</a> • Made by
