@@ -1158,7 +1158,7 @@ local render_image_group_share = login_required(function(r, user_record)
         image.sources = sources
         image.attributions = attributions
         image.sources_text = r.params["sources_text_record_" .. image.image_id]
-        image.spoiler = r.params["spoiler_record_" .. image.image_id]
+        image.spoiler = r.params["spoiler_record_" .. image.image_id] ~= nil
         local _, file_path = FsTools.make_image_path_from_filename(image.file)
         image.file_path = file_path
     end
