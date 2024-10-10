@@ -54,9 +54,9 @@
       name="add"
       value="Add"
       hx-post="{%& form_path %}"
-      hx-target="dialog"
+      hx-target="#dialog"
       hx-validate="true"
     />
   </span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Add Tag Rule", hx = hx}) %}
+{% end %}{% render("layouts/dialog", { title = "Add Tag Rule" }) %}

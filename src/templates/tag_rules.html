@@ -2,7 +2,7 @@
 function(m) return "<wbr />" .. m end) end %} {% function block.content() %}
 <h1>Tag Rules</h1>
 <p>
-  <a href="/tag-rule/add" hx-get="/tag-rule/add" hx-target="dialog"
+  <a href="/tag-rule/add" hx-get="/tag-rule/add" hx-target="#dialog"
     >Add Tag Rule…</a
   >
 </p>
@@ -55,7 +55,7 @@ function(m) return "<wbr />" .. m end) end %} {% function block.content() %}
         <a
           href="/tag-rule/{%& item.tag_rule_id %}/edit"
           hx-get="/tag-rule/{%& item.tag_rule_id %}/edit"
-          hx-target="dialog"
+          hx-target="#dialog"
           >✎</a
         >
       </td>
@@ -65,5 +65,5 @@ function(m) return "<wbr />" .. m end) end %} {% function block.content() %}
   {% render("components/pagination_controls", { pages = pages, kind_plural =
   "rules" }) %}
 </form>
-{% end %}{% end %}{% render("layouts/main", { title = "Tag Rules", user = user
+{% end %}{% end %}{% render("layouts/main", { title = "Tag Rules"
 }) %}

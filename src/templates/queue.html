@@ -1,6 +1,6 @@
 {% function block.content() %}
 <h1>Queued Items</h1>
-<p><a href="/enqueue" hx-get="/enqueue" hx-target="dialog">Add to Queue…</a></p>
+<p><a href="/enqueue" hx-get="/enqueue" hx-target="#dialog">Add to Queue…</a></p>
 {% if pages.current > 1 and #queue_records == 0 then %}
 <p>You've fallen off the end of the page counter!</p>
 {% elseif #queue_records == 0 then %}
@@ -32,4 +32,4 @@
   = true}) %}{% render("components/pagination_controls", { pages = pages,
   kind_plural = "entries" }) %}
 </form>
-{% end %}{% end %}{% render("layouts/main", { title = "Queue", user = user }) %}
+{% end %}{% end %}{% render("layouts/main", { title = "Queue" }) %}

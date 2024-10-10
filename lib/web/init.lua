@@ -12,10 +12,10 @@ local function add_form_path(r, params)
     params.form_path = r.path
 end
 
-local function add_htmx_param(r, params)
+local function add_htmx_param(r)
     local hx_header = r.headers["HX-Request"]
     if hx_header and hx_header == "true" then
-        params.hx = true
+        Fm.setTemplateVar("hx", true)
     end
 end
 
@@ -273,6 +273,7 @@ local function login_required(handler)
             return Fm.serve500()
         end
         Fm.setTemplateVar("toast", r.session.toast)
+        Fm.setTemplateVar("user", user_record)
         r.session.toast = nil
         return handler(r, user_record)
     end
@@ -299,6 +300,7 @@ local function login_optional(handler)
                     return Fm.serve500()
                 end
                 Fm.setTemplateVar("toast", r.session.toast)
+                Fm.setTemplateVar("user", user_record)
                 r.session.toast = nil
             else
                 Log(kLogInfo, tostring(errmsg))
@@ -403,7 +405,6 @@ local render_home = login_required(function(r, user_record)
     end
     set_after_dialog_action(r)
     return Fm.serveContent("home", {
-        user = user_record,
         queue_records = queue_records,
         image_records = image_records,
         fn = image_functions,
@@ -448,7 +449,7 @@ local allowed_image_types = {
 }
 
 local render_enqueue = login_required(function(r, user_record)
-    local params = { user = user_record }
+    local params = {}
     add_htmx_param(r, params)
     add_form_path(r, params)
     return Fm.serveContent("enqueue", params)
@@ -618,7 +619,6 @@ local function render_image_internal(r, user_record)
         template_name = "image_edit"
     end
     local params = {
-        user = user_record,
         image = image,
         artists = artists,
         delete_artists = delete_artists,
@@ -1096,7 +1096,6 @@ local render_image_share = login_required(function(r, user_record)
     local form_per_media_text = r.params.sources_text or per_media_text
     local form_ping_text = r.params.ping_text or ping_text
     local params = {
-        user = user_record,
         image = image,
         share_ping_list = spl,
         sources_text = form_per_media_text,
@@ -1254,7 +1253,6 @@ local render_image_group_share = login_required(function(r, user_record)
     local attribution = r.params.attribution
         or (spl and spl.send_with_attribution)
     local params = {
-        user = user_record,
         ig_id = r.params.ig_id,
         images = images,
         share_ping_list = spl,
@@ -1457,7 +1455,6 @@ local render_queue = login_required(function(r, user_record)
     r.session.error = nil
     set_after_dialog_action(r)
     return Fm.serveContent("queue", {
-        user = user_record,
         error = error,
         queue_records = queue_records,
         pages = pages,
@@ -1503,16 +1500,12 @@ end)
 
 local render_about = login_optional(function(r, user_record)
     set_after_dialog_action(r)
-    return Fm.serveContent("about", {
-        user = user_record,
-    })
+    return Fm.serveContent("about", {})
 end)
 
 local render_tos = login_optional(function(r, user_record)
     set_after_dialog_action(r)
-    return Fm.serveContent("tos", {
-        user = user_record,
-    })
+    return Fm.serveContent("tos", {})
 end)
 
 local render_queue_help = login_required(function(r, user_record)
@@ -1534,7 +1527,6 @@ local render_queue_help = login_required(function(r, user_record)
         return Fm.serve500()
     end
     local params = {
-        user = user_record,
         queue_entry = queue_entry,
         help_ask = help_ask,
     }
@@ -1680,7 +1672,6 @@ local render_images = login_required(function(r, user_record)
     r.session.error = nil
     set_after_dialog_action(r)
     return Fm.serveContent("images", {
-        user = user_record,
         error = error,
         image_records = image_records,
         pages = pages,
@@ -1740,7 +1731,6 @@ local render_artists = login_required(function(r, user_record)
     r.session.error = nil
     set_after_dialog_action(r)
     return Fm.serveContent("artists", {
-        user = user_record,
         error = error,
         artist_records = artist_records,
         pages = pages,
@@ -1799,7 +1789,6 @@ local render_artist = login_required(function(r, user_record)
     end
     set_after_dialog_action(r)
     return Fm.serveContent("artist", {
-        user = user_record,
         artist = artist,
         handles = handles,
         images = images,
@@ -2030,7 +2019,6 @@ local render_image_groups = login_required(function(r, user_record)
     r.session.error = nil
     set_after_dialog_action(r)
     return Fm.serveContent("image_groups", {
-        user = user_record,
         error = error,
         ig_records = ig_records,
         pages = pages,
@@ -2161,7 +2149,6 @@ local render_image_group = login_required(function(r, user_record)
     end
     set_after_dialog_action(r)
     local params = {
-        user = user_record,
         ig = ig,
         images = images,
         share_records = share_records,
@@ -2185,7 +2172,6 @@ local render_edit_image_group = login_required(function(r, user_record)
         Log(kLogInfo, image_errmsg)
     end
     local params = {
-        user = user_record,
         ig = ig,
         images = images,
         fn = image_functions,
@@ -2322,7 +2308,6 @@ local render_telegram_link = login_required(function(r, user_record)
         return Fm.serve404()
     end
     local params = {
-        user = user_record,
         tg = tg,
     }
     add_htmx_param(r, params)
@@ -2392,7 +2377,6 @@ local render_tags = login_required(function(r, user_record)
     r.session.error = nil
     set_after_dialog_action(r)
     return Fm.serveContent("tags", {
-        user = user_record,
         error = error,
         tag_records = tag_records,
         pages = pages,
@@ -2446,7 +2430,6 @@ local render_tag = login_required(function(r, user_record)
     end
     set_after_dialog_action(r)
     return Fm.serveContent("tag", {
-        user = user_record,
         tag = tag_record,
         images = images,
         fn = image_functions,
@@ -2463,7 +2446,6 @@ local render_edit_tag = login_required(function(r, user_record)
         return Fm.serve404()
     end
     local params = {
-        user = user_record,
         tag = tag,
     }
     add_htmx_param(r, params)
@@ -2566,7 +2548,6 @@ local render_account = login_required(function(r, user_record)
     r.session.pw_change_error = nil
     set_after_dialog_action(r)
     return Fm.serveContent("account", {
-        user = user_record,
         image_stats = image_stats,
         artist_count = artist_count,
         tag_count = tag_count,
@@ -2657,7 +2638,6 @@ local render_tag_rules = login_required(function(r, user_record)
     end
     set_after_dialog_action(r)
     return Fm.serveContent("tag_rules", {
-        user = user_record,
         error = error,
         tag_rule_records = tag_rule_records,
         pages = pages,
@@ -2689,7 +2669,6 @@ local render_tag_rule = login_required(function(r, user_record)
     end
     set_after_dialog_action(r)
     return Fm.serveContent("tag_rule", {
-        user = user_record,
         tag_rule = tag_rule_record,
     })
 end)
@@ -2708,7 +2687,6 @@ local render_edit_tag_rule = login_required(function(r, user_record)
         Log(kLogInfo, alltags_err)
     end
     local params = {
-        user = user_record,
         tag_rule = tag_rule,
         alltags = alltags,
         alldomains = ScraperPipeline.CANONICAL_DOMAINS_WITH_TAGS,
@@ -2924,7 +2902,6 @@ local render_add_share_ping_list = login_required(function(r, user_record)
         )
     end
     local params = {
-        user = user_record,
         alltags = alltags,
         share_services = { "Telegram" },
         name = r.params.name,
@@ -3183,7 +3160,6 @@ local render_edit_share_ping_list = login_required(function(r, user_record)
     Log(kLogInfo, "attribution: " .. tostring(attribution))
     -- Render page.
     local params = {
-        user = user_record,
         alltags = alltags,
         spl = spl,
         entries = entries,
@@ -3232,7 +3208,6 @@ local render_share_ping_list = login_required(function(r, user_record)
         return Fm.serve500()
     end
     return Fm.serveContent("share_ping_list", {
-        user = user_record,
         share_ping_list = share_ping_list,
         entries = entries,
         positive_tags = positive_tags,
@@ -3243,9 +3218,9 @@ end)
 
 local render_help = login_optional(function(r, user_record)
     if r.params.page then
-        return Fm.serveContent("help/" .. r.params.page, { user = user_record })
+        return Fm.serveContent("help/" .. r.params.page, {})
     end
-    return Fm.serveContent("help/index", { user = user_record })
+    return Fm.serveContent("help/index", {})
 end)
 
 local render_archive = login_required(function(r, user_record)
@@ -3353,7 +3328,7 @@ local render_archive = login_required(function(r, user_record)
     local error = r.session.error
     if error then
         Log(kLogDebug, "Error: %s" % { error })
-        r.headers["HX-Retarget"] = "dialog"
+        r.headers["HX-Retarget"] = "#dialog"
         r.headers["HX-Reselect"] = "#dialog-contents"
     end
     r.session.error = nil

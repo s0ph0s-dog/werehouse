@@ -17,7 +17,7 @@
       name="delete_{%& kind %}_{%& tag_type %}_tag"
       value="{%& handle_idx %},{%& tag_idx %}"
       hx-post="{%& form_path %}"
-      hx-target="dialog"
+      hx-target="#dialog"
     >
       Delete
     </button>
@@ -34,7 +34,7 @@
       name="delete_{%& tag_type %}_tag"
       value="{%& entry_id %},{%& tag.tag_id %}"
       hx-post="{%& form_path %}"
-      hx-target="dialog"
+      hx-target="#dialog"
     >Delete</button>
 </li>
 {% end end end %}
@@ -55,7 +55,7 @@
       name="delete_{%& kind %}_handle"
       value="{%& id %}"
       hx-post="{%& form_path %}"
-      hx-target="dialog"
+      hx-target="#dialog"
     >Delete</button>
   </div>
   <ul>
@@ -82,7 +82,7 @@
         name="add_{%& kind %}_positive_tag"
         value="add_{%& kind %}_positive_tag"
         hx-post="{%& form_path %}"
-        hx-target="dialog"
+        hx-target="#dialog"
       >
         Add Another ‘Ping’ Tag…
       </button>
@@ -110,7 +110,7 @@
         name="add_{%& kind %}_negative_tag"
         value="add_{%& kind %}_negative_tag"
         hx-post="{%& form_path %}"
-        hx-target="dialog"
+        hx-target="#dialog"
       >
         Add Another ‘Don’t Ping’ Tag…
       </button>
@@ -206,7 +206,7 @@
       name="add_handle"
       value="add_handle"
       hx-post="{%& form_path %}"
-      hx-target="dialog"
+      hx-target="#dialog"
     >
       Add Tags…
     </button>
@@ -223,4 +223,4 @@
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Edit Share Option: " .. spl.name, dialog_width
-= "30em", hx = hx }) %}
+= "30em" }) %}

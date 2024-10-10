@@ -6,7 +6,7 @@
 <a
   href="/share-ping-list/{%& share_ping_list.spl_id %}/edit"
   hx-get="/share-ping-list/{%& share_ping_list.spl_id %}/edit"
-  hx-target="dialog"
+  hx-target="#dialog"
   >Edit…</a
 >
 <form method="POST" action="{%& form_action %}">
@@ -42,4 +42,4 @@
   {% end %}
 </ul>
 {% end %}{% render("layouts/main", { title = "Share Option: %s (%s)" %
-{share_ping_list.name, share_ping_list.share_data.type}, user = user }) %}
+{share_ping_list.name, share_ping_list.share_data.type} }) %}

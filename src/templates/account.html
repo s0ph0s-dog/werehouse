@@ -1,5 +1,5 @@
 {% function block.content() %}
-<h1>{%& user.username %}</h1>
+<h1>{%& vars.user.username %}</h1>
 <p>Your account stores:</p>
 <ul>
   {% for i = 1, #image_stats do local row = image_stats[i] %}
@@ -42,7 +42,7 @@
   <a
     href="/share-ping-list/add"
     hx-get="/share-ping-list/add"
-    hx-target="dialog"
+    hx-target="#dialog"
     >Add New Share Option…</a
   >
 </p>
@@ -90,13 +90,13 @@
 <h1 id="invite-links">Invite Links</h1>
 <form method="POST" action="/account/invites">
   <p>
-    You have {%& user.invites_available %} available.
+    You have {%& vars.user.invites_available %} available.
     <input
       type="submit"
       name="make-invite"
       {%
       if
-      user.invites_available
+      vars.user.invites_available
       <
       1
       then
@@ -193,4 +193,4 @@
     cycle out of the backups after approximately 30 days.
   </span>
 </form>
-{% end %}{% render("layouts/main", { title = "Profile", user = user }) %}
+{% end %}{% render("layouts/main", { title = "Profile" }) %}

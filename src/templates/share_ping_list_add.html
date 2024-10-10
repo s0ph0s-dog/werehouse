@@ -18,7 +18,7 @@
       name="delete_pending_{%& tag_type %}_tag"
       value="{%& handle_idx %},{%& tag_idx %}"
       hx-post="{%& form_path %}"
-      hx-target="dialog"
+      hx-target="#dialog"
     >
       Delete
     </button>
@@ -26,7 +26,8 @@
 </li>
 {% end end end %} {% function block.content() %}
 <form class="vbox" method="POST" action="{%& form_path %}">
-  <input type="submit" name="dummy_submit" value="dummy_submit" class="hidden" hx-post="{%& form_path %}" hx-target="dialog" />
+  <input type="submit" name="dummy_submit" value="dummy_submit" class="hidden"
+    hx-post="{%& form_path %}" hx-target="#dialog" />
   <label
     >Name:
     <input
@@ -94,7 +95,7 @@
             name="delete_pending_handle"
             value="{%& h_idx %}"
             hx-post="{%& form_path %}"
-            hx-target="dialog"
+            hx-target="#dialog"
           >
             Delete
           </button>
@@ -120,7 +121,7 @@
               name="add_pending_positive_tag"
               value="add_handle"
               hx-post="{%& form_path %}"
-              hx-target="dialog"
+              hx-target="#dialog"
             >
               Add Another ‘Ping’ Tag…
             </button>
@@ -145,7 +146,7 @@
               name="add_pending_negative_tag"
               value="add_handle"
               hx-post="{%& form_path %}"
-              hx-target="dialog"
+              hx-target="#dialog"
             >
               Add Another ‘Don’t Ping’ Tag…
             </button>
@@ -168,7 +169,7 @@
       name="add_handle"
       value="add_handle"
       hx-post="{%& form_path %}"
-      hx-target="dialog"
+      hx-target="#dialog"
     >
       Add Tags…
     </button>
@@ -185,4 +186,4 @@
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Add Share Option", dialog_width
-= "30em", hx = hx }) %}
+= "30em" }) %}

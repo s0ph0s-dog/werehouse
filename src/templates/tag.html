@@ -3,7 +3,7 @@
 <a
   href="/tag/{%& tag.tag_id %}/edit"
   hx-get="/tag/{%& tag.tag_id %}/edit"
-  hx-target="dialog"
+  hx-target="#dialog"
   >Edit…</a
 >
 <p>
@@ -12,4 +12,4 @@
 </p>
 <h1>Recently Archived Records</h1>
 {% render("components/image_gallery", { image_records = images, fn = fn }) %}{%
-end %}{% render("layouts/main", { title = tag.name, user = user }) %}
+end %}{% render("layouts/main", { title = tag.name }) %}

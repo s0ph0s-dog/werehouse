@@ -3,7 +3,7 @@
 <a
   href="/tag-rule/{%& tag_rule.tag_rule_id %}/edit"
   hx-get="/tag-rule/{%& tag_rule.tag_rule_id %}/exit"
-  hx-target="dialog"
+  hx-target="#dialog"
   >Edit…</a
 >
 <p>
@@ -12,4 +12,4 @@
   <b>{%& tag_rule.tag_name %}</b> to the record in your archive.
 </p>
 {% end %}{% render("layouts/main", { title = "Tag Rule: %s on %s" %
-{tag_rule.incoming_name, tag_rule.incoming_domain}, user = user }) %}
+{tag_rule.incoming_name, tag_rule.incoming_domain} }) %}

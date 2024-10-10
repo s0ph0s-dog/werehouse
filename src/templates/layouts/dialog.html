@@ -1,4 +1,4 @@
-{% if not hx then %}
+{% if not vars.hx then %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -44,7 +44,7 @@
           incorrectly and no page content was provided.{% end %}{%
           block.content() %}
         </div>
-        {% if not hx then %}
+        {% if not vars.hx then %}
       </div>
     </div>
     <script src="/htmx@2.0.1.min.js"></script>

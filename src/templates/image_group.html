@@ -4,11 +4,11 @@
   <a
     href="/image-group/{%& ig.ig_id %}/edit"
     hx-get="/image-group/{%& ig.ig_id %}/edit"
-    hx-target="dialog"
+    hx-target="#dialog"
     >Edit…</a
   >
 </p>
 {% render("components/share_widget", {share_ping_lists = share_ping_lists,
 telegram_accounts = telegram_accounts, share_records = share_records }) %} {%
 render("components/image_gallery", { image_records = images, fn = fn }) %}{% end
-%}{% render("layouts/main", { title = ig.name, user = user }) %}
+%}{% render("layouts/main", { title = ig.name }) %}

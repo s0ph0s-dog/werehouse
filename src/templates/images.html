@@ -1,8 +1,8 @@
 {% function block.content() %}
 <h1>Records</h1>
 <p>
-  <a href="/archive" hx-get="/archive" hx-target="dialog">Manually Archive…</a>
+  <a href="/archive" hx-get="/archive" hx-target="#dialog">Manually Archive…</a>
 </p>
 {% render("components/image_gallery", { image_records = image_records, pages =
 pages, fn = fn, editable = true, kind = kind }) %}{% end %}{%
-render("layouts/main", { title = "Records", user = user }) %}
+render("layouts/main", { title = "Records" }) %}

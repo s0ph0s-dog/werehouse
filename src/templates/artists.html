@@ -1,7 +1,7 @@
 {% function block.content() %}
 <h1>Artists</h1>
 <p>
-  <a href="/artist/add" hx-get="/artist/add" hx-target="dialog">Add Artist…</a>
+  <a href="/artist/add" hx-get="/artist/add" hx-target="#dialog">Add Artist…</a>
 </p>
 {% if pages.current > 1 and #artist_records == 0 then %}
 <p>You've fallen off the end of the page counter!</p>
@@ -55,5 +55,5 @@
   {% render("components/pagination_controls", { pages = pages, kind_plural =
   "artists" }) %}
 </form>
-{% end %}{% end %}{% render("layouts/main", { title = "Artists", user = user })
+{% end %}{% end %}{% render("layouts/main", { title = "Artists" })
 %}

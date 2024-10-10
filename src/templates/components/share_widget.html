@@ -5,7 +5,7 @@
   or add a Share Option.
 </p>
 {% else %}
-<form method="POST" hx-post="" hx-target="dialog">
+<form method="POST" hx-post="" hx-target="#dialog">
   <span class="buttons">
     <select name="share_option">
       {% for i = 1, #share_ping_lists do local spl = share_ping_lists[i] %}

@@ -1,6 +1,6 @@
 {% function block.content() %}
 <h1>Tags</h1>
-<p><a href="/tag/add" hx-get="/tag/add" hx-target="dialog">Add Tag…</a></p>
+<p><a href="/tag/add" hx-get="/tag/add" hx-target="#dialog">Add Tag…</a></p>
 {% if pages.current > 1 and #tag_records == 0 then %}
 <p>You've fallen off the end of the page counter!</p>
 {% elseif #tag_records == 0 then %}
@@ -42,4 +42,4 @@
   {% render("components/pagination_controls", { pages = pages, kind_plural =
   "tags" }) %}
 </form>
-{% end %}{% end %}{% render("layouts/main", { title = "Tags", user = user }) %}
+{% end %}{% end %}{% render("layouts/main", { title = "Tags" }) %}

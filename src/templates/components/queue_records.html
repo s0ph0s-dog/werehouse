@@ -17,7 +17,7 @@
 {% function block.status_desc(queue_item) %}
 {% if queue_item.help_ask and not queue_item.help_answer then %}
 <p><a hx-get="/queue/{%& queue_item.qid %}/help"
-   hx-target="dialog"
+   hx-target="#dialog"
    href="/queue/{%& queue_item.qid %}/help"
   >Provide Help</a></p>
 {% else %}
