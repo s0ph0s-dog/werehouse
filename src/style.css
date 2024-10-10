@@ -22,7 +22,7 @@ html {
 body {
   margin: 0;
 }
-.dialog {
+#dialog {
   max-width: 40em;
   border: 3px solid CanvasText;
   padding: 1em;
@@ -30,7 +30,7 @@ body {
   width: 24em;
   max-width: 95vw;
 }
-.dialog h1 {
+#dialog h1 {
   font-size: 1.5rem;
 }
 #dialog-contents a {
