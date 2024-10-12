@@ -153,12 +153,14 @@ local user_setup = [[
     CREATE VIEW IF NOT EXISTS "incoming_tags_now_matched_by_tag_rules" (
         itid,
         image_id,
+        tag_rule_id,
         tag_id,
         tag_name,
         applied
     ) AS SELECT
         incoming_tags.itid,
         incoming_tags.image_id,
+        tag_rules.tag_rule_id,
         tag_rules.tag_id,
         tags.name,
         incoming_tags.image_tag_id IS NOT NULL
@@ -593,8 +595,7 @@ local queries = {
             FROM artists INNER JOIN image_artists
             ON image_artists.artist_id = artists.artist_id
             WHERE image_artists.image_id = ?;]],
-        get_tag_id_by_name = [[SELECT tag_id FROM tags
-            WHERE lower(name) = lower(?) COLLATE NOCASE;]],
+        get_tag_id_by_name = [[SELECT tag_id FROM tags WHERE name LIKE ?;]],
         get_tags_for_image = [[SELECT tags.tag_id, tags.name, tag_counts.count
             FROM tags INNER JOIN image_tags
             ON image_tags.tag_id = tags.tag_id
@@ -610,6 +611,10 @@ local queries = {
                 tag_name, image_id, itid
             FROM incoming_tags_now_matched_by_tag_rules
             WHERE applied = 0;]],
+        get_images_and_tags_for_new_tag_rules_by_tag_rule_id = [[SELECT
+                tag_name, image_id, itid
+            FROM incoming_tags_now_matched_by_tag_rules
+            WHERE applied = 0 AND tag_rule_id = ?;]],
         get_all_tags = [[SELECT tag_id, name FROM tags;]],
         get_sources_for_image = [[SELECT source_id, link
             FROM sources
@@ -910,10 +915,16 @@ local queries = {
             ) VALUES (?, ?, ?)
             RETURNING tag_rule_id;]],
         insert_image_tags_for_new_tag_rules = [[INSERT
-            OR IGNORE INTO image_tags (image_id, tag_id)
+            OR REPLACE INTO image_tags (image_id, tag_id)
             SELECT image_id, tag_id
             FROM "incoming_tags_now_matched_by_tag_rules"
             WHERE applied = 0
+            RETURNING image_id, tag_id, image_tag_id;]],
+        insert_image_tags_for_new_tag_rules_by_id = [[INSERT
+            OR REPLACE INTO image_tags (image_id, tag_id)
+            SELECT image_id, tag_id
+            FROM "incoming_tags_now_matched_by_tag_rules"
+            WHERE applied = 0 AND tag_rule_id = ?
             RETURNING image_id, tag_id, image_tag_id;]],
         update_image_tag_id_for_incoming_tags = [[UPDATE incoming_tags
             SET image_tag_id = ?
@@ -2285,7 +2296,6 @@ function Model:createTagRule(incoming_name, incoming_domain, tag_name)
         self:rollback(SP)
         return nil, tag_err
     end
-    print(EncodeJson(tag_id))
     local insert_ok, insert_err = self.conn:fetchOne(
         queries.model.insert_tag_rule,
         incoming_name,
@@ -2392,19 +2402,122 @@ function Model:applyIncomingTagsNowMatchedByTagRules()
     end
     for i = 1, #new_ids do
         local new_id = new_ids[i]
-        local upd_ok, upd_err = self.conn:execute(
+        Log(
+            kLogDebug,
+            "Updating image_tag_id %d for image %d and tag %d"
+                % { new_id.image_tag_id, new_id.image_id, new_id.tag_id }
+        )
+        local pcall_ok, upd_ok, upd_err = pcall(
+            self.conn.execute,
+            self.conn,
             queries.model.update_image_tag_id_for_incoming_tags,
             new_id.image_tag_id,
             new_id.image_id,
             new_id.tag_id
         )
-        if not upd_ok then
-            Log(kLogDebug, "failed to update image_tag_id for incoming tag")
+        if not pcall_ok and upd_ok:startswith("FOREIGN") then
+            Log(
+                kLogDebug,
+                "Unable to update image_tag_id %d because it doesn't exist. I will assume this is because it was replaced by a later tag rule and ignore the problem."
+                    % { new_id.image_tag_id }
+            )
+            -- Clear the prepared statement cache so that the next call doesn't
+            -- try to use the now-faulted statement.
+            self.conn.prepcache = {}
+        elseif not upd_ok then
+            Log(
+                kLogInfo,
+                "failed to update image_tag_id = %d for incoming tags for image %d and tag %d"
+                    % { new_id.image_tag_id, new_id.image_id, new_id.tag_id }
+            )
             self:rollback(SP)
             return nil, upd_err
+        elseif not pcall_ok then
+            local msg = "Unexpected error: %s / %s"
+                % { tostring(upd_ok), tostring(upd_err) }
+            Log(kLogInfo, msg)
+            self:rollback(SP)
+            return nil, msg
         end
     end
     Log(kLogDebug, "made it to the end successfully")
+    self:release_savepoint(SP)
+    return changes
+end
+
+function Model:applyIncomingTagsNowMatchedBySpecificTagRules(tag_rule_ids)
+    local SP = "apply_incoming_tags_now_matched_by_specific_tag_rules"
+    self:create_savepoint(SP)
+    local changes = {}
+    for i = 1, #tag_rule_ids do
+        local part_changes, pc_err = self.conn:fetchAll(
+            queries.model.get_images_and_tags_for_new_tag_rules_by_tag_rule_id,
+            tag_rule_ids[i]
+        )
+        if not part_changes then
+            self:rollback(SP)
+            return nil, pc_err
+        end
+        table.extend(changes, part_changes)
+    end
+    if #changes < 1 then
+        Log(kLogDebug, "No changes to apply for specified tag rules.")
+        self:release_savepoint(SP)
+        return changes
+    end
+    local new_ids = {}
+    for i = 1, #tag_rule_ids do
+        local part_new_ids, pni_err = self.conn:fetchAll(
+            queries.model.insert_image_tags_for_new_tag_rules_by_id,
+            tag_rule_ids[i]
+        )
+        if not part_new_ids then
+            Log(kLogInfo, "Failed to apply new tag rules: " .. pni_err)
+            self:rollback(SP)
+            return nil, pni_err
+        end
+        table.extend(new_ids, part_new_ids)
+    end
+    for i = 1, #new_ids do
+        local new_id = new_ids[i]
+        Log(
+            kLogDebug,
+            "Updating image_tag_id %d for image %d and tag %d"
+                % { new_id.image_tag_id, new_id.image_id, new_id.tag_id }
+        )
+        local pcall_ok, upd_ok, upd_err = pcall(
+            self.conn.execute,
+            self.conn,
+            queries.model.update_image_tag_id_for_incoming_tags,
+            new_id.image_tag_id,
+            new_id.image_id,
+            new_id.tag_id
+        )
+        if not pcall_ok and upd_ok:startswith("FOREIGN") then
+            Log(
+                kLogDebug,
+                "Unable to update image_tag_id %d because it doesn't exist. I will assume this is because it was replaced by a later tag rule and ignore the problem."
+                    % { new_id.image_tag_id }
+            )
+            -- Clear the prepared statement cache so that the next call doesn't
+            -- try to use the now-faulted statement.
+            self.conn.prepcache = {}
+        elseif not upd_ok then
+            Log(
+                kLogInfo,
+                "failed to update image_tag_id = %d for incoming tags for image %d and tag %d"
+                    % { new_id.image_tag_id, new_id.image_id, new_id.tag_id }
+            )
+            self:rollback(SP)
+            return nil, upd_err
+        elseif not pcall_ok then
+            local msg = "Unexpected error: %s / %s"
+                % { tostring(upd_ok), tostring(upd_err) }
+            Log(kLogInfo, msg)
+            self:rollback(SP)
+            return nil, msg
+        end
+    end
     self:release_savepoint(SP)
     return changes
 end

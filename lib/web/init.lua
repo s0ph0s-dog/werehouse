@@ -1338,6 +1338,7 @@ local render_add_tag_rule_bulk = login_required(function(r, user_record)
         end
         local SP = "bulk_add_tag_rule"
         Model:create_savepoint(SP)
+        local tag_rule_ids = {}
         for i = 1, #incoming_names do
             local tr_ok, tr_err = Model:createTagRule(
                 incoming_names[i],
@@ -1349,10 +1350,11 @@ local render_add_tag_rule_bulk = login_required(function(r, user_record)
                 Log(kLogInfo, tr_err)
                 return Fm.serve500()
             end
+            tag_rule_ids[#tag_rule_ids + 1] = tr_ok
         end
         Model:release_savepoint(SP)
         local changes, change_err =
-            Model:applyIncomingTagsNowMatchedByTagRules()
+            Model:applyIncomingTagsNowMatchedBySpecificTagRules(tag_rule_ids)
         assert((changes == nil) ~= (change_err == nil))
         if not changes then
             Log(kLogInfo, change_err)
@@ -1362,7 +1364,7 @@ local render_add_tag_rule_bulk = login_required(function(r, user_record)
             return get_post_dialog_redirect(r, "/tag-rule")
         end
         local params = { changes = changes }
-        add_htmx_param(r, params)
+        add_htmx_param(r)
         add_form_path(r, params)
         return Fm.serveContent("tag_rule_changelist", params)
     elseif r.params.ok then
@@ -2763,7 +2765,8 @@ local accept_add_tag_rule = login_required(function(r)
         Log(kLogInfo, tostring(err))
         return Fm.serve500(err)
     end
-    local changes, change_err = Model:applyIncomingTagsNowMatchedByTagRules()
+    local changes, change_err =
+        Model:applyIncomingTagsNowMatchedBySpecificTagRules { tag_rule_id }
     assert((changes == nil) ~= (change_err == nil))
     if not changes then
         Log(kLogInfo, change_err)
