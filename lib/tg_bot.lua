@@ -266,7 +266,6 @@ local function handle_enqueue(message)
             local largest_photo = nil
             for i = 1, #message.photo do
                 local photo = message.photo[i]
-                print("Found", EncodeJson(photo))
                 if photo.width > max_width and photo.height > max_height then
                     max_width = photo.width
                     max_height = photo.height

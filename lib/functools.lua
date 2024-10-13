@@ -12,7 +12,6 @@ function string.startswith(s, prefix)
         return false
     end
     local maybe_prefix = s:sub(1, #prefix)
-    -- print(maybe_prefix)
     return prefix == maybe_prefix
 end
 

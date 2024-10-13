@@ -260,7 +260,7 @@ function telegram_slow_alert(content) {
       setTimeout(() => {
         alert("Telegram is taking a long time to send this one. I'll keep trying in the background. (It might take up to a minute to actually send :/)")
         window.location.reload();
-      }, 2000);
+      }, 3000);
     });
   });
 }

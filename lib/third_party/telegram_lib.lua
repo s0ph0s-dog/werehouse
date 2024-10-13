@@ -371,7 +371,6 @@ function api.run(limit, timeout, offset, allowed_updates)
         local updates, err =
             api.get_updates(timeout, offset, limit, allowed_updates)
         if updates and type(updates) == "table" and updates.result then
-            print(updates)
             for _, v in pairs(updates.result) do
                 if v then
                     xpcall(api.process_update, debug.traceback, v)

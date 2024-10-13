@@ -1527,7 +1527,6 @@ function Model:insertImage(image_data, mime_type, width, height, kind, rating)
         end
     end
     local filename, f_err = FsTools.save_image(image_data, mime_type)
-    print(filename, f_err)
     if not filename then
         return nil, f_err
     end
@@ -1601,7 +1600,6 @@ function Model:replaceImage(image_id, image_data, mime_type, width, height)
         "Replaced the image because the newer version is larger or an equally-sized PNG"
     )
     local filename, f_err = FsTools.save_image(image_data, mime_type)
-    print(filename, f_err)
     if not filename then
         return nil, f_err
     end
@@ -1961,7 +1959,6 @@ function Model:addTagsForImageByName(image_id, tag_names)
             Log(kLogDebug, tostring(errmsg))
             return nil, errmsg
         end
-        print("ids: ", image_id, tag_id)
         local link_ok, link_err = self:associateTagWithImage(image_id, tag_id)
         if not link_ok then
             self:rollback(SP)
@@ -2685,7 +2682,6 @@ function Model:getEntriesForSPLById(spl_id)
     local negative_tags_regrouped = {}
     for i = 1, #entries do
         local entry = entries[i]
-        print(EncodeJson(entry))
         positive_tags_regrouped[entry.spl_entry_id] = {}
         negative_tags_regrouped[entry.spl_entry_id] = {}
     end
@@ -3319,7 +3315,8 @@ local function for_each_user(fn)
     end
     for i = 1, #users do
         local user = users[i]
-        print(
+        Log(
+            kLogInfo,
             "Checking records for user %s (%d of %d)…"
                 % { user.user_id, i, #users }
         )

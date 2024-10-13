@@ -168,7 +168,6 @@ local function accept_invite(r)
     local pw_hash = hash_password(r.params.password)
     local result, errmsg =
         Accounts:acceptInvite(r.params.invite_code, r.params.username, pw_hash)
-    print(result)
     if not result then
         Log(kLogInfo, "Invitation acceptance failed: %s" % { errmsg })
         return Fm.serve400()
@@ -1611,7 +1610,6 @@ local function queue_help_new(r, help_ask_data)
                 end
             end
         end
-        print(EncodeJson(subtasks))
         return {
             type = PipelineTaskType.Archive,
             qid = help_ask_data.qid,

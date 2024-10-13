@@ -699,6 +699,7 @@ local function clean_sources(other_args)
 end
 
 local function reapply_tags_from_rules(_)
+    ---@param model Model
     DbUtil.for_each_user(function(_, _, model)
         local SP = "reapply_tags_from_rules"
         model:create_savepoint(SP)
