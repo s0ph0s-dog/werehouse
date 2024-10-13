@@ -278,7 +278,7 @@ local function p_fetch(model, queue_entry, task)
                 if not image_data then
                     return nil, thumb_err_or_headers
                 end
-                local thumb_mime = err_or_headers["Content-Type"]
+                local thumb_mime = thumb_err_or_headers["Content-Type"]
                     or Nu.guess_mime_from_url(thumbnail.raw_uri)
                     or "image/jpeg"
                 thumbnail.image_data = image_data

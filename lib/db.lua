@@ -1802,6 +1802,7 @@ function Model:getOrCreateArtist(name, manually_verified)
         manually_verified
     )
     if not ok then
+        self.conn.prepcache = {}
         artist, errmsg = self:findArtistIdByName(name)
     end
     if not artist or artist == self.conn.NONE then

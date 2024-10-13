@@ -780,6 +780,7 @@ local function makeStorage(dbname, sqlsetup, opts)
       -- if the last statement is incomplete
       if not stmt:isopen() then break end
       if stmt:bind_values(...) > 0 then
+        dbm.prepcache = {}
         return nil, "can't bind values: "..self.db:errmsg()
       end
       for row in stmt:nrows() do
