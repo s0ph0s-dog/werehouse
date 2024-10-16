@@ -215,13 +215,14 @@ local function handle_enqueue(message)
     if user_record == Accounts.conn.NONE then
         return
     end
-    local model = DbUtil.Model:new(nil, user_record.user_id)
     if not user_record or not user_record.username then
         return
     end
+    local model = DbUtil.Model:new(nil, user_record.user_id)
     local is_saveable, why_not = message_is_saveable(message)
     if not is_saveable then
         api.reply_to_message(message, why_not)
+        model.conn:close()
         return
     end
     local links = bot.get_all_links_from_message(message)
@@ -242,6 +243,7 @@ local function handle_enqueue(message)
                     "I encountered an error while trying to add this to the queue: %s"
                         % { err }
                 )
+                model.conn:close()
                 return
             end
             local result, tg_err
@@ -255,6 +257,7 @@ local function handle_enqueue(message)
                 )
             end
             update_queue_with_tg_ids(result, tg_err, model, queue_entry)
+            model.conn:close()
             return
         end
     end
@@ -274,6 +277,7 @@ local function handle_enqueue(message)
             end
             if not largest_photo then
                 Log(kLogDebug, "No photos in list")
+                model.conn:close()
                 return
             end
             file_id = largest_photo.file_id
@@ -283,6 +287,7 @@ local function handle_enqueue(message)
         local photo_data, photo_err = api.download_file(file_id)
         if not photo_data then
             Log(kLogInfo, tostring(photo_err))
+            model.conn:close()
             return
         end
         -- Telegram images are always image/jpeg, so the MIME type is not included anywhere. The server response is application/octet-stream, which is not helpful.
@@ -294,18 +299,21 @@ local function handle_enqueue(message)
                 message,
                 "I couldn’t add this photo to the queue: %s" % { err }
             )
+            model.conn:close()
             return
         end
         local result, tg_err =
             api.reply_to_message(message, "Added this to the queue!")
         update_queue_with_tg_ids(result, tg_err, model, queue_entry)
         update_queue_with_tg_source_and_cache(model, queue_entry, message)
+        model.conn:close()
         return
     end
     api.reply_to_message(
         message,
         "I encountered an error while trying to add this to the queue."
     )
+    model.conn:close()
 end
 
 function bot.notify_account_linked(tg_userid, username)
