@@ -1,6 +1,7 @@
 local ACCOUNTS_DB_FILE = "db/werehouse-accounts.sqlite3"
 local TG_FORWARD_CACHE_DB_FILE = "db/werehouse-tg-forward-cache.sqlite3"
 local USER_DB_FILE_TEMPLATE = "db/werehouse-%s.sqlite3"
+local QUERY_STATS_FILE = "db/werehouse-qstats.sqlite3"
 
 local IdPrefixes = {
     user = "u_",
@@ -432,6 +433,24 @@ local tg_forward_cache_setup = [[
 
     CREATE UNIQUE INDEX IF NOT EXISTS cache_by_username_message_id
         ON cache (username, message_id);
+]]
+
+local query_stats_setup = [[
+    PRAGMA journal_mode=WAL;
+    PRAGMA busy_timeout = 5000;
+    PRAGMA synchronous=NORMAL;
+    PRAGMA foreign_keys=ON;
+    PRAGMA cache_size = -20000;
+    PRAGMA auto_vacuum = INCREMENTAL;
+    PRAGMA temp_store = MEMORY;
+    PRAGMA mmap_size = 2147483648;
+    CREATE TABLE IF NOT EXISTS "query_stats" (
+        "query" TEXT NOT NULL,
+        "duration" REAL NOT NULL,
+        "timestamp" INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS query_stats_by_query ON query_stats (query);
 ]]
 
 local queries = {
@@ -1078,6 +1097,44 @@ local queries = {
     },
 }
 
+local function make_stats_db()
+    -- This may be failing because it's exceeding a memory limit.
+    local ok, db = pcall(Fm.makeStorage, QUERY_STATS_FILE, query_stats_setup)
+    if not ok then
+        Log(kLogInfo, "Error initializing stats db: " .. tostring(db))
+        return nil
+    end
+    return db
+end
+
+local function trace(dbm, query, params, dt)
+    Log(kLogDebug, "query params: " .. tostring(EncodeJson(params)))
+    local stats_db = make_stats_db()
+    if not stats_db then
+        return
+    end
+    stats_db:execute(
+        [[INSERT INTO
+            query_stats ("query", "duration", "timestamp")
+        VALUES (?, ?, unixepoch('now'));]],
+        query,
+        dt
+    )
+end
+
+local function get_query_stats()
+    local stats_db = make_stats_db()
+    if not stats_db then
+        return {}
+    end
+    return stats_db:fetchAll([[SELECT
+            query, COUNT(*) AS count, (AVG(duration) * 1000000) AS mean_us
+        FROM query_stats
+        WHERE timestamp > (unixepoch('now') - (24 * 60 * 60))
+        GROUP BY query
+        ORDER BY mean_us DESC;]])
+end
+
 local function fetchOneExactly(conn, query, ...)
     local result, err = conn:fetchOne(query, ...)
     if not result then
@@ -1097,7 +1154,7 @@ local Model = {}
 function Model:new(o, user_id)
     o = o or {}
     local filename = USER_DB_FILE_TEMPLATE % { user_id }
-    o.conn = Fm.makeStorage(filename, user_setup)
+    o.conn = Fm.makeStorage(filename, user_setup, { trace = trace })
     o.user_id = user_id
     setmetatable(o, self)
     self.__index = self
@@ -2919,7 +2976,7 @@ local Accounts = {}
 
 function Accounts:new(o)
     o = o or {}
-    o.conn = Fm.makeStorage(ACCOUNTS_DB_FILE, accounts_setup)
+    o.conn = Fm.makeStorage(ACCOUNTS_DB_FILE, accounts_setup, { trace = trace })
     setmetatable(o, self)
     self.__index = self
     return o
@@ -3237,7 +3294,11 @@ local TGForwardCache = {}
 ---@return TGForwardCache
 function TGForwardCache:new(o)
     o = o or {}
-    o.conn = Fm.makeStorage(TG_FORWARD_CACHE_DB_FILE, tg_forward_cache_setup)
+    o.conn = Fm.makeStorage(
+        TG_FORWARD_CACHE_DB_FILE,
+        tg_forward_cache_setup,
+        { trace = trace }
+    )
     setmetatable(o, self)
     self.__index = self
     return o
@@ -3444,6 +3505,7 @@ table.sort(CategoryLoopable, function(a, b)
 end)
 
 return {
+    get_query_stats = get_query_stats,
     Accounts = Accounts,
     Model = Model,
     TGForwardCache = TGForwardCache,

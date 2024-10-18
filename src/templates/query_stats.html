@@ -1,0 +1,21 @@
+{% function block.content() %}
+<h1>Query Statistics</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Query</th>
+            <th>Count</th>
+            <th>Mean Time (µs)</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for i = 1, #stat_data do local stat_datum = stat_data[i] %}
+        <tr>
+            <td><tt>{%& stat_datum.query %}</tt></td>
+            <td>{%& stat_datum.count %}</td>
+            <td>{%& stat_datum.mean_us %}</td>
+        </tr>
+    {% end %}
+    </tbody>
+</table>
+{% end %}{% render("layouts/main", { title = "Query Statistics" }) %}

@@ -3349,6 +3349,17 @@ local function accept_csp_report(r)
     return Fm.serveResponse(204)
 end
 
+local function render_query_stats(_)
+    local stat_data, err = DbUtil.get_query_stats()
+    if not stat_data then
+        Log(kLogInfo, tostring(err))
+        return Fm.serve500()
+    end
+    return Fm.serveContent("query_stats", {
+        stat_data = stat_data,
+    })
+end
+
 local function setup_static()
     Fm.setRoute("/favicon.ico", Fm.serveAsset)
     Fm.setRoute("/icon.svg", Fm.serveAsset)
@@ -3482,6 +3493,7 @@ local function setup()
     setup_account()
     Fm.setRoute("/help(/:page)", render_help)
     Fm.setRoute("/csp-report", accept_csp_report)
+    Fm.setRoute("/query-stats", render_query_stats)
 end
 
 local function run()

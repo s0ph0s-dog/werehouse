@@ -83,6 +83,7 @@ SRCS := src/.init.lua \
     src/templates/enqueue.html \
     src/templates/queue.html \
     src/templates/queue_help.html \
+    src/templates/query_stats.html \
     src/templates/about.html \
     src/templates/account.html \
     src/templates/share_ping_list.html \
