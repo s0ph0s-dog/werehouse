@@ -16,6 +16,10 @@ local accounts_setup = [[
     PRAGMA busy_timeout = 5000;
     PRAGMA synchronous=NORMAL;
     PRAGMA foreign_keys=ON;
+    PRAGMA cache_size = -20000;
+    PRAGMA auto_vacuum = INCREMENTAL;
+    PRAGMA temp_store = MEMORY;
+    PRAGMA mmap_size = 2147483648;
     CREATE TABLE IF NOT EXISTS "users" (
         "user_id" TEXT NOT NULL UNIQUE,
         "username" TEXT NOT NULL UNIQUE,
@@ -76,6 +80,10 @@ local user_setup = [[
     PRAGMA busy_timeout = 5000;
     PRAGMA synchronous=NORMAL;
     PRAGMA foreign_keys=ON;
+    PRAGMA cache_size = -20000;
+    PRAGMA auto_vacuum = INCREMENTAL;
+    PRAGMA temp_store = MEMORY;
+    PRAGMA mmap_size = 2147483648;
     CREATE TABLE IF NOT EXISTS "images" (
         "image_id" INTEGER NOT NULL UNIQUE,
         "file" TEXT NOT NULL UNIQUE,
@@ -405,6 +413,10 @@ local tg_forward_cache_setup = [[
     PRAGMA busy_timeout = 5000;
     PRAGMA synchronous=NORMAL;
     PRAGMA foreign_keys=ON;
+    PRAGMA cache_size = -20000;
+    PRAGMA auto_vacuum = INCREMENTAL;
+    PRAGMA temp_store = MEMORY;
+    PRAGMA mmap_size = 2147483648;
     CREATE TABLE IF NOT EXISTS "cache" (
         "cache_id" INTEGER NOT NULL UNIQUE,
         "type" TEXT NOT NULL,
