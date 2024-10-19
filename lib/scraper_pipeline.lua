@@ -149,6 +149,7 @@ local function p_deserialize(model, queue_entry, _)
         queue_entry.status == QueueStatus.ToDo
         or queue_entry.status == QueueStatus.ToDoAgain
     then
+        model:incrementQueueItemRetryCount(queue_entry.qid)
         return make_scrape_task_from_queue_entry(model, queue_entry)
     else
         return nil,
