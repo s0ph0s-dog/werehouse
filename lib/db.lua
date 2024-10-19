@@ -17,10 +17,6 @@ local accounts_setup = [[
     PRAGMA busy_timeout = 5000;
     PRAGMA synchronous=NORMAL;
     PRAGMA foreign_keys=ON;
-    PRAGMA cache_size = -20000;
-    PRAGMA auto_vacuum = INCREMENTAL;
-    PRAGMA temp_store = MEMORY;
-    PRAGMA mmap_size = 2147483648;
     CREATE TABLE IF NOT EXISTS "users" (
         "user_id" TEXT NOT NULL UNIQUE,
         "username" TEXT NOT NULL UNIQUE,
@@ -81,10 +77,6 @@ local user_setup = [[
     PRAGMA busy_timeout = 5000;
     PRAGMA synchronous=NORMAL;
     PRAGMA foreign_keys=ON;
-    PRAGMA cache_size = -20000;
-    PRAGMA auto_vacuum = INCREMENTAL;
-    PRAGMA temp_store = MEMORY;
-    PRAGMA mmap_size = 2147483648;
     CREATE TABLE IF NOT EXISTS "images" (
         "image_id" INTEGER NOT NULL UNIQUE,
         "file" TEXT NOT NULL UNIQUE,
@@ -414,10 +406,6 @@ local tg_forward_cache_setup = [[
     PRAGMA busy_timeout = 5000;
     PRAGMA synchronous=NORMAL;
     PRAGMA foreign_keys=ON;
-    PRAGMA cache_size = -20000;
-    PRAGMA auto_vacuum = INCREMENTAL;
-    PRAGMA temp_store = MEMORY;
-    PRAGMA mmap_size = 2147483648;
     CREATE TABLE IF NOT EXISTS "cache" (
         "cache_id" INTEGER NOT NULL UNIQUE,
         "type" TEXT NOT NULL,
@@ -440,10 +428,6 @@ local query_stats_setup = [[
     PRAGMA busy_timeout = 5000;
     PRAGMA synchronous=NORMAL;
     PRAGMA foreign_keys=ON;
-    PRAGMA cache_size = -20000;
-    PRAGMA auto_vacuum = INCREMENTAL;
-    PRAGMA temp_store = MEMORY;
-    PRAGMA mmap_size = 2147483648;
     CREATE TABLE IF NOT EXISTS "query_stats" (
         "query" TEXT NOT NULL,
         "duration" REAL NOT NULL,
@@ -1098,36 +1082,38 @@ local queries = {
 }
 
 local function make_stats_db()
-    -- This may be failing because it's exceeding a memory limit.
     local ok, db = pcall(Fm.makeStorage, QUERY_STATS_FILE, query_stats_setup)
     if not ok then
         Log(kLogInfo, "Error initializing stats db: " .. tostring(db))
         return nil
     end
+    Log(kLogInfo, "Query statistics DB initialized.")
     return db
 end
 
+local STATS_DB = make_stats_db()
+
 local function trace(dbm, query, params, dt)
     Log(kLogDebug, "query params: " .. tostring(EncodeJson(params)))
-    local stats_db = make_stats_db()
-    if not stats_db then
-        return
+    if STATS_DB then
+        local ok, err = STATS_DB:execute(
+            [[INSERT INTO
+                query_stats ("query", "duration", "timestamp")
+            VALUES (?, ?, unixepoch('now'));]],
+            query,
+            dt
+        )
+        if not ok then
+            Log(kLogDebug, "Error logging query performance: " .. tostring(err))
+        end
     end
-    stats_db:execute(
-        [[INSERT INTO
-            query_stats ("query", "duration", "timestamp")
-        VALUES (?, ?, unixepoch('now'));]],
-        query,
-        dt
-    )
 end
 
 local function get_query_stats()
-    local stats_db = make_stats_db()
-    if not stats_db then
+    if not STATS_DB then
         return {}
     end
-    return stats_db:fetchAll([[SELECT
+    return STATS_DB:fetchAll([[SELECT
             query, COUNT(*) AS count, (AVG(duration) * 1000000) AS mean_us
         FROM query_stats
         WHERE timestamp > (unixepoch('now') - (24 * 60 * 60))

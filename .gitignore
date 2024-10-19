@@ -14,3 +14,4 @@ images/*
 /key.pem
 /tags
 /Makefile.secret
+/wh.log
