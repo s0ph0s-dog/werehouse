@@ -323,6 +323,11 @@ local user_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE
     );
 
+    CREATE INDEX IF NOT EXISTS thumbnails_by_image_and_id_desc ON thumbnails(
+        image_id,
+        thumbnail_id DESC
+    );
+
     CREATE TABLE IF NOT EXISTS "queue" (
         "qid" INTEGER NOT NULL UNIQUE,
         "link" TEXT UNIQUE,
@@ -359,6 +364,7 @@ local user_setup = [[
     );
 
     CREATE INDEX IF NOT EXISTS queue2_added_on ON queue2 (added_on);
+    CREATE INDEX IF NOT EXISTS queue2_status_added_on ON queue2(status, added_on);
 
     -- Stored as a separate table to ensure that if one value is present, they all are.
     CREATE TABLE IF NOT EXISTS "queue_images" (
