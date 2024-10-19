@@ -234,6 +234,30 @@ local function p_scrape(model, queue_entry, task)
     end
 end
 
+local function log_strip_bin(obj)
+    if type(obj) == "table" then
+        local result = {}
+        if #obj > 0 then
+            for i = 1, #obj do
+                result[i] = log_strip_bin(obj[i])
+            end
+        else
+            for k, v in pairs(obj) do
+                result[k] = log_strip_bin(v)
+            end
+        end
+        return result
+    elseif type(obj) == "string" then
+        if #obj > 400 then
+            return "[data removed to prevent log spam]"
+        else
+            return obj
+        end
+    else
+        return obj
+    end
+end
+
 ---Fetch the images found by the scraper.
 ---@param model Model The database connection.
 ---@param queue_entry ActiveQueueEntry The queue entry from the database.
@@ -255,6 +279,11 @@ local function p_fetch(model, queue_entry, task)
         for j = 1, #scraped_data_for_source do
             local scraped_data = scraped_data_for_source[j]
             ---@cast scraped_data FetchedSourceData
+            assert(
+                scraped_data.media_url,
+                "media_url was nil in "
+                    .. EncodeJson(log_strip_bin(scraped_data))
+            )
             local media_data, err_or_headers =
                 Nu.FetchMedia(scraped_data.media_url)
             if not media_data then
@@ -273,6 +302,11 @@ local function p_fetch(model, queue_entry, task)
             local thumbnails = scraped_data.thumbnails or {}
             for k = 1, #thumbnails do
                 local thumbnail = thumbnails[k]
+                assert(
+                    thumbnail.raw_uri,
+                    "thumbnail.raw_uri was nil for index %d in %s"
+                        % { k, EncodeJson(log_strip_bin(scraped_data)) }
+                )
                 local image_data, thumb_err_or_headers =
                     Nu.FetchMedia(thumbnail.raw_uri)
                 if not image_data then

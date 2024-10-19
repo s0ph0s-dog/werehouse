@@ -251,7 +251,7 @@ local function try_from_cache(chat_name, chat_id, uri)
         if media.thumbnail then
             thumbs = {
                 {
-                    raw_uri = Bot.api.get_file_url(media.thumbnail),
+                    raw_uri = Bot.api.get_file_url(media.thumbnail.file_id),
                     mime_type = "image/jpeg",
                     width = media.thumbnail.width,
                     height = media.thumbnail.height,
