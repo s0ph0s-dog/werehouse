@@ -449,6 +449,11 @@ local allowed_image_types = {
 
 local render_enqueue = login_required(function(r, user_record)
     local params = {}
+    if r.session.error then
+        Fm.setTemplateVar("error", r.session.error)
+        r.headers["HX-Retarget"] = "#dialog"
+        r.session.error = nil
+    end
     add_htmx_param(r, params)
     add_form_path(r, params)
     return Fm.serveContent("enqueue", params)
@@ -476,8 +481,9 @@ local accept_enqueue = login_required(function(r)
         local result, errmsg = Model:enqueueLink(r.params.link)
         if not result then
             Log(kLogWarn, errmsg)
+            r.session.error = errmsg
+            return Fm.serveRedirect(302, "/enqueue")
         end
-        -- TODO: check errors
         return redirect
     elseif
         r.params.multipart.image

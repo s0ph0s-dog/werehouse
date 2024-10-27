@@ -32,14 +32,12 @@
           margin: 0;
         }
       </style>
-      <div
-        class="dialog"
-      >
+      <div class="dialog">
         {% end %}
         <div id="dialog-contents">
           <h1>{%& title %}</h1>
-          {% if type(error) == "string" then %}
-          <p class="error">{%& error %}</p>
+          {% if type(vars.error) == "string" then %}
+          <p class="error">{%& vars.error %}</p>
           {% end %} {% function block.content() %}This page was configured
           incorrectly and no page content was provided.{% end %}{%
           block.content() %}
