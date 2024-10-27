@@ -14,7 +14,9 @@
       name="image"
       accept="*.png,*.jpg,*.jpeg,*.gif,image/png,image/jpeg,image/gif"
   /></label>
-  <span class="buttons">
+  <span class="buttons reverse">
+    <input type="submit" name="add" value="Add" hx-post="/enqueue"
+            hx-encoding="multipart/form-data" />
     <input
       type="submit"
       name="cancel"
@@ -23,7 +25,6 @@
       hx-post="/enqueue"
       hx-swap="none"
     />
-    <input type="submit" name="add" value="Add" />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Add to Queue" }) %}

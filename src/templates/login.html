@@ -16,9 +16,9 @@
       maxlength="128"
       name="password"
       autocomplete="current-password" /></label
-  ><span class="buttons"
-    ><input type="reset" /><input type="submit" value="Log In"
-  /></span>
+  ><span class="buttons reverse"
+    ><input type="submit" value="Log In"
+  /><input type="reset" /></span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Log In", dialog_width = "20em",
 error = error }) %}

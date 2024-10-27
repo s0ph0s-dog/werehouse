@@ -23,15 +23,7 @@
     ><input type="checkbox" name="check_duplicates" checked /> Check for
     duplicates</label
   >
-  <span class="buttons">
-    <input
-      type="submit"
-      name="cancel"
-      value="Cancel"
-      formnovalidate
-      hx-post="/archive"
-      hx-swap="none"
-    />
+  <span class="buttons reverse">
     <input
       type="submit"
       name="archive"
@@ -43,6 +35,14 @@
       hx-validate="true"
       hx-push-url="true"
       hx-on::after-request="this.closest('dialog').close();"
+    />
+    <input
+      type="submit"
+      name="cancel"
+      value="Cancel"
+      formnovalidate
+      hx-post="/archive"
+      hx-swap="none"
     />
   </span>
 </form>

@@ -48,15 +48,7 @@
     </label>
   </div>
   {% end %}
-  <span class="buttons">
-    <input
-      type="submit"
-      name="cancel"
-      value="Cancel"
-      formnovalidate
-      hx-post="{%& form_path %}"
-      hx-swap="none"
-    />
+  <span class="buttons reverse">
     <input
       type="submit"
       name="add"
@@ -64,6 +56,14 @@
       hx-post="{%& form_path %}"
       hx-target="#dialog"
       hx-validate="true"
+    />
+    <input
+      type="submit"
+      name="cancel"
+      value="Cancel"
+      formnovalidate
+      hx-post="{%& form_path %}"
+      hx-swap="none"
     />
   </span>
 </form>

@@ -42,7 +42,8 @@
       required
     />
   </label>
-  <span class="buttons">
+  <span class="buttons reverse">
+    <input type="submit" name="Update" value="Update" />
     <input
       type="submit"
       name="cancel"
@@ -51,7 +52,6 @@
       hx-post="{%& form_path %}"
       hx-swap="none"
     />
-    <input type="submit" name="Update" value="Update" />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Edit Tag Rule: %s on %s" % {tag_rule.incoming_name, tag_rule.incoming_domain} }) %}

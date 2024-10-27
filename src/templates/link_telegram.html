@@ -19,9 +19,9 @@
     werehouse: {%& user.username %}<br />
     Telegram: {%& tg.display_name %} (@{%& tg.username %}, {%& tg.tg_userid %})
   </p>
-  <span class="buttons">
-    <input type="submit" name="cancel" value="Cancel" />
+  <span class="buttons reverse">
     <input type="submit" name="link" value="Link" />
+    <input type="submit" name="cancel" value="Cancel" />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Link Telegram Account", user =

@@ -15,7 +15,8 @@
     Tag Description:
     <textarea name="description" rows="5" cols="35"></textarea>
   </label>
-  <span class="buttons">
+  <span class="buttons reverse">
+    <input type="submit" name="add" value="Add" />
     <input
       type="submit"
       name="cancel"
@@ -24,7 +25,6 @@
       hx-post="/tag/add"
       hx-swap="none"
     />
-    <input type="submit" name="add" value="Add" />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Add Tag" }) %}

@@ -38,7 +38,8 @@
 {%& ping_text %}</textarea
   ></label>
   {% end %}
-  <span class="buttons">
+  <span class="buttons reverse">
+    <input type="submit" name="share" value="Share" data-telegram-slow />
     <input
       type="submit"
       name="cancel"
@@ -46,7 +47,6 @@
       hx-post="{%& form_path %}"
       hx-swap="none"
     />
-    <input type="submit" name="share" value="Share" data-telegram-slow />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Share " .. (ig_id or

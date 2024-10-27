@@ -99,12 +99,25 @@ textarea {
   justify-content: flex-end;
   padding: 0.5em 0;
 }
+.reverse {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
 .buttons input,
 .buttons button {
   margin-right: 1em;
 }
 .buttons input:last-child,
 .buttons button:last-child {
+  margin-right: 0;
+}
+
+.buttons.reverse input,
+.buttons.reverse button {
+  margin-right: 1em;
+}
+.buttons.reverse input:first-child,
+.buttons.reverse button:first-child {
   margin-right: 0;
 }
 

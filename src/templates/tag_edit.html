@@ -16,7 +16,8 @@
 {%& tag.description %}</textarea
     >
   </label>
-  <span class="buttons">
+  <span class="buttons reverse">
+    <input type="submit" name="update" value="Update" />
     <input
       type="submit"
       name="cancel"
@@ -25,7 +26,6 @@
       hx-post="{%& form_path %}"
       hx-swap="none"
     />
-    <input type="submit" name="update" value="Update" />
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Edit Tag: " .. tag.name }) %}

@@ -63,12 +63,16 @@
   </ol>
   {% end %}
   <span class="buttons">
-    <input type="submit" name="discard" value="Discard All" /><input
+    <input type="submit" name="ok" value="OK" />
+    <input
       type="submit"
       name="cancel"
       value="Cancel"
       formnovalidate
-      hx-post="{%& form_path %}" /><input type="submit" name="ok" value="OK"
+      hx-post="{%& form_path %}" /><input
+        type="submit"
+        name="discard"
+        value="Discard All"
   /></span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Provide Help",
