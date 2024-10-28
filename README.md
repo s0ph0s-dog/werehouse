@@ -35,7 +35,7 @@ Check [Releases](/s0ph0s-2/werehouse/releases) for pre-built binaries.
    - `IB_PASSWORD=(Inkbunny password)` — Your Inkbunny password. Set this to enable archiving from Inkbunny.
    - `E621_USERNAME=(e621 Username)` — Your e621 username. Set both this and `E621_API_KEY` to enable archiving of e621 posts *which are only visible to logged-in users.* Most posts are visible without an API key.
    - `E621_API_KEY=(e621 API key)` — Your e621 API key.  Generate this by going to [the e621 control panel](https://e621.net/users/home) and clicking “Manage API Access.”
-5. Run `./werehouse.com -D . -p 8082`. Optionally include `-%` if you're running locally, to avoid generating a TLS certificate on startup.
+5. Run `./werehouse.com -D . -p 8082`.
 6. Use the URL printed to the console on startup to register the first account.
 
 # Contributing

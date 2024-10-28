@@ -2987,7 +2987,7 @@ function Accounts:bootstrapInvites()
         self.conn:execute(queries.accounts.bootstrap_invite, invite_id)
         Log(
             kLogWarn,
-            "There are no accounts in the database. Register one using this link: http://127.0.0.1:8082/accept-invite/%s"
+            "There are no accounts in the database. Register one using this link: https://127.0.0.1:8082/accept-invite/%s"
                 % { invite_id }
         )
     end

@@ -1,5 +1,5 @@
 # Configure here
-VERSION := 0.1
+VERSION := 1.0
 REDBEAN_VERSION := 3.0beta
 OUTPUT := werehouse.com
 SRV_DIR := srv
@@ -73,6 +73,7 @@ SRCS := src/.init.lua \
     src/templates/help/known-issues.html \
     src/templates/help/how-queue-works.html \
     src/templates/help/sharing.html \
+    src/templates/help/version-history.html \
     src/templates/image.html \
     src/templates/image_edit.html \
     src/templates/image_share.html \
