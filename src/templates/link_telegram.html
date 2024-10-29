@@ -16,7 +16,7 @@
 </ul>
 <form class="vbox" method="POST" action="{%& form_path %}">
   <p>
-    werehouse: {%& user.username %}<br />
+    werehouse: {%& vars.user.username %}<br />
     Telegram: {%& tg.display_name %} (@{%& tg.username %}, {%& tg.tg_userid %})
   </p>
   <span class="buttons reverse">
@@ -24,5 +24,4 @@
     <input type="submit" name="cancel" value="Cancel" />
   </span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Link Telegram Account", user =
-user }) %}
+{% end %}{% render("layouts/dialog", { title = "Link Telegram Account" }) %}
