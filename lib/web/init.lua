@@ -1929,7 +1929,11 @@ local accept_edit_artist = login_required(function(r)
             Model:updateArtist(artist_id, r.params.name, verified)
         if not artist_ok then
             Log(kLogInfo, tostring(artist_err))
-            return Fm.serve500()
+            return Fm.serveError(
+                400,
+                nil,
+                "Unable to rename artist: " .. artist_err
+            )
         end
         if r.params.delete_handles then
             local delete_ok, delete_err = Model:deleteHandlesForArtistById(

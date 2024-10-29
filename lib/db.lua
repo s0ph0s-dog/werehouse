@@ -1840,12 +1840,21 @@ function Model:createHandleForArtist(artist_id, handle, domain, profile_url)
 end
 
 function Model:updateArtist(artist_id, name, manually_verified)
-    return self.conn:execute(
+    local ok, result, err = pcall(
+        self.conn.execute,
+        self.conn,
         queries.model.update_artist_by_id,
         name,
         manually_verified,
         artist_id
     )
+    if not ok then
+        return nil, "An artist already exists with that name."
+    end
+    if not result then
+        return nil, err
+    end
+    return result
 end
 
 function Model:findArtistIdByName(name)
