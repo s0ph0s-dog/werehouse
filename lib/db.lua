@@ -279,6 +279,7 @@ local user_setup = [[
         "tag_id" INTEGER NOT NULL,
         PRIMARY KEY("spl_entry_id", "tag_id"),
         FOREIGN KEY ("spl_entry_id") REFERENCES "share_ping_list_entry"("spl_entry_id")
+        ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("tag_id") REFERENCES "tags"("tag_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
@@ -288,6 +289,7 @@ local user_setup = [[
         "tag_id" INTEGER NOT NULL,
         PRIMARY KEY("spl_entry_id", "tag_id"),
         FOREIGN KEY ("spl_entry_id") REFERENCES "share_ping_list_entry"("spl_entry_id")
+        ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("tag_id") REFERENCES "tags"("tag_id")
         ON UPDATE CASCADE ON DELETE CASCADE
     );
