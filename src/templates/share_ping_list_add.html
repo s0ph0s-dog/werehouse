@@ -66,7 +66,7 @@
   <label class="inline">
     <input type="checkbox" name="attribution" value="true" {% if attribution ==
     "true" or attribution == 1 then %}checked {% end %} /> Include “Shared by
-    {%& user.username %}” in the shared post?
+    {%& vars.user.username %}” in the shared post?
   </label>
   <details {% if pending_handles and #pending_handles>
     0 then %}open{% end %}>
