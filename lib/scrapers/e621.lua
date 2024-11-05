@@ -194,10 +194,15 @@ local function normalize_uri(uri)
     parts.scheme = "https"
     -- E621 doesn't use the params for anything other than optional data on pool/post pages
     parts.params = nil
+    -- Rewrite old e621 URLs.
+    -- (e6 redirects post/show/xxx.json to posts/xxx, stripping the json, and
+    -- breaking the request.)
+    parts.path = parts.path:gsub("/post/show/", "/posts/")
     -- Strip all trailing slashes
     if parts.path:endswith("/") then
         parts.path = parts.path:gsub("/+$", "")
     end
+    Log(kLogDebug, "parts.path = " .. parts.path)
     return EncodeUrl(parts)
 end
 
