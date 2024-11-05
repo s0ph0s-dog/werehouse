@@ -2615,7 +2615,7 @@ local accept_change_password = login_required(function(r, user_record)
             Log(kLogInfo, "error updating password hash for user: %s" % { err })
             return Fm.serve500()
         end
-        r.session.toast = "Password updated!"
+        r.session.toast = { msg = "Password updated!" }
         return Fm.serveRedirect("/account", 302)
     end
     return Fm.serve400()
