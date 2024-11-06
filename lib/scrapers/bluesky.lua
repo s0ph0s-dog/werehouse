@@ -121,6 +121,11 @@ local function get_artist_profile(post_uri, handle_or_did, did)
     if not displayName then
         return nil, PipelineErrorPermanent("No display name")
     end
+    -- Bluesky displays the handle instead of the display name if the display
+    -- name is empty.
+    if #displayName < 1 then
+        displayName = handle
+    end
     local profile_url = EncodeUrl {
         scheme = "https",
         host = "bsky.app",
