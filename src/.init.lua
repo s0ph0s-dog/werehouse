@@ -58,7 +58,7 @@ end
 function OnWorkerStart()
     Accounts = DbUtil.Accounts:new()
 
-    unix.setrlimit(unix.RLIMIT_AS, 200 * 1024 * 1024)
+    unix.setrlimit(unix.RLIMIT_AS, 400 * 1024 * 1024)
     unix.setrlimit(unix.RLIMIT_CPU, 4)
 
     assert(unix.unveil(".", "rwc"))
@@ -75,8 +75,8 @@ function OnWorkerStop()
         Model.conn:close()
     end
 end
--- 10MB, a reasonable limit for images.
-ProgramMaxPayloadSize(10 * 1024 * 1024)
+-- 100MB, a reasonable limit for images and videos.
+ProgramMaxPayloadSize(100 * 1024 * 1024)
 
 Fm.setSchedule("* * * * *", ScraperPipeline.process_all_queues)
 Fm.setSchedule("50 * * * *", sessionMaintenance)
