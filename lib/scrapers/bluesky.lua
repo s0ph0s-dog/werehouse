@@ -3,7 +3,6 @@ local BSKY_URI_EXP = assert(
         [[^(https?://)?(bsky|cbsky|psky|fxbsky)\.app/profile/([^/#?]+)/post/([a-z0-9]+)]]
     )
 )
-local BSKY_DID_EXP = assert(re.compile([[^at://([A-z0-9:]+)/]]))
 local CANONICAL_DOMAIN = "bsky.app"
 
 ---@param uri string
@@ -108,64 +107,6 @@ local function make_image_uri(handle_or_did, image_ref)
         },
     }
     return EncodeUrl(parts)
-end
-
-local function get_artist_profile(post_uri, handle_or_did, did)
-    local handle = handle_or_did
-    if did == handle_or_did then
-        local xrpc_user_uri = EncodeUrl {
-            scheme = "https",
-            host = "bsky.social",
-            path = "/xrpc/com.atproto.repo.describeRepo",
-            params = {
-                { "repo", did },
-            },
-        }
-        local repo_json, errmsg3 = Nu.FetchJson(xrpc_user_uri)
-        if not repo_json then
-            return nil, PipelineErrorTemporary(errmsg3)
-        end
-        if not repo_json.handle or type(repo_json.handle) ~= "string" then
-            return nil, PipelineErrorTemporary("No handle?")
-        end
-        handle = repo_json.handle
-    end
-    local xrpc_profile_uri = EncodeUrl {
-        scheme = "https",
-        host = "bsky.social",
-        path = "/xrpc/com.atproto.repo.listRecords",
-        params = {
-            { "repo", handle_or_did },
-            { "collection", "app.bsky.actor.profile" },
-            { "limit", "1" },
-        },
-    }
-    local user_json, errmsg2 = Nu.FetchJson(xrpc_profile_uri)
-    if not user_json then
-        return nil, PipelineErrorTemporary(errmsg2)
-    end
-    if not user_json.records[1] then
-        return nil, PipelineErrorPermanent("Missing profile")
-    end
-    local displayName = user_json.records[1].value.displayName
-    if not displayName then
-        return nil, PipelineErrorPermanent("No display name")
-    end
-    -- Bluesky displays the handle instead of the display name if the display
-    -- name is empty.
-    if #displayName < 1 then
-        displayName = handle
-    end
-    local profile_url = EncodeUrl {
-        scheme = "https",
-        host = "bsky.app",
-        path = "/profile/" .. did,
-    }
-    return {
-        handle = handle,
-        profile_url = profile_url,
-        display_name = displayName,
-    }
 end
 
 -- TODO: parse at:// URIs too
