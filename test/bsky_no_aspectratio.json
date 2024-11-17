@@ -1,48 +1,102 @@
 {
-  "uri": "at://did:plc:bkq6i3w4hg7zkzuf5phyfdxg/app.bsky.feed.post/3kb4ebxmabw2v",
-  "cid": "bafyreiebyenod3u6wsjnlejmyhdojsmcdfysugmkijtxj7zajgvha47xqy",
-  "value": {
-    "text": "old thing for strawkitty i recently colored 💜\n(part1-3)",
-    "$type": "app.bsky.feed.post",
-    "embed": {
-      "$type": "app.bsky.embed.images",
-      "images": [
-        {
-          "alt": "",
-          "image": {
-            "$type": "blob",
-            "ref": {
-              "$link": "bafkreie4pcim2xsuzgjstzhprtkfjiam2vqlgygjhxujiduvoxs5z2opr4"
-            },
-            "mimeType": "image/jpeg",
-            "size": 924004
+  "posts": [
+    {
+      "uri": "at://did:plc:bkq6i3w4hg7zkzuf5phyfdxg/app.bsky.feed.post/3kb4ebxmabw2v",
+      "cid": "bafyreiebyenod3u6wsjnlejmyhdojsmcdfysugmkijtxj7zajgvha47xqy",
+      "author": {
+        "did": "did:plc:bkq6i3w4hg7zkzuf5phyfdxg",
+        "handle": "hungerynanu.bsky.social",
+        "displayName": "HungeryNanu",
+        "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreihng3pccgqzh65i2y36tpn6ttekwjelrihqenbq34vba22ijiwbyi@jpeg",
+        "associated": {
+          "chat": {
+            "allowIncoming": "all"
           }
         },
-        {
-          "alt": "",
-          "image": {
-            "$type": "blob",
-            "ref": {
-              "$link": "bafkreiag6auhhw5by6nrkmgzzhtxetqtmsa55o3o7rnyzwhohxga3cfpoq"
+        "labels": [],
+        "createdAt": "2023-10-05T20:51:25.760Z"
+      },
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "createdAt": "2023-10-06T21:02:43.594Z",
+        "embed": {
+          "$type": "app.bsky.embed.images",
+          "images": [
+            {
+              "alt": "",
+              "image": {
+                "$type": "blob",
+                "ref": {
+                  "$link": "bafkreie4pcim2xsuzgjstzhprtkfjiam2vqlgygjhxujiduvoxs5z2opr4"
+                },
+                "mimeType": "image/jpeg",
+                "size": 924004
+              }
             },
-            "mimeType": "image/jpeg",
-            "size": 918224
-          }
+            {
+              "alt": "",
+              "image": {
+                "$type": "blob",
+                "ref": {
+                  "$link": "bafkreiag6auhhw5by6nrkmgzzhtxetqtmsa55o3o7rnyzwhohxga3cfpoq"
+                },
+                "mimeType": "image/jpeg",
+                "size": 918224
+              }
+            },
+            {
+              "alt": "",
+              "image": {
+                "$type": "blob",
+                "ref": {
+                  "$link": "bafkreibxygqam6gddpcexktzuup6js52g2fx73ytip3ptdetc4d6g3kq4u"
+                },
+                "mimeType": "image/jpeg",
+                "size": 914247
+              }
+            }
+          ]
         },
-        {
-          "alt": "",
-          "image": {
-            "$type": "blob",
-            "ref": {
-              "$link": "bafkreibxygqam6gddpcexktzuup6js52g2fx73ytip3ptdetc4d6g3kq4u"
-            },
-            "mimeType": "image/jpeg",
-            "size": 914247
+        "langs": [
+          "en"
+        ],
+        "text": "old thing for strawkitty i recently colored 💜\n(part1-3)"
+      },
+      "embed": {
+        "$type": "app.bsky.embed.images#view",
+        "images": [
+          {
+            "thumb": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreie4pcim2xsuzgjstzhprtkfjiam2vqlgygjhxujiduvoxs5z2opr4@jpeg",
+            "fullsize": "https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreie4pcim2xsuzgjstzhprtkfjiam2vqlgygjhxujiduvoxs5z2opr4@jpeg",
+            "alt": ""
+          },
+          {
+            "thumb": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreiag6auhhw5by6nrkmgzzhtxetqtmsa55o3o7rnyzwhohxga3cfpoq@jpeg",
+            "fullsize": "https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreiag6auhhw5by6nrkmgzzhtxetqtmsa55o3o7rnyzwhohxga3cfpoq@jpeg",
+            "alt": ""
+          },
+          {
+            "thumb": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreibxygqam6gddpcexktzuup6js52g2fx73ytip3ptdetc4d6g3kq4u@jpeg",
+            "fullsize": "https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/bafkreibxygqam6gddpcexktzuup6js52g2fx73ytip3ptdetc4d6g3kq4u@jpeg",
+            "alt": ""
           }
+        ]
+      },
+      "replyCount": 0,
+      "repostCount": 6,
+      "likeCount": 26,
+      "quoteCount": 0,
+      "indexedAt": "2023-10-06T21:02:43.594Z",
+      "labels": [
+        {
+          "cid": "bafyreiebyenod3u6wsjnlejmyhdojsmcdfysugmkijtxj7zajgvha47xqy",
+          "cts": "2023-10-06T21:02:45.904Z",
+          "neg": false,
+          "src": "did:plc:ar7c4by46qjdydhdevvrndac",
+          "uri": "at://did:plc:bkq6i3w4hg7zkzuf5phyfdxg/app.bsky.feed.post/3kb4ebxmabw2v",
+          "val": "porn"
         }
       ]
-    },
-    "langs": ["en"],
-    "createdAt": "2023-10-06T21:02:43.594Z"
-  }
+    }
+  ]
 }

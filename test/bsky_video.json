@@ -1,22 +1,60 @@
 {
-  "uri": "at://did:plc:2dwd4zvjtr3fob2pv2pwuf3t/app.bsky.feed.post/3l3vpkeq4lr2j",
-  "cid": "bafyreifgrseu3l3qaw6sywwx6t5ew43zlhogyry5htc3cxie4icygtnore",
-  "value": {
-    "text": "test",
-    "$type": "app.bsky.feed.post",
-    "embed": {
-      "$type": "app.bsky.embed.video",
-      "video": {
-        "$type": "blob",
-        "ref": {
-          "$link": "bafkreiacrbck4lycvn6hyzwuskm5dfzago3sur7nwcpstaqx7igrggzadm"
+  "posts": [
+    {
+      "uri": "at://did:plc:2dwd4zvjtr3fob2pv2pwuf3t/app.bsky.feed.post/3l3vpkeq4lr2j",
+      "cid": "bafyreifgrseu3l3qaw6sywwx6t5ew43zlhogyry5htc3cxie4icygtnore",
+      "author": {
+        "did": "did:plc:2dwd4zvjtr3fob2pv2pwuf3t",
+        "handle": "tabuley.bsky.social",
+        "displayName": "Tabuley ",
+        "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:2dwd4zvjtr3fob2pv2pwuf3t/bafkreieql73xf3bolqlyfbmi33qu73j6nkyhal6xkdlxxog3tm37z34e2i@jpeg",
+        "associated": {
+          "chat": {
+            "allowIncoming": "following"
+          }
         },
-        "mimeType": "video/mp4",
-        "size": 539263
+        "labels": [],
+        "createdAt": "2023-07-21T14:02:28.289Z"
       },
-      "aspectRatio": { "width": 1920, "height": 1080 }
-    },
-    "langs": ["en"],
-    "createdAt": "2024-09-11T19:55:53.436Z"
-  }
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "createdAt": "2024-09-11T19:55:53.436Z",
+        "embed": {
+          "$type": "app.bsky.embed.video",
+          "aspectRatio": {
+            "height": 1080,
+            "width": 1920
+          },
+          "video": {
+            "$type": "blob",
+            "ref": {
+              "$link": "bafkreiacrbck4lycvn6hyzwuskm5dfzago3sur7nwcpstaqx7igrggzadm"
+            },
+            "mimeType": "video/mp4",
+            "size": 539263
+          }
+        },
+        "langs": [
+          "en"
+        ],
+        "text": "test"
+      },
+      "embed": {
+        "$type": "app.bsky.embed.video#view",
+        "cid": "bafkreiacrbck4lycvn6hyzwuskm5dfzago3sur7nwcpstaqx7igrggzadm",
+        "playlist": "https://video.bsky.app/watch/did%3Aplc%3A2dwd4zvjtr3fob2pv2pwuf3t/bafkreiacrbck4lycvn6hyzwuskm5dfzago3sur7nwcpstaqx7igrggzadm/playlist.m3u8",
+        "thumbnail": "https://video.bsky.app/watch/did%3Aplc%3A2dwd4zvjtr3fob2pv2pwuf3t/bafkreiacrbck4lycvn6hyzwuskm5dfzago3sur7nwcpstaqx7igrggzadm/thumbnail.jpg",
+        "aspectRatio": {
+          "height": 1080,
+          "width": 1920
+        }
+      },
+      "replyCount": 83,
+      "repostCount": 429,
+      "likeCount": 2616,
+      "quoteCount": 12,
+      "indexedAt": "2024-09-11T19:55:53.436Z",
+      "labels": []
+    }
+  ]
 }

@@ -17,12 +17,42 @@ local function parse_bsky_uri(uri)
     return handle_or_did, post_id
 end
 
+local function handle_to_did(handle)
+    if handle:startswith("did:") then
+        return handle
+    end
+    local req_url = EncodeUrl {
+        scheme = "https",
+        host = "public.api.bsky.app",
+        path = "/xrpc/com.atproto.identity.resolveHandle",
+        params = {
+            { "handle", handle },
+        },
+    }
+    local resp_json, err = Nu.FetchJson(req_url)
+    if not resp_json then
+        return nil, err
+    end
+    if not resp_json.did then
+        return nil, "No DID in handle lookup response from Bluesky"
+    end
+    return resp_json.did
+end
+
 local function normalize_uri(uri)
     local handle_or_did, post_id = parse_bsky_uri(uri)
     if not handle_or_did then
         return uri
     end
-    return "https://bsky.app/profile/%s/post/%s" % { handle_or_did, post_id }
+    local did, did_err = handle_to_did(handle_or_did)
+    if not did then
+        Log(
+            kLogVerbose,
+            "Unable to get DID for '%s': %s" % { handle_or_did, did_err }
+        )
+        return uri
+    end
+    return "https://bsky.app/profile/%s/post/%s" % { did, post_id }
 end
 
 local function extract_image_embeds(post_data)
@@ -30,15 +60,15 @@ local function extract_image_embeds(post_data)
         Log(kLogVerbose, "Post was nil")
         return nil
     end
-    if not post_data.value then
-        Log(kLogVerbose, "Post value was nil")
+    if not post_data.record then
+        Log(kLogVerbose, "Post record was nil")
         return nil
     end
-    if not post_data.value.embed then
+    if not post_data.record.embed then
         Log(kLogVerbose, "Post embed was nil")
         return nil
     end
-    local embed_type = post_data.value.embed["$type"]
+    local embed_type = post_data.record.embed["$type"]
     if
         not embed_type
         or (
@@ -50,15 +80,15 @@ local function extract_image_embeds(post_data)
         Log(kLogVerbose, "Post embed was not an image or video.")
         return nil
     end
-    local embed_media = post_data.value.embed.images
-        or post_data.value.embed.video
-        or post_data.value.embed.media.images
-        or post_data.value.embed.media.video
+    local embed_media = post_data.record.embed.images
+        or post_data.record.embed.video
+        or post_data.record.embed.media.images
+        or post_data.record.embed.media.video
     if not embed_media then
         return nil
     end
     if #embed_media < 1 then
-        local ar = post_data.value.embed.aspectRatio
+        local ar = post_data.record.embed.aspectRatio
         if ar then
             embed_media.aspectRatio = ar
         end
@@ -144,9 +174,10 @@ end
 ---@param did string Bluesky DID of user who posted
 ---@param uri string Bluesky URI for post
 ---@param artist ScrapedAuthor Author object for the user who posted
+---@param rating integer Rating of the post (value of DbUtil.k.Rating enum)
 ---@return ScrapedSourceData
----@overload fun(image: table, did: string, uri: string, artist: ScrapedAuthor): nil, PipelineError
-local function process_image(image, did, uri, artist)
+---@overload fun(image: table, did: string, uri: string, artist: ScrapedAuthor, rating: integer): nil, PipelineError
+local function process_image(image, did, uri, artist, rating)
     if not image then
         return nil, PipelineErrorPermanent("image was null")
     end
@@ -166,7 +197,7 @@ local function process_image(image, did, uri, artist)
         ---@type ScrapedSourceData
         local data = {
             kind = DbUtil.k.ImageKind.Video,
-            rating = DbUtil.k.Rating.General,
+            rating = rating,
             media_url = video_uri,
             mime_type = image.mimeType,
             width = aspectRatio.width,
@@ -204,7 +235,7 @@ local function process_image(image, did, uri, artist)
         ---@type ScrapedSourceData
         local data = {
             kind = DbUtil.k.ImageKind.Image,
-            rating = DbUtil.k.Rating.General,
+            rating = rating,
             media_url = image_uri,
             mime_type = image.image.mimeType,
             width = aspectRatio.width,
@@ -217,46 +248,87 @@ local function process_image(image, did, uri, artist)
     end
 end
 
+local label_map = {
+    porn = DbUtil.k.Rating.Explicit,
+    sexual = DbUtil.k.Rating.Explicit,
+    ["sexual-figurative"] = DbUtil.k.Rating.Explicit,
+}
+
+---@param labels table ATProto SelfLabels
+---@return integer # a value of the DbUtil.k.Rating enum
+local function guess_rating_from_labels(labels)
+    if not labels then
+        return DbUtil.k.Rating.General
+    end
+    for i = 1, #labels do
+        local lbl = labels[i]
+        if lbl and lbl.val then
+            return label_map[lbl.val]
+        end
+    end
+    return DbUtil.k.Rating.General
+end
+
+---@param bsky_author table
+---@return ScrapedAuthor
+local function map_author(bsky_author)
+    ---@type ScrapedAuthor
+    return {
+        handle = bsky_author.handle or "invalid.handle",
+        display_name = bsky_author.displayName
+            or bsky_author.handle
+            or "Unknown User",
+        profile_url = "https://bsky.app/profile/"
+            .. EscapeSegment(bsky_author.did),
+    }
+end
+
 ---@type ScraperProcess
 local function process_uri(uri)
+    -- Normalize URI to at://did/app.bsky.feed.post/id
     local handle_or_did, post_id = parse_bsky_uri(uri)
     if not handle_or_did or type(post_id) == "re.Errno" then
         return nil, PipelineErrorPermanent("Invalid Bluesky post URI")
     end
+    local did, did_err = handle_to_did(handle_or_did)
+    if not did then
+        return nil, PipelineErrorPermanent(did_err)
+    end
+    local post_at_uri = "at://%s/app.bsky.feed.post/%s"
+        % {
+            did,
+            post_id,
+        }
+    local post_uri = "https://bsky.app/profile/%s/post/%s"
+        % {
+            EscapeSegment(did),
+            EscapeSegment(post_id),
+        }
+    -- Fetch post info
     local xrpc_uri = EncodeUrl {
         scheme = "https",
-        host = "bsky.social",
-        path = "/xrpc/com.atproto.repo.getRecord",
+        host = "public.api.bsky.app",
+        path = "/xrpc/app.bsky.feed.getPosts",
         params = {
-            { "repo", handle_or_did },
-            { "collection", "app.bsky.feed.post" },
-            { "rkey", post_id },
+            { "uris", post_at_uri },
         },
     }
     local json, errmsg = Nu.FetchJson(xrpc_uri)
     if not json then
         return nil, PipelineErrorTemporary(errmsg)
     end
-    local images = extract_image_embeds(json)
-    if not images then
-        return nil, PipelineErrorPermanent("Post had no images or video")
+    if not json.posts or #json.posts == 0 then
+        return nil, PipelineErrorPermanent("This post could not be found.")
     end
-    if not json.uri or type(json.uri) ~= "string" then
-        return nil,
-            PipelineErrorPermanent(
-                "Bluesky API didn't provide a URI for this post?"
-            )
-    end
-    local match, did = BSKY_DID_EXP:search(json.uri)
-    if not match or type(did) == "re.Errno" then
-        return nil, PipelineErrorPermanent("Invalid bsky post URI??")
-    end
-    local artist, errmsg2 = get_artist_profile(json.uri, handle_or_did, did)
-    if not artist then
-        return nil, errmsg2
-    end
+    local post_data = json.posts[1]
+    -- Determine artist
+    local author = map_author(post_data.author)
+    -- Determine rating from labels
+    local rating = guess_rating_from_labels(post_data.labels)
+    -- Map embeds to ScrapedSourceData
+    local images = extract_image_embeds(post_data)
     return table.maperr(images, function(image)
-        return process_image(image, did, uri, artist)
+        return process_image(image, did, post_uri, author, rating)
     end)
 end
 
