@@ -1,10 +1,12 @@
 FILE_EXT_EXP = assert(re.compile([[\.([a-z0-9]{1,5})$]]))
 
+---@return table
+---@overload fun(): nil, string
 local function FetchJson(uri, options)
     local status, headers, body = Fetch(uri, options)
     if not status then
         Log(kLogVerbose, "TLS error: %s" % { headers })
-        return nil, headers
+        return nil, tostring(headers)
     end
     if status ~= 200 then
         Log(
@@ -12,11 +14,11 @@ local function FetchJson(uri, options)
             "Error %d from %s: Headers%s; Body(%s)"
                 % { status, uri, EncodeJson(headers), body }
         )
-        return nil, status
+        return nil, tostring(status)
     end
     local json, errmsg = DecodeJson(body)
     if not json then
-        return nil, errmsg
+        return nil, tostring(errmsg)
     end
     return json
 end
