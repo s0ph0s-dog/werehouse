@@ -1,5 +1,5 @@
 # Configure here
-VERSION := 1.0
+VERSION := 1.1
 REDBEAN_VERSION := 3.0beta
 OUTPUT := werehouse.com
 SRV_DIR := srv
