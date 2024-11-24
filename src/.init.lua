@@ -44,6 +44,7 @@ ProgramHeader("Strict-Transport-Security", "max-age=31536000")
 ProgramHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 ProgramHeader("Referrer-Policy", "strict-origin-when-cross-origin")
 
+assert(DbUtil.mkdir())
 Accounts = DbUtil.Accounts:new()
 Accounts:bootstrapInvites()
 

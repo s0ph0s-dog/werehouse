@@ -1,3 +1,4 @@
+local DB_DIR = "db"
 local ACCOUNTS_DB_FILE = "db/werehouse-accounts.sqlite3"
 local TG_FORWARD_CACHE_DB_FILE = "db/werehouse-tg-forward-cache.sqlite3"
 local USER_DB_FILE_TEMPLATE = "db/werehouse-%s.sqlite3"
@@ -1089,6 +1090,16 @@ local queries = {
     },
 }
 
+local function mkdir()
+    local ok, err = unix.mkdir("./" .. DB_DIR, 0700)
+    if not ok and err == unix.EEXIST then
+        return true
+    elseif not ok then
+        return nil, err
+    else
+        return true
+    end
+end
 local function make_stats_db()
     local ok, db = pcall(Fm.makeStorage, QUERY_STATS_FILE, query_stats_setup)
     if not ok then
@@ -3508,6 +3519,7 @@ table.sort(CategoryLoopable, function(a, b)
 end)
 
 return {
+    mkdir = mkdir,
     get_query_stats = get_query_stats,
     Accounts = Accounts,
     Model = Model,
