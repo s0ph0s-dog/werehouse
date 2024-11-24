@@ -1,5 +1,5 @@
 # Configure here
-VERSION := 1.1
+VERSION := 1.1.1
 REDBEAN_VERSION := 3.0beta
 OUTPUT := werehouse.com
 SRV_DIR := srv
@@ -117,6 +117,9 @@ CSSO_PATH := $(shell which csso)
 
 build: $(OUTPUT)
 
+release: build
+	cp $(OUTPUT) $(patsubst %.com,%-$(VERSION).com,$(OUTPUT))
+
 # This is below build so that build is still the default target.
 include Makefile.secret
 
@@ -135,7 +138,7 @@ check-format:
 format:
 	stylua src lib test
 
-.PHONY: build clean check check-format test format
+.PHONY: build clean check check-format test format release
 
 # Don't delete any of these if make is interrupted
 .PRECIOUS: $(SRV_DIR)/. $(SRV_DIR)%/.

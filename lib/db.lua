@@ -1092,7 +1092,7 @@ local queries = {
 
 local function mkdir()
     local ok, err = unix.mkdir("./" .. DB_DIR, 0700)
-    if not ok and err == unix.EEXIST then
+    if not ok and err and err:errno() == unix.EEXIST then
         return true
     elseif not ok then
         return nil, err
