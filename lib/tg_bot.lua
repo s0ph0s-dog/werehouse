@@ -443,8 +443,8 @@ function bot.post_media_group(to_chat, media_list, follow_up)
     for i = 1, #batches do
         local batch = batches[i]
         local media_upload = {}
-        for i = 1, #batch do
-            local media = batch[i]
+        for j = 1, #batch do
+            local media = batch[j]
             media_upload[media.file] = media.file_path
         end
         media_group_result, mg_err =
