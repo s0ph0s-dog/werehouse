@@ -242,7 +242,7 @@ local user_setup = [[
         LEFT NATURAL JOIN image_artists
         LEFT NATURAL JOIN artists
         LEFT NATURAL JOIN (
-            SELECT DISTINCT
+            SELECT
                 image_id,
                 first_value(thumbnail_id) OVER thumb_win AS first_thumbnail_id,
                 first_value(width) OVER thumb_win AS first_thumbnail_width,
