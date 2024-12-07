@@ -36,7 +36,7 @@
       <div>
         <span
           >{%& image.width %} by {%& image.height %} • {%& image.mime_type %}
-          • Posted by {%& image.authors[1].handle %}</span>
+           • Posted by {%& #image.authors > 0 and image.authors[1].handle or "(unknown)" %}</span>
         <ul>
           {% for dupe_idx = 1, #image.duplicates do local duplicate =
           image.duplicates[dupe_idx] %}
