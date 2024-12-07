@@ -242,17 +242,14 @@ local user_setup = [[
         LEFT NATURAL JOIN image_artists
         LEFT NATURAL JOIN artists
         LEFT NATURAL JOIN (
-            SELECT DISTINCT
+            SELECT
                 image_id,
-                first_value(thumbnail_id) OVER thumb_win AS first_thumbnail_id,
-                first_value(width) OVER thumb_win AS first_thumbnail_width,
-                first_value(height) OVER thumb_win AS first_thumbnail_height
+                thumbnail_id AS first_thumbnail_id,
+                width AS first_thumbnail_width,
+                height AS first_thumbnail_height
             FROM thumbnails
-            WINDOW thumb_win AS (
-                PARTITION BY image_id
-                ORDER BY thumbnail_id DESC
-                ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-             )
+            GROUP BY image_id
+            HAVING MAX(thumbnail_id)
         )
         GROUP BY images.image_id;
 
