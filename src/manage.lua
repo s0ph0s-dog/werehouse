@@ -114,6 +114,7 @@ end
 local function update_image_sizes(other_args)
     local dry_run = other_args[1] == "-d"
     DbUtil.for_each_user(function(_, user, model)
+        ---@cast model Model
         local images, images_err = model:getAllImagesForSizeCheck()
         if not images then
             print("Failed :(")
@@ -133,7 +134,7 @@ local function update_image_sizes(other_args)
                 Log(
                     kLogWarn,
                     "Record %s referenced in database for user %s does not exist on disk at %s"
-                        % { image.file, user.user_id, image_path }
+                        % { image.image_id, user.user_id, image_path }
                 )
             else
                 -- Using file length, not blocks-on-disk size.
@@ -815,6 +816,14 @@ local function artist_mergecase(other_args)
     end)
 end
 
+local function drop_thumb_meta()
+    ---@param model Model
+    DbUtil.for_each_user(function(_, _, model)
+        model.conn:execute("DROP TABLE IF EXISTS thumbnails_meta;")
+        return 0
+    end)
+end
+
 local commands = {
     db_migrate = db_migrate,
     update_image_sizes = update_image_sizes,
@@ -833,6 +842,7 @@ local commands = {
     clean_deleted_files = clean_deleted_files,
     hash_thumbs = hash_thumbs,
     artist_mergecase = artist_mergecase,
+    drop_thumb_meta = drop_thumb_meta,
 }
 
 local remaining_args = arg
