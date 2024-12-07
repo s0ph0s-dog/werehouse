@@ -1653,25 +1653,27 @@ function Model:replaceImage(image_id, image_data, mime_type, width, height)
                 mime_type,
             }
     )
-    if
-        not (
-            (width > existing.width and height > existing.height)
-            or (
-                width == existing.width
-                and height == existing.height
-                and mime_type == "image/png"
-            )
-        )
-    then
+    local isLarger = (width > existing.width and height > existing.height)
+    local isSameSizePNG = (
+        width == existing.width
+        and height == existing.height
+        and mime_type == "image/png"
+    )
+    local _, existing_filename =
+        FsTools.make_image_path_from_filename(existing.file)
+    local canReadExisting, r_err =
+        unix.access(existing_filename, unix.R_OK | unix.W_OK)
+    local fileMissing = canReadExisting == nil
+    if not (isLarger or isSameSizePNG or fileMissing) then
         Log(
             kLogVerbose,
-            "Not replacing image because the newer version is smaller or not an equally-sized PNG"
+            "Not replacing image because the newer version is smaller or not an equally-sized PNG, or because the current file is gone."
         )
         return { image_id = image_id }
     end
     Log(
         kLogVerbose,
-        "Replaced the image because the newer version is larger or an equally-sized PNG"
+        "Replaced the image because the newer version is larger or an equally-sized PNG, or because the current file is gone."
     )
     local filename, f_err = FsTools.save_image(image_data, mime_type)
     if not filename then
