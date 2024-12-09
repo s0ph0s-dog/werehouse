@@ -403,6 +403,9 @@ local function check_for_duplicates(model, sources, hash)
     for _, duplicate_data in pairs(duplicates_by_image_id) do
         result[#result + 1] = duplicate_data
     end
+    table.sort(result, function(a, b)
+        return (a.similarity or 0) > (b.similarity or 0)
+    end)
     return result
 end
 
