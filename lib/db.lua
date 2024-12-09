@@ -1735,7 +1735,14 @@ function Model:checkDuplicateSources(links)
             return nil, errmsg
         end
         for _, image in ipairs(sources) do
-            dupes[link] = image.image_id
+            local dupe_list = nil
+            if dupes[link] then
+                dupe_list = dupes[link]
+            else
+                dupe_list = {}
+                dupes[link] = dupe_list
+            end
+            dupe_list[#dupe_list + 1] = image.image_id
         end
     end
     return dupes

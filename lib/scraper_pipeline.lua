@@ -369,15 +369,18 @@ local function check_for_duplicates(model, sources, hash)
     if not source_dupes then
         return nil, sd_err
     end
-    for dupe_url, dupe_image_id in pairs(source_dupes) do
-        if not duplicates_by_image_id[dupe_image_id] then
-            duplicates_by_image_id[dupe_image_id] = {
-                duplicate_of = dupe_image_id,
-                matched_sources = {},
-            }
+    for dupe_url, dupe_image_ids in pairs(source_dupes) do
+        for i = 1, #dupe_image_ids do
+            local dupe_image_id = dupe_image_ids[i]
+            if not duplicates_by_image_id[dupe_image_id] then
+                duplicates_by_image_id[dupe_image_id] = {
+                    duplicate_of = dupe_image_id,
+                    matched_sources = {},
+                }
+            end
+            local dst = duplicates_by_image_id[dupe_image_id].matched_sources
+            dst[#dst + 1] = dupe_url
         end
-        local dst = duplicates_by_image_id[dupe_image_id].matched_sources
-        dst[#dst + 1] = dupe_url
     end
     if hash then
         local similar, s_err = model:findSimilarImageHashes(hash, 3)
