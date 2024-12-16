@@ -56,6 +56,7 @@ local function help()
     print(
         "- artist_mergecase (-d): Merge together artists whose names are the same (excluding capitalization differences)"
     )
+    print("- select_thumbs: Pick the primary thumbnail for each record.")
 end
 
 local function db_migrate(other_args)
@@ -816,6 +817,35 @@ local function artist_mergecase(other_args)
     end)
 end
 
+local function select_thumbs(_)
+    ---@param model Model
+    DbUtil.for_each_user(function(_, _, model)
+        local SP = "select_thumbs"
+        model:create_savepoint(SP)
+        local insert_q = [[INSERT OR REPLACE INTO "selected_thumbnails" (
+            image_id,
+            thumbnail_id,
+            width,
+            height
+        ) SELECT
+            image_id,
+            thumbnail_id,
+            width,
+            height
+        FROM "thumbnails"
+        GROUP BY image_id
+        HAVING MAX(thumbnail_id);]]
+        local ok, err = model.conn:execute(insert_q)
+        if not ok then
+            Log(kLogWarn, err)
+            model:rollback(SP)
+            return 1
+        end
+        model:release_savepoint(SP)
+        return 0
+    end)
+end
+
 local function drop_thumb_meta()
     ---@param model Model
     DbUtil.for_each_user(function(_, _, model)
@@ -843,6 +873,7 @@ local commands = {
     hash_thumbs = hash_thumbs,
     artist_mergecase = artist_mergecase,
     drop_thumb_meta = drop_thumb_meta,
+    select_thumbs = select_thumbs,
 }
 
 local remaining_args = arg

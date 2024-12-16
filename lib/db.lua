@@ -235,24 +235,14 @@ local user_setup = [[
         images.height,
         images.saved_at,
         group_concat(artists.name, ", ") AS artists,
-        first_thumbnail_id,
-        first_thumbnail_width,
-        first_thumbnail_height
+        selected_thumbnails.thumbnail_id AS first_thumbnail_id,
+        selected_thumbnails.width AS first_thumbnail_width,
+        selected_thumbnails.height AS first_thumbnail_height
     FROM images
         LEFT NATURAL JOIN image_artists
         LEFT NATURAL JOIN artists
-        LEFT NATURAL JOIN (
-            SELECT
-                image_id,
-                thumbnail_id AS first_thumbnail_id,
-                width AS first_thumbnail_width,
-                height AS first_thumbnail_height
-            FROM thumbnails
-            GROUP BY image_id
-            HAVING MAX(thumbnail_id)
-        )
+        LEFT JOIN selected_thumbnails ON selected_thumbnails.image_id = images.image_id
         GROUP BY images.image_id;
-
 
     CREATE TABLE IF NOT EXISTS "share_ping_list" (
         "spl_id" INTEGER NOT NULL UNIQUE,
@@ -327,6 +317,36 @@ local user_setup = [[
         image_id,
         thumbnail_id DESC
     );
+
+    CREATE TABLE IF NOT EXISTS "selected_thumbnails" (
+        image_id INTEGER NOT NULL UNIQUE,
+        thumbnail_id INTEGER NOT NULL UNIQUE,
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        PRIMARY KEY ("image_id"),
+        FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
+        ON UPDATE CASCADE ON DELETE CASCADE,
+        FOREIGN KEY ("thumbnail_id") REFERENCES "thumbnails"("thumbnail_id")
+        ON UPDATE CASCADE ON DELETE CASCADE
+    );
+
+    CREATE TRIGGER IF NOT EXISTS update_selected_thumbnail
+        AFTER INSERT ON "thumbnails"
+        FOR EACH ROW
+        BEGIN INSERT OR REPLACE INTO "selected_thumbnails" (
+            image_id,
+            thumbnail_id,
+            width,
+            height
+        ) SELECT
+            image_id,
+            thumbnail_id,
+            width,
+            height
+        FROM "thumbnails"
+        WHERE new.image_id = thumbnails.image_id
+        GROUP BY image_id
+        HAVING MAX(thumbnail_id); END;
 
     CREATE TABLE IF NOT EXISTS "queue" (
         "qid" INTEGER NOT NULL UNIQUE,
