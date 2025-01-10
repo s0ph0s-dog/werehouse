@@ -115,9 +115,14 @@ local function scrape_image_data(root)
     local display_name = display_name_element:getcontent()
     -- The tags are in two places on the page, so find just the sidebar ones.
     local tag_elements = root:select(".submission-sidebar .tags a")
-    local tags = table.map(tag_elements, function(t)
-        return t:getcontent()
-    end)
+    local tags = table.filter(
+        table.map(tag_elements, function(t)
+            return t:getcontent()
+        end),
+        function(s)
+            return #s > 0
+        end
+    )
     ---@type ScrapedSourceData
     local result = {
         kind = DbUtil.k.ImageKind.Image,
