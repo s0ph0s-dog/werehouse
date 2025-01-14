@@ -30,7 +30,13 @@ function api.request(endpoint, parameters, files)
         Log(kLogDebug, EncodeJson(parameters))
     end
     for file_key, file_name in pairs(files or {}) do
-        local file_data, err = Slurp(file_name)
+        local file_data, err
+        if type(file_name) == "table" and file_name.data then
+            file_data = file_name.data
+            file_name = "C:\\fakepath\\image.jpg"
+        else
+            file_data, err = Slurp(file_name)
+        end
         if file_data then
             parameters[file_key] = {
                 filename = file_name,

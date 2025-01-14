@@ -923,44 +923,6 @@ local accept_edit_image = login_required(function(r, user_record)
     return render_image_internal(r, user_record)
 end)
 
-local function check_image_against_telegram_rules(image)
-    if image.kind == DbUtil.k.ImageKind.Image then
-        -- TODO: support resizing image down to within the limit
-        if image.file_size > 10 * 1000 * 1000 then
-            return false,
-                "Image file size is too large (must be smaller than 10 MB)"
-        end
-        if (image.width + image.height) > 10000 then
-            return false,
-                "Image dimensions are too large (width + height must be less than 10,000 px)"
-        end
-        local aspect_ratio = image.width / image.height
-        if aspect_ratio > 20 or aspect_ratio < 0.05 then
-            return false,
-                "Image aspect ratio is too extreme (must be at most 20:1)"
-        end
-        return true
-    elseif image.kind == DbUtil.k.ImageKind.Video then
-        if image.file_size > 50 * 1000 * 1000 then
-            return false,
-                "Video file size is too large (must be smaller than 50 MB)"
-        end
-        if image.mime_type ~= "video/mp4" then
-            return false,
-                "Video file container is not supported by Telegram (must be mp4)"
-        end
-        return true
-    elseif image.kind == DbUtil.k.ImageKind.Animation then
-        if image.file_size > 50 * 1000 * 1000 then
-            return false,
-                "Animation file size is too large (must be smaller than 50 MB)"
-        end
-        return true
-    else
-        return false, "Telegram doesn't support this kind of file"
-    end
-end
-
 local render_image_share = login_required(function(r, user_record)
     local image_id = tonumber(r.params.image_id)
     local spl_id = tonumber(r.params.to)
@@ -1024,36 +986,15 @@ local render_image_share = login_required(function(r, user_record)
                 "The share token you used is invalid. Did you double-click the share button?"
             )
         end
-        local share_ok, share_err = check_image_against_telegram_rules(image)
+        local _, file_path = FsTools.make_image_path_from_filename(image.file)
+        image.file_path = file_path
+        image.sources_text = r.params.sources_text
+        image.spoiler = r.params.spoiler ~= nil
+        local chat_id = (spl and spl.share_data.chat_id) or tg_userid
+        local share_ok, share_err =
+            Bot.share_media(chat_id, { image }, r.params.ping_text)
         if not share_ok then
             return Fm.serveError(400, nil, share_err)
-        end
-        local _, file_path = FsTools.make_image_path_from_filename(image.file)
-        local chat_id = (spl and spl.share_data.chat_id) or tg_userid
-        if image.kind == DbUtil.k.ImageKind.Image then
-            Bot.post_image(
-                chat_id,
-                file_path,
-                r.params.sources_text,
-                r.params.ping_text,
-                r.params.spoiler ~= nil
-            )
-        elseif image.kind == DbUtil.k.ImageKind.Video then
-            Bot.post_video(
-                chat_id,
-                file_path,
-                r.params.sources_text,
-                r.params.ping_text,
-                r.params.spoiler ~= nil
-            )
-        elseif image.kind == DbUtil.k.ImageKind.Animation then
-            Bot.post_animation(
-                chat_id,
-                file_path,
-                r.params.sources_text,
-                r.params.ping_text,
-                r.params.spoiler ~= nil
-            )
         end
         return Fm.serveRedirect("/image/" .. image_id, 302)
     end
@@ -1189,22 +1130,11 @@ local render_image_group_share = login_required(function(r, user_record)
             )
         end
         local chat_id = (spl and spl.share_data.chat_id) or tg_userid
-        local rule_errors = {}
-        for i = 1, #images do
-            local image = images[i]
-            local i_ok, i_err = check_image_against_telegram_rules(image)
-            if not i_ok then
-                rule_errors[#rule_errors + 1] = "Image %d: %s"
-                    % {
-                        image.image_id,
-                        i_err,
-                    }
-            end
-        end
-        if #rule_errors > 0 then
+        local ok, rule_errors =
+            Bot.share_media(chat_id, images, r.params.ping_text)
+        if not ok and #rule_errors > 0 then
             Fm.serveError(400, nil, rule_errors)
         end
-        Bot.post_media_group(chat_id, images, r.params.ping_text)
         return Fm.serveRedirect("/image-group/" .. ig_id, 302)
     end
     local ping_data, pd_err = {}, nil

@@ -398,11 +398,20 @@ function bot.post_media_group(to_chat, media_list, follow_up)
     assert(#media_list > 0)
     if #media_list < 2 then
         local media = media_list[1]
-        if media.kind == DbUtil.k.ImageKind.Image then
+        if media.kind == DbUtil.k.ImageKind.Image and media.resized then
+            local f = { data = media.resized }
+            bot.post_image(
+                to_chat,
+                f,
+                media.sources_text,
+                follow_up,
+                media.spoiler
+            )
+        elseif media.kind == DbUtil.k.ImageKind.Image then
             bot.post_image(
                 to_chat,
                 media.file_path,
-                media.caption,
+                media.sources_text,
                 follow_up,
                 media.spoiler
             )
@@ -410,7 +419,7 @@ function bot.post_media_group(to_chat, media_list, follow_up)
             bot.post_video(
                 to_chat,
                 media.file_path,
-                media.caption,
+                media.sources_text,
                 follow_up,
                 media.spoiler
             )
@@ -418,11 +427,12 @@ function bot.post_media_group(to_chat, media_list, follow_up)
             bot.post_animation(
                 to_chat,
                 media.file_path,
-                media.caption,
+                media.sources_text,
                 follow_up,
                 media.spoiler
             )
         end
+        return true
     end
     local api_media_list = table.map(media_list, function(item)
         return {
@@ -469,6 +479,79 @@ function bot.post_media_group(to_chat, media_list, follow_up)
             Log(kLogWarn, tostring(EncodeJson(p_err)))
         end
     end
+end
+
+local function resize_image(image)
+    local f = img.loadfile(image.file_path)
+    if not f then
+        return nil, "unable to load image file"
+    end
+    local smaller, err = f:resize(1200)
+    if not smaller then
+        return nil, "unable to resize image file: " .. err
+    end
+    local result = smaller:savebufferjpeg()
+    if not result then
+        return nil, "unable to encode resized image as JPEG"
+    end
+    image.resized = result
+    return true
+end
+
+local function check_rules(media)
+    if media.kind == DbUtil.k.ImageKind.Image then
+        if
+            media.file_size > 10 * 1000 * 1000
+            or (media.width + media.height) > 10000
+        then
+            local ok = resize_image(media)
+            if not ok then
+                return false,
+                    "I couldn't resize this image to fit within Telegram's limits (size < 50 MB and width + height < 10,000 px): "
+                        .. ok
+            end
+        end
+        local aspect_ratio = media.width / media.height
+        if aspect_ratio > 20 or aspect_ratio < 0.05 then
+            return false,
+                "Image aspect ratio is too extreme (must be at most 20:1)"
+        end
+        return true
+    elseif media.kind == DbUtil.k.ImageKind.Video then
+        if media.file_size > 50 * 1000 * 1000 then
+            return false,
+                "Video file size is too large (must be smaller than 50 MB)"
+        end
+        if media.mime_type ~= "video/mp4" then
+            return false,
+                "Video file container is not supported by Telegram (must be mp4)"
+        end
+        return true
+    elseif media.kind == DbUtil.k.ImageKind.Animation then
+        if media.file_size > 50 * 1000 * 1000 then
+            return false,
+                "Animation file size is too large (must be smaller than 50 MB)"
+        end
+        return true
+    else
+        return false, "Telegram doesn't support this kind of file"
+    end
+end
+
+function bot.share_media(chat_id, media_list, follow_up)
+    local errors = {}
+    for i = 1, #media_list do
+        local media = media_list[i]
+        local ok, err = check_rules(media)
+        if not ok then
+            errors[#errors + 1] = "Image %d: %s" % { media.image_id, err }
+        end
+    end
+    if #errors > 0 then
+        return nil, errors
+    end
+    bot.post_media_group(chat_id, media_list, follow_up)
+    return true
 end
 
 function bot.update_queue_message_with_status(chat_id, message_id, new_text)
