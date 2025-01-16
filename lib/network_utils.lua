@@ -57,6 +57,8 @@ local ext_to_mime = {
     jpeg = "image/jpeg",
     png = "image/png",
     gif = "image/gif",
+    jxl = "image/jxl",
+    webp = "image/webp",
     mp4 = "video/mp4",
     webm = "video/webm",
 }

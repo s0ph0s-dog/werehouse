@@ -1,5 +1,6 @@
 local MIME_TO_EXT = {
     ["image/jpeg"] = ".jpg",
+    ["image/jxl"] = ".jxl",
     ["image/png"] = ".png",
     ["image/webp"] = ".webp",
     ["text/plain"] = ".txt",
@@ -9,6 +10,7 @@ local MIME_TO_EXT = {
 
 local MIME_TO_KIND = {
     ["image/jpeg"] = DbUtil.k.ImageKind.Image,
+    ["image/jxl"] = DbUtil.k.ImageKind.Image,
     ["image/png"] = DbUtil.k.ImageKind.Image,
     ["image/webp"] = DbUtil.k.ImageKind.Image,
     ["image/gif"] = DbUtil.k.ImageKind.Image,
@@ -31,6 +33,16 @@ local function make_queue_path_from_filename(filename, user_id)
         % {
             user_id,
             filename:sub(1, 1),
+        }
+    local path = parent_dir .. filename
+    return parent_dir, path
+end
+
+local function make_preview_path_from_filename(_, filename)
+    local parent_dir = "previews/%s/%s/"
+        % {
+            filename:sub(1, 1),
+            filename:sub(2, 2),
         }
     local path = parent_dir .. filename
     return parent_dir, path
@@ -81,6 +93,15 @@ local function save_queue(image_data, image_mime_type, user_id)
         image_data,
         image_mime_type,
         user_id
+    )
+end
+
+local function save_preview(image_data, image_mime_type, source_filename)
+    return save_image_generic(
+        make_preview_path_from_filename,
+        image_data,
+        image_mime_type,
+        source_filename
     )
 end
 
@@ -179,10 +200,12 @@ end
 return {
     save_image = save_image,
     save_queue = save_queue,
+    save_preview = save_preview,
     load_image = load_image,
     load_queue = load_queue,
     make_image_path_from_filename = make_image_path_from_filename,
     make_queue_path_from_filename = make_queue_path_from_filename,
+    make_preview_path_from_filename = make_preview_path_from_filename,
     list_all_image_files = list_all_image_files,
     for_each_image_file = for_each_image_file,
     for_each_queue_file = for_each_queue_file,

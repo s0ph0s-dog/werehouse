@@ -36,6 +36,7 @@ ServerVersion = string.format(
 ProgramBrand(ServerVersion)
 
 ProgramContentType("webmanifest", "application/manifest+json")
+ProgramContentType("jxl", "image/jxl")
 ProgramCache(60 * 60 * 24 * 365, "private")
 
 ProgramHeader("Cross-Origin-Opener-Policy", "same-origin")

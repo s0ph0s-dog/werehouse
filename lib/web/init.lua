@@ -506,6 +506,89 @@ local accept_enqueue = login_required(function(r)
     return Fm.serve500("This should have been unreachable")
 end)
 
+local mime_to_encoder_map = {
+    ["image/jxl"] = function(i)
+        return i:savebufferjxl()
+    end,
+    ["image/jpeg"] = function(i)
+        return i:savebufferjpeg()
+    end,
+    ["image/webp"] = function(i)
+        return i:savebufferwebp()
+    end,
+}
+
+local function make_preview(filename, ext, real_path)
+    Log(
+        kLogInfo,
+        "Making preview for '%s'. Encoding as '%s'. Source file on disk at '%s'."
+            % { filename, ext, real_path }
+    )
+    local mime = Nu.ext_to_mime[ext]
+    Log(kLogInfo, "Preview MIME type: " .. tostring(mime))
+    local fullsize, err = img.loadfile(real_path)
+    if not fullsize then
+        return nil, err
+    end
+    local width = fullsize:width()
+    local max_view_width = 1524
+    if width > max_view_width then
+        local new_height =
+            math.floor((max_view_width / width) * fullsize:height())
+        local shrunk, resize_err = fullsize:resize(new_height, max_view_width)
+        if not shrunk then
+            return nil, resize_err
+        end
+        fullsize = shrunk
+    end
+    local preview_data, encode_err = mime_to_encoder_map[mime](fullsize)
+    if not preview_data then
+        return nil, encode_err
+    end
+    local preview_filename = filename .. "." .. ext
+    local saved, save_err =
+        FsTools.save_preview(preview_data, mime, preview_filename)
+    if not saved then
+        return nil, save_err
+    end
+    local _, cache_path =
+        FsTools.make_preview_path_from_filename(nil, preview_filename)
+    return cache_path
+end
+
+local render_preview_file = login_required(function(r)
+    local preview_filename = r.params.filename
+    if not preview_filename then
+        return Fm.serve400()
+    end
+    local source_filename, ext = preview_filename:match("(.+)%.(%a%a%a%a?)$")
+    if not source_filename then
+        return Fm.serve400()
+    end
+    local preview_path = "previews/%s/%s/%s"
+        % {
+            preview_filename:sub(1, 1),
+            preview_filename:sub(2, 2),
+            preview_filename,
+        }
+    SetHeader("Cache-Control", "private, max-age=31536000")
+    if unix.access(preview_path, unix.R_OK) then
+        return Fm.serveAsset(preview_path)
+    end
+    local real_path = "images/%s/%s/%s"
+        % {
+            source_filename:sub(1, 1),
+            source_filename:sub(2, 2),
+            source_filename,
+        }
+    local preview, preview_err = make_preview(source_filename, ext, real_path)
+    if not preview then
+        Log(kLogInfo, "Unable to generate preview: " .. preview_err)
+        return Fm.serve500()
+    end
+    return Fm.serveAsset(preview)
+end)
+
 local render_image_file = login_required(function(r)
     if not r.params.filename then
         return Fm.serve400()
@@ -623,6 +706,10 @@ local function render_image_internal(r, user_record)
     if r.path:endswith("/edit") then
         template_name = "image_edit"
     end
+    -- This is nil when the parameter is missing and false when it's there with
+    -- no value.
+    local show_full_size = r.params.fullsize ~= nil
+    Fm.setTemplateVar("rv_fullsize", show_full_size)
     local params = {
         image = image,
         artists = artists,
@@ -1055,6 +1142,7 @@ local render_image_share = login_required(function(r, user_record)
     }
     add_htmx_param(r, params)
     add_form_path(r, params)
+    Fm.setTemplateVar("rv_hide_fullsize_msg", true)
     return Fm.serveContent("image_share", params)
 end)
 
@@ -1203,6 +1291,7 @@ local render_image_group_share = login_required(function(r, user_record)
     }
     add_htmx_param(r, params)
     add_form_path(r, params)
+    Fm.setTemplateVar("rv_hide_fullsize_msg", true)
     return Fm.serveContent("image_share", params)
 end)
 
@@ -3340,6 +3429,7 @@ end
 
 local function setup_images()
     Fm.setRoute("/image-file/:filename", render_image_file)
+    Fm.setRoute("/preview-file/:filename", render_preview_file)
     Fm.setRoute("/thumbnail-file/:thumbnail_id[%d]", render_thumbnail_file)
     Fm.setRoute(Fm.GET { "/image" }, render_images)
     Fm.setRoute(Fm.POST { "/image" }, accept_images)

@@ -281,9 +281,15 @@ footer {
   display: inline-block;
 }
 
-.main-image input:checked ~ .height-limit {
+.main-image input:checked ~ .height-limit,
+.main-image input:checked ~ picture .height-limit
+{
   max-height: 95vh;
   width: auto;
+}
+
+.main-image picture + p {
+    margin: 0.5em 0 0 0;
 }
 
 .links > a {

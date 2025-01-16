@@ -15,3 +15,6 @@ images/*
 /tags
 /Makefile.secret
 /wh.log
+/cache
+.DS_Store
+/previews

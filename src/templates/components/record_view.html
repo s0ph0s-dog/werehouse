@@ -1,5 +1,18 @@
-{% if record.kind == kind.Image or (record.kind == kind.Animation and
-record.mime_type == "image/gif") then %}
+{% if record.kind == kind.Image and not vars.rv_fullsize then %}
+<picture>
+	<source srcset="/preview-file/{%& record.file %}.jxl" type="image/jxl" />
+	<img
+		src="/preview-file/{%& record.file %}.webp"
+		class="height-limit"
+		width="{%& record.width == 0 and "100%" or record.width %}"
+		height="{%& record.height == 0 and "100%" or record.height %}"
+	/>
+</picture>
+{% if not vars.rv_hide_fullsize_msg then %}
+<p><small>This is a preview of the full image. <a href="?fullsize">Load full-size
+	image.</a></small></p>
+{% end %}
+{% elseif (record.kind == kind.Image and vars.rv_fullsize) or (record.kind == kind.Animation and record.mime_type == "image/gif") then %}
 <img
   src="/image-file/{%& record.file %}"
   class="height-limit"
