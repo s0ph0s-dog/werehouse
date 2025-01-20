@@ -49,7 +49,7 @@ function(m) return "<wbr />" .. m end) end %} {% function block.content() %}
         {%= block.add_breaks(escapeHtml(item.incoming_domain)) %}
       </td>
       <td class="t-main">
-        <a href="/tag/{%& item.tag_id %}" hx-swap="show:top">{%& item.tag_name %}</a>
+        <a href="/tag/{%& item.tag_id %}" hx-boost="false">{%& item.tag_name %}</a>
       </td>
       <td class="t-btn">
         <a
