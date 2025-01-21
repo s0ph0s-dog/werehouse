@@ -1,16 +1,11 @@
-{% function block.record_view(record, sources_text, sources_text_size, group) %}
+{% function block.record_view(record, sources_text, sources_text_size) %}
 <div class="main-image vbox">
   {% render("components/record_view", {record = record, kind = fn.kind }) %}
 </div>
 <label class="inline">
-  {% if not group then %}
-  <input type="checkbox" name="spoiler" />
-  {% else %}
-  <input type="checkbox" name="spoiler_record_{%& record.image_id %}" value="true" />
-  {% end %} Send as spoiler
+  <input type="checkbox" name="spoiler_record_{%& record.image_id %}" value="true" /> Send as spoiler
 </label>
-{% local ta_name = "sources_text" if group then ta_name = "sources_text_record_"
-.. tostring(record.image_id) end %}
+{% local ta_name = "sources_text_record_" .. tostring(record.image_id) %}
 <label>Media Caption:
 <textarea name="{%& ta_name %}" rows="{%& sources_text_size %}">
 {%& sources_text %}</textarea
@@ -28,11 +23,10 @@
     type="hidden"
     name="to_user"
     value="{%& to_user %}"
-  />{% end %} {% if images then %}{% for i = 1, #images do local image =
+  />{% end %} {% for i = 1, #images do local image =
   images[i] %}{% block.record_view(image, image.sources_text,
-  image.sources_text_size, true) %}{% end %}{% elseif image then %}{%
-  block.record_view(image, sources_text, sources_text_size, false) %}{% else
-  %}There's a bug{% end %}{% if ping_text then %}
+  image.sources_text_size) %}{% end %}
+  {% if ping_text then %}
   <label>Reply to First Media:
   <textarea name="ping_text" rows="{%& ping_text_size %}">
 {%& ping_text %}</textarea
@@ -50,4 +44,4 @@
   </span>
 </form>
 {% end %}{% render("layouts/dialog", { title = "Share " .. (ig_id or
-image.image_id) }) %}
+image_id) }) %}

@@ -31,7 +31,9 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/network_utils.lua \
 	lib/tg_bot.lua \
 	lib/nanoid.lua \
-	lib/web/init.lua
+	lib/web/init.lua \
+	lib/web/utility.lua \
+	lib/web/sharing.lua
 SRCS := src/.init.lua \
     src/manage.lua \
     src/favicon.ico \
