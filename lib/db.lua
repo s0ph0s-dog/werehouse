@@ -256,6 +256,7 @@ local user_setup = [[
     CREATE TABLE IF NOT EXISTS "share_ping_list_entry" (
         "spl_entry_id" INTEGER NOT NULL UNIQUE,
         "handle" TEXT NOT NULL,
+        "nickname" TEXT,
         "spl_id" INTEGER NOT NULL,
         PRIMARY KEY("spl_entry_id"),
         FOREIGN KEY ("spl_id") REFERENCES "share_ping_list"("spl_id")
@@ -870,7 +871,7 @@ local queries = {
                 share_data,
                 send_with_attribution
             FROM share_ping_list WHERE spl_id = ?;]],
-        get_entries_for_ping_list_by_id = [[SELECT spl_entry_id, handle, spl_id
+        get_entries_for_ping_list_by_id = [[SELECT spl_entry_id, handle, nickname, spl_id
             FROM share_ping_list_entry WHERE spl_id = ?;]],
         get_all_positive_tags_for_all_entries_in_ping_list_by_id = [[SELECT
                 pl_entry_positive_tags.spl_entry_id,
@@ -985,8 +986,9 @@ local queries = {
             RETURNING spl_id;]],
         insert_spl_entry = [[INSERT INTO share_ping_list_entry (
             handle,
+            nickname,
             spl_id
-        ) VALUES (?, ?)
+        ) VALUES (?, ?, ?)
         RETURNING spl_entry_id;]],
         insert_positive_tag = [[INSERT OR IGNORE INTO pl_entry_positive_tags
             (spl_entry_id, tag_id) VALUES (?, ?);]],
@@ -2717,11 +2719,21 @@ function Model:linkNegativeTagsToSPLEntryByName(entry_id, tag_names)
     )
 end
 
-function Model:createSPLEntryWithTags(spl_id, handle, pos_tags, neg_tags)
+function Model:createSPLEntryWithTags(
+    spl_id,
+    handle,
+    nickname,
+    pos_tags,
+    neg_tags
+)
     local SP = "create_spl_entry_with_tags"
     self:create_savepoint(SP)
-    local entry, entry_err =
-        self.conn:fetchOne(queries.model.insert_spl_entry, handle, spl_id)
+    local entry, entry_err = self.conn:fetchOne(
+        queries.model.insert_spl_entry,
+        handle,
+        nickname,
+        spl_id
+    )
     if not entry then
         self:rollback(SP)
         return nil, entry_err

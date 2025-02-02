@@ -76,6 +76,10 @@ function string.linecount(s)
     return lines
 end
 
+function string.trim(s)
+    return s:match("^%s*(.*)%s*$")
+end
+
 ---@generic T : any, U : any
 ---@param sequence (T[])
 ---@param transformation (fun(item: T): U)

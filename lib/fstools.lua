@@ -3,6 +3,7 @@ local MIME_TO_EXT = {
     ["image/jxl"] = ".jxl",
     ["image/png"] = ".png",
     ["image/webp"] = ".webp",
+    ["image/gif"] = ".gif",
     ["text/plain"] = ".txt",
     ["video/webm"] = ".webm",
     ["video/mp4"] = ".mp4",

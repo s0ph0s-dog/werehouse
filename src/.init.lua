@@ -13,6 +13,7 @@ local _ = require("functools")
 Ris = require("reverse_image_search")
 ScraperPipeline = require("scraper_pipeline")
 Bot = require("tg_bot")
+Discord = require("discord")
 GifTools = require("giftools")
 
 local session_key = os.getenv("SESSION_KEY")

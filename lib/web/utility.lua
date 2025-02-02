@@ -135,6 +135,20 @@ local function add_htmx_param(r)
     end
 end
 
+local function not_emptystr(x)
+    return x and #x > 0
+end
+
+local function get_post_dialog_redirect(r, default)
+    local redirect_url = r.headers["Referer"]
+        or r.headers["HX-Current-URL"]
+        or r.session.after_dialog_action
+        or default
+    redirect_url = redirect_url:gsub("/edit$", "")
+    Log(kLogDebug, "Redirecting to %s after this dialog" % { redirect_url })
+    return Fm.serveRedirect(redirect_url, 302)
+end
+
 local image_functions = {
     category_str = function(category)
         if not category then
@@ -168,4 +182,6 @@ return {
     add_form_path = add_form_path,
     add_htmx_param = add_htmx_param,
     image_functions = image_functions,
+    not_emptystr = not_emptystr,
+    get_post_dialog_redirect = get_post_dialog_redirect,
 }

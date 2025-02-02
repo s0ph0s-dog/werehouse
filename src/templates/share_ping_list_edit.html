@@ -38,16 +38,25 @@
     >Delete</button>
 </li>
 {% end end end %}
-{% function emit_row(kind, id, value, uncommitted_ptag_list, uncommitted_ntag_list) %}
+{% function emit_row(kind, id, nickname_value, value, uncommitted_ptag_list, uncommitted_ntag_list, username_placeholder, nickname_type) %}
 <li>
   <div class="input-cell">
     <input type="hidden" name="{%& kind %}_ids[]" value="{%& id %}" />
+		<input
+			data-1p-ignore
+			required
+			type="{%& nickname_type %}"
+			name="{%& kind %}_nicknames[]" 
+			value="{%& nickname_value %}"
+			placeholder="Nickname"
+			autocomplete="off"
+		/>
     <input
       data-1p-ignore
       type="text"
       name="{%& kind %}_handles[]"
       value="{%& value %}"
-      placeholder="@Username"
+			placeholder="{%& username_placeholder %}"
       autocomplete="off"
     />
     <button
@@ -136,24 +145,36 @@
       (Click here if you change the service:
       <input type="submit" name="service_reload" value="Refresh" />)</noscript
     >:
-    <select required name="selected_service">
+		<select required name="selected_service" hx-post="{%& form_path %}?service_reload=Refresh" hx-target="#dialog">
       {% for i = 1, #share_services do local service = share_services[i] %}
       <option value="{%& service %}"{% if selected_service == service then %} selected{% end %}>{%& service %}</option>
       {% end %}
     </select>
   </label>
-  {% if not incoming_service or incoming_service == "Telegram" then %}
+	{% local username_placeholder = "Username"
+	   local nickname_type = "hidden" %}
+  {% if not selected_service or selected_service == "Telegram" then %}
+	{% username_placeholder = "@Username" %}
   <label
     ><span class="inline"
       >Chat ID (ask @werehouse_archive_bot with <tt>/chatid</tt>):</span
     >
     <input required type="number" name="chat_id" value="{%& chat_id %}" />
   </label>
-  {% elseif incoming_service == "Discord" then %}
+  {% elseif selected_service == "Discord" then %}
+	{% username_placeholder = "User ID (about 20 digits)"
+	   nickname_type = "text" %}
   <label
     >Webhook URL:
-    <input required type="number" name="chat_id" />
+		<input required type="url" name="webhook" value="{%& webhook %}"/>
   </label>
+	<p><strong>Note:</strong> In order to correctly mention people in Discord, you
+		must enter their user ID, <em>not</em> their username.  I wish this was easier, but Discord
+		doesn't provide any way to convert usernames to user IDs.  For help finding
+		user IDs, follow <a
+			href="https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID"
+			target="_blank">Discord’s “Where can I find my User ID?” guide</a>.
+	</p>
   {% end %}
   <label class="inline">
     <input type="checkbox" name="attribution" value="true" {% if attribution == "true" or attribution == 1 then %}checked {% end %} /> Include <q>Shared by {%& vars.user.username %}</q> in the shared post?
@@ -183,19 +204,26 @@
     </div>
     <ul>
       {% if entries and #entries > 0 then for e_idx = 1, #entries do local entry = entries[e_idx] %}
-      {% emit_row("entry", entry.spl_entry_id, entry.handle, entry_positive_tags, entry_negative_tags) %}
+      {% emit_row("entry", entry.spl_entry_id, entry.nickname, entry.handle, entry_positive_tags, entry_negative_tags, username_placeholder, nickname_type) %}
       {% end end %}
       {% if pending_handles and #pending_handles > 0 then for h_idx = 1,
       #pending_handles do %}
-      {% emit_row("pending", h_idx, pending_handles[h_idx], pending_positive_tags, pending_negative_tags) %}
+      {% emit_row("pending", h_idx, pending_nicknames[h_idx], pending_handles[h_idx], pending_positive_tags, pending_negative_tags, username_placeholder, nickname_type) %}
       {% end end %}
       <li>
+        <input
+          data-1p-ignore
+					type="{%& nickname_type %}"
+          name="pending_nicknames[]"
+          autocomplete="off"
+					placeholder="Add a nickname to ping"
+        />
         <input
           data-1p-ignore
           type="text"
           name="pending_handles[]"
           autocomplete="off"
-          placeholder="Add a @Username to ping"
+					placeholder="Add a {%& username_placeholder %} to ping"
         />
       </li>
     </ul>

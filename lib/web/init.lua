@@ -1,15 +1,5 @@
 local sharing = require("web.sharing")
 
-local function get_post_dialog_redirect(r, default)
-    local redirect_url = r.headers["Referer"]
-        or r.headers["HX-Current-URL"]
-        or r.session.after_dialog_action
-        or default
-    redirect_url = redirect_url:gsub("/edit$", "")
-    Log(kLogDebug, "Redirecting to %s after this dialog" % { redirect_url })
-    return Fm.serveRedirect(redirect_url, 302)
-end
-
 local function render_invite(r)
     local invite_record = Accounts:findInvite(r.params.invite_code)
     -- If the invite doesn't exist, or if it has already been used.
@@ -299,7 +289,7 @@ local render_enqueue = WebUtility.login_required(function(r, _)
 end)
 
 local accept_enqueue = WebUtility.login_required(function(r)
-    local redirect = get_post_dialog_redirect(r, "/home")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/home")
     if r.params.cancel then
         return redirect
     end
@@ -441,10 +431,6 @@ local render_image_file = WebUtility.login_required(function(r)
     SetHeader("Cache-Control", "private, max-age=31536000")
     return Fm.serveAsset(path)
 end)
-
-local function not_emptystr(x)
-    return x and #x > 0
-end
 
 local function render_share_widget(user_id, params)
     local share_ping_lists, spl_err = Model:getAllSharePingLists()
@@ -939,14 +925,14 @@ local render_add_tag_rule_bulk = WebUtility.login_required(function(r, _)
             return Fm.serve500()
         end
         if #changes < 1 then
-            return get_post_dialog_redirect(r, "/tag-rule")
+            return WebUtility.get_post_dialog_redirect(r, "/tag-rule")
         end
         local params = { changes = changes }
         WebUtility.add_htmx_param(r)
         WebUtility.add_form_path(r, params)
         return Fm.serveContent("tag_rule_changelist", params)
     elseif r.params.ok then
-        return get_post_dialog_redirect(r, "/tag-rule")
+        return WebUtility.get_post_dialog_redirect(r, "/tag-rule")
     else
         r.session.after_dialog_action = r.headers["HX-Current-URL"]
             or r.headers.Referer
@@ -1042,7 +1028,7 @@ local render_queue = WebUtility.login_required(function(r, _)
 end)
 
 local accept_queue = WebUtility.login_required(function(r)
-    local redirect = get_post_dialog_redirect(r, "/queue")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/queue")
     if r.params.cleanup then
         local ok, err = Model:cleanUpQueue()
         if not ok then
@@ -1202,7 +1188,7 @@ local function queue_help_new(r, help_ask_data)
 end
 
 local accept_queue_help = WebUtility.login_required(function(r)
-    local redirect = get_post_dialog_redirect(r, "/home")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/home")
     local qid = r.params.qid
     if not qid then
         return Fm.serve400()
@@ -1262,7 +1248,7 @@ local render_images = WebUtility.login_required(function(r, _)
 end)
 
 local accept_images = WebUtility.login_required(function(r, _)
-    local redirect = get_post_dialog_redirect(r, "/image")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/image")
     if r.params.delete then
         local ok, errmsg = Model:deleteImages(r.params.image_ids)
         if not ok then
@@ -1320,7 +1306,7 @@ local render_artists = WebUtility.login_required(function(r, _)
 end)
 
 local accept_artists = WebUtility.login_required(function(r)
-    local redirect = get_post_dialog_redirect(r, "/artist")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/artist")
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteArtists(r.params.artist_ids)
         if not ok then
@@ -1432,7 +1418,7 @@ local render_edit_artist =
 
 local accept_edit_artist = WebUtility.login_required(function(r)
     local redirect =
-        get_post_dialog_redirect(r, "/artist/" .. r.params.artist_id)
+        WebUtility.get_post_dialog_redirect(r, "/artist/" .. r.params.artist_id)
     if r.params.cancel then
         return redirect
     end
@@ -1543,7 +1529,7 @@ local accept_edit_artist = WebUtility.login_required(function(r)
 end)
 
 local accept_add_artist = WebUtility.login_required(function(r)
-    local redirect = get_post_dialog_redirect(r, "/artist")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/artist")
     if r.params.cancel then
         return redirect
     end
@@ -1613,7 +1599,7 @@ local render_image_groups = WebUtility.login_required(function(r, _)
 end)
 
 local accept_image_groups = WebUtility.login_required(function(r)
-    local redirect = get_post_dialog_redirect(r, "/image-group")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/image-group")
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteImageGroups(r.params.ig_ids)
         if not ok then
@@ -1784,7 +1770,7 @@ local function normalize_order_values(image_ids, new_orders)
 end
 
 local accept_edit_image_group = WebUtility.login_required(function(r)
-    local redirect = get_post_dialog_redirect(r, "/image-group")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/image-group")
     if r.params.cancel then
         return redirect
     end
@@ -1971,7 +1957,7 @@ local render_tags = WebUtility.login_required(function(r, _)
 end)
 
 local accept_tags = WebUtility.login_required(function(r)
-    local redirect = get_post_dialog_redirect(r, "/tag")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/tag")
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteTags(r.params.tag_ids)
         if not ok then
@@ -2041,7 +2027,7 @@ local render_edit_tag = WebUtility.login_required(function(r, _)
 end)
 
 local accept_edit_tag = WebUtility.login_required(function(r)
-    local redirect = get_post_dialog_redirect(r, "/tag")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/tag")
     if r.params.cancel then
         return redirect
     end
@@ -2237,7 +2223,7 @@ local render_tag_rules = WebUtility.login_required(function(r, _)
 end)
 
 local accept_tag_rules = WebUtility.login_required(function(r)
-    local redirect = get_post_dialog_redirect(r, "/tag-rule")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/tag-rule")
     if r.params.delete == "Delete" then
         local ok, errmsg = Model:deleteTagRules(r.params.tag_rule_ids)
         if not ok then
@@ -2289,7 +2275,7 @@ local render_edit_tag_rule = WebUtility.login_required(function(r, _)
 end)
 
 local accept_edit_tag_rule = WebUtility.login_required(function(r)
-    local redirect = get_post_dialog_redirect(r, "/tag-rule")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/tag-rule")
     if r.params.cancel then
         return redirect
     end
@@ -2333,7 +2319,7 @@ local render_add_tag_rule = WebUtility.login_required(function(r)
 end)
 
 local accept_add_tag_rule = WebUtility.login_required(function(r)
-    local redirect = get_post_dialog_redirect(r, "/tag-rule")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/tag-rule")
     if r.params.cancel or r.params.ok then
         return redirect
     end
@@ -2372,452 +2358,6 @@ local accept_add_tag_rule = WebUtility.login_required(function(r)
     return Fm.serveContent("tag_rule_changelist", params)
 end)
 
-local function reorganize_tags(kind, r)
-    local positive_tags = {}
-    local negative_tags = {}
-    local params_ids_key = kind .. "_ids"
-    local fmtstr = "%s_%s_tags_handle_%d"
-    if r.params[params_ids_key] then
-        for i = 1, #r.params[params_ids_key] do
-            local id = tonumber(r.params[params_ids_key][i]) or 0
-            local ptag_key = fmtstr:format(kind, "positive", id)
-            local ntag_key = fmtstr:format(kind, "negative", id)
-            positive_tags[id] = table.filter(r.params[ptag_key], not_emptystr)
-            negative_tags[id] = table.filter(r.params[ntag_key], not_emptystr)
-        end
-    end
-    return positive_tags, negative_tags
-end
-
-local function parse_delete_coords(coords)
-    for h_idx_str, t_idx_str in coords:gmatch("(%d+),(%d+)") do
-        return tonumber(h_idx_str), tonumber(t_idx_str)
-    end
-    return nil
-end
-
-local function accept_add_share_ping_list(
-    r,
-    _,
-    pending_handles,
-    pending_pos,
-    pending_neg
-)
-    if not not_emptystr(r.params.name) then
-        return Fm.serveError(400, nil, "Invalid share option name")
-    end
-    if r.params.selected_service ~= "Telegram" then
-        return Fm.serveError(400, nil, "Invalid service (must be 'Telegram')")
-    end
-    if not not_emptystr(r.params.chat_id) or not tonumber(r.params.chat_id) then
-        return Fm.serveError(400, nil, "Invalid chat ID")
-    end
-    local share_data = EncodeJson {
-        type = r.params.selected_service,
-        chat_id = tonumber(r.params.chat_id),
-    }
-    local SP = "add_share_ping_list"
-    Model:create_savepoint(SP)
-    local spl_id, spl_err = Model:createSharePingList(
-        r.params.name,
-        share_data,
-        r.params.attribution == "true"
-    )
-    if not spl_id then
-        Log(kLogInfo, tostring(spl_err))
-        Model:rollback(SP)
-        return Fm.serve500()
-    end
-    for i = 1, #pending_handles do
-        local h_ok, h_err = Model:createSPLEntryWithTags(
-            spl_id,
-            pending_handles[i],
-            pending_pos[i],
-            pending_neg[i]
-        )
-        if not h_ok then
-            Log(kLogInfo, tostring(h_err))
-            Model:rollback(SP)
-            return Fm.serve500()
-        end
-    end
-    Model:release_savepoint(SP)
-    return Fm.serveRedirect("/share-ping-list/" .. spl_id)
-end
-
-local render_add_share_ping_list = WebUtility.login_required(
-    function(r, user_record)
-        local redirect = get_post_dialog_redirect(r, "/account")
-        if r.params.cancel then
-            return redirect
-        end
-        local alltags, alltags_err = Model:getAllTags()
-        if not alltags then
-            Log(kLogInfo, alltags_err)
-            alltags = {}
-        end
-        local pending_pos, pending_neg = reorganize_tags("pending", r)
-        local pending_handles =
-            table.filter(r.params.pending_handles, not_emptystr)
-        if
-            r.params.dummy_submit
-            or r.params.service_reload
-            or r.params.add_pending_handle
-            or r.params.add_pending_positive_tag
-            or r.params.add_pending_negative_tag
-        then
-        -- Do nothing, handling this happens automatically as part of answering the request.
-        elseif r.params.delete_pending_positive_tag then
-            local h_idx, t_idx =
-                parse_delete_coords(r.params.delete_pending_positive_tag)
-            table.remove(pending_pos[h_idx], t_idx)
-        elseif r.params.delete_pending_negative_tag then
-            local h_idx, t_idx =
-                parse_delete_coords(r.params.delete_pending_negative_tag)
-            table.remove(pending_neg[h_idx], t_idx)
-        elseif r.params.delete_pending_handle then
-            local h_idx = tonumber(r.params.delete_pending_handle)
-            if not h_idx then
-                return Fm.serveError(
-                    400,
-                    nil,
-                    "Invalid number for delete_pending_handle"
-                )
-            end
-            table.remove(pending_handles, h_idx)
-            table.remove(pending_pos, h_idx)
-            table.remove(pending_neg, h_idx)
-        elseif r.params.add then
-            return accept_add_share_ping_list(
-                r,
-                user_record,
-                pending_handles,
-                pending_pos,
-                pending_neg
-            )
-        end
-        local params = {
-            alltags = alltags,
-            share_services = { "Telegram" },
-            name = r.params.name,
-            chat_id = r.params.chat_id,
-            selected_service = r.params.selected_service,
-            pending_handles = pending_handles,
-            pending_positive_tags = pending_pos,
-            pending_negative_tags = pending_neg,
-        }
-        WebUtility.add_htmx_param(r)
-        WebUtility.add_form_path(r, params)
-        return Fm.serveContent("share_ping_list_add", params)
-    end
-)
-
-local function filter_deleted_tags(delete_coords_list, tags_by_entryid_map)
-    local result = {}
-    local delete_set = {}
-    for i = 1, #delete_coords_list do
-        local entry_id, tag_id = parse_delete_coords(delete_coords_list[i])
-        if not entry_id then
-            return Fm.serve400()
-        end
-        if not tag_id then
-            return Fm.serve400()
-        end
-        if not delete_set[entry_id] then
-            delete_set[entry_id] = {}
-        end
-        delete_set[entry_id][tag_id] = true
-    end
-    Log(kLogDebug, "delete_set: %s" % { EncodeLua(delete_set) })
-    for entry_id, tags in pairs(tags_by_entryid_map) do
-        result[entry_id] = table.filter(tags, function(t)
-            Log(kLogDebug, "t: %s" % { EncodeJson(t) })
-            return not (delete_set[entry_id] and delete_set[entry_id][t.tag_id])
-        end)
-    end
-    return result
-end
-
-local function accept_edit_share_ping_list(
-    r,
-    delete_entry_ids,
-    delete_entry_negative_tags,
-    delete_entry_positive_tags,
-    pending_pos,
-    pending_neg,
-    entry_pos,
-    entry_neg,
-    pending_handles
-)
-    local spl_id = r.params.spl_id
-    if not not_emptystr(spl_id) then
-        return Fm.serveError(400, nil, "Invalid share option ID")
-    end
-    if not not_emptystr(r.params.name) then
-        return Fm.serveError(400, nil, "Invalid share option name")
-    end
-    if r.params.selected_service ~= "Telegram" then
-        return Fm.serveError(400, nil, "Invalid service (must be 'Telegram')")
-    end
-    if not not_emptystr(r.params.chat_id) or not tonumber(r.params.chat_id) then
-        return Fm.serveError(400, nil, "Invalid chat ID")
-    end
-    local share_data = EncodeJson {
-        type = r.params.selected_service,
-        chat_id = tonumber(r.params.chat_id),
-    }
-    local SP = "edit_share_ping_list"
-    Model:create_savepoint(SP)
-    local meta_ok, meta_err = Model:updateSharePingListMetadata(
-        spl_id,
-        r.params.name,
-        share_data,
-        r.params.attribution == "true"
-    )
-    if not meta_ok then
-        Model:rollback(SP)
-        Log(kLogInfo, meta_err)
-        return Fm.serve500()
-    end
-    -- Delete entries first (to cascade-delete their pl_entry_x_tag rows)
-    local de_ok, de_err = Model:deleteSPLEntriesById(delete_entry_ids)
-    if not de_ok then
-        Model:rollback(SP)
-        Log(kLogInfo, tostring(de_err))
-        return Fm.serve500()
-    end
-    -- Delete tags next.  If a user deletes a tag and then re-adds it, this order will avoid constraint errors.
-    local function delete_map(pair_str)
-        return table.pack(parse_delete_coords(pair_str))
-    end
-    local dptp = table.map(delete_entry_positive_tags, delete_map)
-    local dntp = table.map(delete_entry_negative_tags, delete_map)
-    local dpt_ok, dpt_err = Model:deletePLPositiveTagsByPair(dptp)
-    if not dpt_ok then
-        Model:rollback(SP)
-        Log(kLogInfo, tostring(dpt_err))
-        return Fm.serve500()
-    end
-    local dnt_ok, dnt_err = Model:deletePLNegativeTagsByPair(dntp)
-    if not dnt_ok then
-        Model:rollback(SP)
-        Log(kLogInfo, tostring(dnt_err))
-        return Fm.serve500()
-    end
-    -- Add pending tags for existing entries.
-    local function do_link(model_method, tag_map)
-        for spl_entry_id, tag_names in pairs(tag_map) do
-            local link_ok, link_err =
-                model_method(Model, spl_entry_id, tag_names)
-            if not link_ok then
-                Model:rollback(SP)
-                Log(kLogInfo, tostring(lpt_err))
-                return false
-            end
-        end
-        return true
-    end
-    if not do_link(Model.linkPositiveTagsToSPLEntryByName, entry_pos) then
-        return Fm.serve500()
-    end
-    if not do_link(Model.linkNegativeTagsToSPLEntryByName, entry_neg) then
-        return Fm.serve500()
-    end
-    -- Add new entries.
-    for i = 1, #pending_handles do
-        local h_ok, h_err = Model:createSPLEntryWithTags(
-            spl_id,
-            pending_handles[i],
-            pending_pos[i],
-            pending_neg[i]
-        )
-        if not h_ok then
-            Log(kLogInfo, tostring(h_err))
-            Model:rollback(SP)
-            return Fm.serve500()
-        end
-    end
-    Model:release_savepoint(SP)
-    return Fm.serveRedirect("/share-ping-list/" .. spl_id)
-end
-
-local render_edit_share_ping_list = WebUtility.login_required(function(r, _)
-    local redirect =
-        get_post_dialog_redirect(r, "/share-ping-list/" .. r.params.spl_id)
-    if r.params.cancel then
-        return redirect
-    end
-    local spl, spl_err = Model:getSharePingListById(r.params.spl_id)
-    if not spl then
-        Log(kLogInfo, tostring(spl_err))
-        return Fm.serveError(400, nil, "Invalid share option ID")
-    end
-    local entries, positive_tags, negative_tags =
-        Model:getEntriesForSPLById(r.params.spl_id)
-    if not entries then
-        return Fm.serve500()
-    end
-    local alltags, alltags_err = Model:getAllTags()
-    if not alltags then
-        Log(kLogInfo, alltags_err)
-        alltags = {}
-    end
-    local delete_entry_ids = r.params.delete_entry_ids or {}
-    local delete_entry_negative_tags = r.params.delete_entry_negative_tags or {}
-    local delete_entry_positive_tags = r.params.delete_entry_positive_tags or {}
-    local pending_pos, pending_neg = reorganize_tags("pending", r)
-    Log(
-        kLogDebug,
-        "pending_pos; pending_neg: %s; %s"
-            % { EncodeLua(pending_pos), EncodeLua(pending_neg) }
-    )
-    local entry_pos, entry_neg = reorganize_tags("entry", r)
-    local pending_handles = table.filter(r.params.pending_handles, not_emptystr)
-    if
-        r.params.dummy_submit
-        or r.params.service_reload
-        or r.params.add_pending_handle
-        or r.params.add_pending_positive_tag
-        or r.params.add_pending_negative_tag
-        or r.params.add_entry_positive_tag
-        or r.params.add_entry_negative_tag
-    then
-        -- Do nothing, handling this happens automatically as part of answering the request.
-    elseif r.params.delete_pending_positive_tag then
-        local h_idx, t_idx =
-            parse_delete_coords(r.params.delete_pending_positive_tag)
-        table.remove(pending_pos[h_idx], t_idx)
-    elseif r.params.delete_pending_negative_tag then
-        local h_idx, t_idx =
-            parse_delete_coords(r.params.delete_pending_negative_tag)
-        table.remove(pending_neg[h_idx], t_idx)
-    elseif r.params.delete_entry_positive_tag then
-        local h_idx, t_idx =
-            parse_delete_coords(r.params.delete_entry_positive_tag)
-        table.remove(entry_pos[h_idx], t_idx)
-    elseif r.params.delete_entry_negative_tag then
-        local h_idx, t_idx =
-            parse_delete_coords(r.params.delete_entry_negative_tag)
-        table.remove(entry_neg[h_idx], t_idx)
-    elseif r.params.delete_pending_handle then
-        local h_idx = tonumber(r.params.delete_pending_handle)
-        if not h_idx then
-            return Fm.serveError(
-                400,
-                nil,
-                "Invalid number for delete_pending_handle"
-            )
-        end
-        table.remove(pending_handles, h_idx)
-        table.remove(pending_pos, h_idx)
-        table.remove(pending_neg, h_idx)
-    elseif r.params.delete_positive_tag then
-        delete_entry_positive_tags[#delete_entry_positive_tags + 1] =
-            r.params.delete_positive_tag
-    elseif r.params.delete_negative_tag then
-        delete_entry_negative_tags[#delete_entry_negative_tags + 1] =
-            r.params.delete_negative_tag
-    elseif r.params.delete_entry_handle then
-        local entry_id = tonumber(r.params.delete_entry_handle)
-        if not entry_id then
-            return Fm.serveError(
-                400,
-                nil,
-                "Invalid number for delete_entry_handle"
-            )
-        end
-        delete_entry_ids[#delete_entry_ids + 1] = entry_id
-        -- Deleting from the output lists is handled below.
-    elseif r.params.add then
-        return accept_edit_share_ping_list(
-            r,
-            delete_entry_ids,
-            delete_entry_negative_tags,
-            delete_entry_positive_tags,
-            pending_pos,
-            pending_neg,
-            entry_pos,
-            entry_neg,
-            pending_handles
-        )
-    end
-    -- "Delete" (hide) database records for handles from next rendered page.
-    local delete_entry_ids_set = {}
-    for idx = 1, #delete_entry_ids do
-        local entry_id = delete_entry_ids[idx]
-        positive_tags[entry_id] = nil
-        negative_tags[entry_id] = nil
-        delete_entry_ids_set[entry_id] = true
-    end
-    entries = table.filter(entries, function(i)
-        return not delete_entry_ids_set[i.spl_entry_id]
-    end)
-    Log(kLogDebug, "entries after filter: %s" % { EncodeJson(entries) })
-    -- "Delete" (hide) database records for tags from next rendered page.
-    positive_tags =
-        filter_deleted_tags(delete_entry_positive_tags, positive_tags)
-    negative_tags =
-        filter_deleted_tags(delete_entry_negative_tags, negative_tags)
-    local attribution = r.params.attribution or spl.send_with_attribution
-    Log(kLogInfo, "attribution: " .. tostring(attribution))
-    -- Render page.
-    local params = {
-        alltags = alltags,
-        spl = spl,
-        entries = entries,
-        positive_tags = positive_tags,
-        negative_tags = negative_tags,
-        attribution = attribution,
-        share_services = { "Telegram" },
-        name = r.params.name or spl.name,
-        chat_id = r.params.chat_id or spl.share_data.chat_id,
-        selected_service = r.params.selected_service or spl.share_data.type,
-        pending_handles = pending_handles,
-        pending_positive_tags = pending_pos,
-        pending_negative_tags = pending_neg,
-        entry_positive_tags = entry_pos,
-        entry_negative_tags = entry_neg,
-        delete_entry_ids = delete_entry_ids,
-        delete_entry_positive_tags = delete_entry_positive_tags,
-        delete_entry_negative_tags = delete_entry_negative_tags,
-    }
-    WebUtility.add_htmx_param(r)
-    WebUtility.add_form_path(r, params)
-    return Fm.serveContent("share_ping_list_edit", params)
-end)
-
-local render_share_ping_list = WebUtility.login_required(function(r, _)
-    local share_ping_list, spl_err = Model:getSharePingListById(r.params.spl_id)
-    if not share_ping_list then
-        return Fm.serve404()
-    end
-    Log(kLogInfo, "r.params.delete = " .. tostring(r.params.delete))
-    if r.params.delete == "Delete" then
-        local d_ok, d_err = Model:deleteSharePingList(r.params.spl_id)
-        if not d_ok then
-            Log(
-                kLogInfo,
-                "Error while trying to delete share option: " .. d_err
-            )
-            return Fm.serve500()
-        else
-            return Fm.serveRedirect(302, "/account")
-        end
-    end
-    local entries, positive_tags, negative_tags =
-        Model:getEntriesForSPLById(r.params.spl_id)
-    if not entries then
-        return Fm.serve500()
-    end
-    return Fm.serveContent("share_ping_list", {
-        share_ping_list = share_ping_list,
-        entries = entries,
-        positive_tags = positive_tags,
-        negative_tags = negative_tags,
-        form_action = r.path,
-    })
-end)
-
 local render_help = WebUtility.login_optional(function(r, _)
     if r.params.page then
         return Fm.serveContent("help/" .. r.params.page, {})
@@ -2832,7 +2372,7 @@ local render_archive = WebUtility.login_required(function(r, _)
             "This server does not support image processing. Please ask the administrator to recompile Redbean with s0ph0s' img extension."
         )
     end
-    local redirect = get_post_dialog_redirect(r, "/home")
+    local redirect = WebUtility.get_post_dialog_redirect(r, "/home")
     if r.params.cancel then
         return redirect
     end
@@ -3063,12 +2603,6 @@ end
 local function setup_account()
     Fm.setRoute(Fm.GET { "/link-telegram/:request_id" }, render_telegram_link)
     Fm.setRoute(Fm.POST { "/link-telegram/:request_id" }, accept_telegram_link)
-    Fm.setRoute("/share-ping-list/add", render_add_share_ping_list)
-    Fm.setRoute("/share-ping-list/:spl_id[%d]", render_share_ping_list)
-    Fm.setRoute(
-        "/share-ping-list/:spl_id[%d]/edit",
-        render_edit_share_ping_list
-    )
     Fm.setRoute("/account", render_account)
     Fm.setRoute("/account/end-sessions", accept_end_sessions)
     Fm.setRoute(

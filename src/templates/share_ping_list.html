@@ -16,6 +16,8 @@
 </form>
 {% if share_ping_list.share_data.type == "Telegram" then %}
 <p>Chat ID: {%& share_ping_list.share_data.chat_id %}</p>
+{% elseif share_ping_list.share_data.type == "Discord" then %}
+<p>Webhook URL: {%& share_ping_list.share_data.webhook %}</p>
 {% else %}
 <p>Unknown service: {%& share_ping_list.share_data.type %}</p>
 {% end %}
@@ -23,7 +25,11 @@
 <ul>
   {% for i = 1, #entries do local entry = entries[i] %}
   <li>
+		{% if entry.nickname then %}
+		{%& entry.nickname %} (<tt>{%& entry.handle %}</tt>)
+		{% else %}
     {%& entry.handle %}
+		{% end %}
     <ul>
       <li>
         Ping this person if a shared record has any of these tags:

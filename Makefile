@@ -30,6 +30,7 @@ LIBS := lib/third_party/fullmoon.lua \
 	lib/scrapers/test.lua \
 	lib/network_utils.lua \
 	lib/tg_bot.lua \
+	lib/discord.lua \
 	lib/nanoid.lua \
 	lib/web/init.lua \
 	lib/web/utility.lua \
