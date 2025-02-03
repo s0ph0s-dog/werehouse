@@ -517,15 +517,15 @@ local function render_image_internal(r, user_record)
     end
     local pending_artists = r.params.pending_artists
     if pending_artists then
-        pending_artists = table.filter(pending_artists, not_emptystr)
+        pending_artists = table.filter(pending_artists, WebUtility.not_emptystr)
     end
     local pending_tags = r.params.pending_tags
     if pending_tags then
-        pending_tags = table.filter(pending_tags, not_emptystr)
+        pending_tags = table.filter(pending_tags, WebUtility.not_emptystr)
     end
     local pending_sources = r.params.pending_sources
     if pending_sources then
-        pending_sources = table.filter(pending_sources, not_emptystr)
+        pending_sources = table.filter(pending_sources, WebUtility.not_emptystr)
     end
     local template_name = "image"
     if r.path:endswith("/edit") then
@@ -691,15 +691,18 @@ local accept_edit_image = WebUtility.login_required(function(r, user_record)
     r.params.category = categories
     local pending_artists = r.params.pending_artists
     if pending_artists then
-        r.params.pending_artists = table.filter(pending_artists, not_emptystr)
+        r.params.pending_artists =
+            table.filter(pending_artists, WebUtility.not_emptystr)
     end
     local pending_tags = r.params.pending_tags
     if pending_tags then
-        r.params.pending_tags = table.filter(pending_tags, not_emptystr)
+        r.params.pending_tags =
+            table.filter(pending_tags, WebUtility.not_emptystr)
     end
     local pending_sources = r.params.pending_sources
     if pending_sources then
-        r.params.pending_sources = table.filter(pending_sources, not_emptystr)
+        r.params.pending_sources =
+            table.filter(pending_sources, WebUtility.not_emptystr)
     end
     -- Submit handlers
     if r.params.delete_artist then
@@ -1268,7 +1271,7 @@ local accept_images = WebUtility.login_required(function(r, _)
         local ig_id, g_err =
             Model:createImageGroupWithImages("Untitled group", image_ids)
         if not ig_id then
-            Log(kLogInfo, g_err)
+            Log(kLogInfo, tostring(g_err))
             return Fm.serve500()
         end
         return Fm.serveRedirect("/image-group/%d/edit" % { ig_id }, 302)
@@ -1393,11 +1396,13 @@ local function render_edit_artist_internal(r)
     end
     local pending_usernames = r.params.pending_usernames
     if pending_usernames then
-        pending_usernames = table.filter(pending_usernames, not_emptystr)
+        pending_usernames =
+            table.filter(pending_usernames, WebUtility.not_emptystr)
     end
     local pending_profile_urls = r.params.pending_profile_urls
     if pending_profile_urls then
-        pending_profile_urls = table.filter(pending_profile_urls, not_emptystr)
+        pending_profile_urls =
+            table.filter(pending_profile_urls, WebUtility.not_emptystr)
     end
     local params = {
         artist = artist,
@@ -1456,9 +1461,9 @@ local accept_edit_artist = WebUtility.login_required(function(r)
             end
         end
         r.params.pending_usernames =
-            table.filter(pending_usernames, not_emptystr)
+            table.filter(pending_usernames, WebUtility.not_emptystr)
         r.params.pending_profile_urls =
-            table.filter(pending_profile_urls, not_emptystr)
+            table.filter(pending_profile_urls, WebUtility.not_emptystr)
     end
     if r.params.delete_handle then
         local to_delete = r.params.delete_handles or {}
@@ -1978,7 +1983,7 @@ local accept_tags = WebUtility.login_required(function(r)
         local merge_into_id = table.remove(tag_ids, 1)
         local ok, errmsg = Model:mergeTags(merge_into_id, tag_ids)
         if not ok then
-            Log(kLogInfo, errmsg)
+            Log(kLogInfo, tostring(errmsg))
             return Fm.serve500()
         end
         return redirect
