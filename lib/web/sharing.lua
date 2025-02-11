@@ -80,7 +80,7 @@ local function do_share(share_id, spl, tg_userid, images, ping_text, redir_url)
         )
     end
     local share_ok, share_err
-    if spl.share_data.type == kTelegram then
+    if not spl or spl.share_data.type == kTelegram then
         local chat_id = (spl and spl.share_data.chat_id) or tg_userid
         share_ok, share_err = Bot.share_media(chat_id, images, ping_text)
     elseif spl.share_data.type == kDiscord then
@@ -109,14 +109,17 @@ local transform_sources = {
 --- Prepare the default data shown in the share form.
 local function prep_form_data(r, user_record, group, images, data, getPings)
     local ping_data, pd_err = {}, nil
+    local source_transformer
     if data.spl then
         ping_data, pd_err = getPings(data.spl.spl_id)
         if not ping_data then
             Log(kLogInfo, pd_err)
             return Fm.serve500()
         end
+        source_transformer = transform_sources[data.spl.share_data.type]
+    else
+        source_transformer = transform_sources[kTelegram]
     end
-    local source_transformer = transform_sources[data.spl.share_data.type]
     for i = 1, #images do
         local image = images[i]
         local attribution_text
