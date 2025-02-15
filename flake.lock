@@ -1,0 +1,48 @@
+{
+  "nodes": {
+    "cosmo": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1739571773,
+        "narHash": "sha256-ja3qAMRfWnlmFbJj6v5gb5yhLBu26qRHGT4ik1Ash1c=",
+        "owner": "s0ph0s-dog",
+        "repo": "cosmopolitan",
+        "rev": "e1b12071b048ab0c4983344354d27aba32c86819",
+        "type": "github"
+      },
+      "original": {
+        "owner": "s0ph0s-dog",
+        "ref": "s0ph0s-patches",
+        "repo": "cosmopolitan",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1739484910,
+        "narHash": "sha256-wjWLzdM7PIq4ZAe7k3vyjtgVJn6b0UeodtRFlM/6W5U=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "0b73e36b1962620a8ac551a37229dd8662dac5c8",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "ref": "nixos-24.11",
+        "type": "indirect"
+      }
+    },
+    "root": {
+      "inputs": {
+        "cosmo": "cosmo",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

@@ -1,6 +1,6 @@
 # Configure here
-VERSION := 1.1.1
-REDBEAN_VERSION := 3.0.2beta
+VERSION := 1.2.0
+REDBEAN_VERSION := 3.0beta
 OUTPUT := werehouse.com
 SRV_DIR := srv
 LIBS := lib/third_party/fullmoon.lua \
@@ -110,6 +110,7 @@ SRCS := src/.init.lua \
 TEST_LIBS := lib/third_party/luaunit.lua
 
 # Infrastructure variables here
+ROOT_DIR := $(shell pwd)
 ABOUT_FILE := $(SRV_DIR)/.lua/about.lua
 REDBEAN := redbean-$(REDBEAN_VERSION).com
 TEST_REDBEAN := test-$(REDBEAN)
@@ -124,7 +125,7 @@ release: build
 	cp $(OUTPUT) $(patsubst %.com,%-$(VERSION).com,$(OUTPUT))
 
 # This is below build so that build is still the default target.
-include Makefile.secret
+-include Makefile.secret
 
 clean:
 	rm -r $(SRV_DIR) $(TESTS_DIR)
@@ -208,8 +209,10 @@ $(SRV_DIR)/%.js: src/%.js | $$(@D)/.
 # into itself.
 $(OUTPUT): $(REDBEAN) $(SRCS_OUT) $(LIBS_OUT) $(ABOUT_FILE)
 	if [ ! -f "$@" ]; then cp "$(REDBEAN)" "$@"; fi
-	cd srv && zip -R "../$@" $(patsubst $(SRV_DIR)/%,%,$(filter-out $<,$?))
+	chmod u+w "$@"
+	cd srv && zip -R "$(ROOT_DIR)/$@" $(patsubst $(SRV_DIR)/%,%,$(filter-out $<,$?))
 
 $(TEST_REDBEAN): $(REDBEAN) $(SRCS_OUT) $(LIBS_OUT) $(TEST_LIBS_OUT) $(ABOUT_FILE)
 	if [ ! -f "$@" ]; then cp "$(REDBEAN)" "$@"; fi
-	cd srv && zip -R "../$@" $(patsubst $(SRV_DIR)/%,%,$(filter-out $<,$?))
+	chmod u+w "$@"
+	cd srv && zip -R "$(ROOT_DIR)/$@" $(patsubst $(SRV_DIR)/%,%,$(filter-out $<,$?))
