@@ -325,7 +325,7 @@
             locations."/" = {
               proxyPass = let
                 port = toString (builtins.head cfg.ports);
-              in "http://127.0.0.1:${port}";
+              in "https://127.0.0.1:${port}";
               recommendedProxySettings = true;
               extraConfig = ''
                 proxy_http_version 1.1;
