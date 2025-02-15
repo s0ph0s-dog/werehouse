@@ -260,7 +260,7 @@
                 SESSION_KEY = cfg.sessionKey;
               })
               (lib.mkIf (cfg.apiKeys.telegram != null) {
-                TG_BOT_TOKEN = cfg.telegramApiKey;
+                TG_BOT_TOKEN = cfg.apiKeys.telegram;
               })
               (lib.mkIf (cfg.apiKeys.fuzzySearch != null) {
                 FUZZYSEARCH_API_KEY = cfg.apiKeys.fuzzySearch;
