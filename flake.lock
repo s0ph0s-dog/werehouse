@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1739571773,
-        "narHash": "sha256-ja3qAMRfWnlmFbJj6v5gb5yhLBu26qRHGT4ik1Ash1c=",
+        "lastModified": 1739834730,
+        "narHash": "sha256-LdSPL8vgQpFRu0yhELcJUp4taUU9LAEpu/Y77uBs1UM=",
         "owner": "s0ph0s-dog",
         "repo": "cosmopolitan",
-        "rev": "e1b12071b048ab0c4983344354d27aba32c86819",
+        "rev": "50092344ffd48688f25fa3f39cfa8139b37edc88",
         "type": "github"
       },
       "original": {
