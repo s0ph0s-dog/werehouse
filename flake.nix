@@ -19,7 +19,7 @@
     lastModifiedDate = self.lastModifiedDate or self.lastModified or "19700101";
 
     # Generate a user-friendly version number.
-    version = "1.2.0";
+    version = "1.2.1";
 
     # System types to support.
     supportedSystems = ["x86_64-linux" "x86_64-darwin"]; #"aarch64-linux" "aarch64-darwin" ];
