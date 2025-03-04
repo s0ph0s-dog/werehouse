@@ -713,7 +713,6 @@ function TestScraperPipeline:testValidFuraffinityLinks()
                 "her",
                 "being",
                 "into",
-                "latex",
                 "is",
                 "character",
                 "development",

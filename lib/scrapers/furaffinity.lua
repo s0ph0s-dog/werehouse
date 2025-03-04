@@ -108,7 +108,7 @@ local function scrape_image_data(root)
     end
     local profile_url = "https://www.furaffinity.net"
         .. maybe_profile_element.attributes.href
-    local display_name_element = first(maybe_profile_element:select("strong"))
+    local display_name_element = first(maybe_profile_element:select("span"))
     if not display_name_element then
         return nil, PipelineErrorPermanent("No display name for the user")
     end
