@@ -83,12 +83,12 @@ local function wait_for_ratelimit(headers)
 end
 
 local function send_media(webhook_url, media_list, ping_text)
-    local total_msgs = #media_list + 1
+    local total_media = #media_list
     for i = 1, #media_list do
         local media = media_list[i]
         local boundary = "__X_HELLO_DISCORD__"
         local request_body, err =
-            prepare_request(media, boundary, i, total_msgs)
+            prepare_request(media, boundary, i, total_media)
         if not request_body then
             return nil, err
         end
@@ -107,12 +107,7 @@ local function send_media(webhook_url, media_list, ping_text)
             end
         until status ~= 429
     end
-    local ping_message = "(%d/%d)\n%s"
-        % {
-            total_msgs,
-            total_msgs,
-            ping_text:trim(),
-        }
+    local ping_message = "⬆️\n" .. ping_text:trim()
     local ping_json = {
         content = ping_message,
         allowed_mentions = {
