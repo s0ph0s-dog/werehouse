@@ -828,7 +828,6 @@ local accept_edit_image = WebUtility.login_required(function(r, user_record)
             return { "itids[]", i }
         end)
         local tr_redirect_url = EncodeUrl {
-            scheme = "https",
             path = "/tag-rule/add-bulk",
             params = params,
         }
