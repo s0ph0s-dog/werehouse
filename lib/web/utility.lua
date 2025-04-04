@@ -184,4 +184,6 @@ return {
     image_functions = image_functions,
     not_emptystr = not_emptystr,
     get_post_dialog_redirect = get_post_dialog_redirect,
+    get_client_ip = get_client_ip,
+    set_login_cookie = set_login_cookie,
 }
