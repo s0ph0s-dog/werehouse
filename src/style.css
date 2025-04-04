@@ -472,7 +472,8 @@ footer {
 }
 
 .input-cell {
-  display: flex;
+  display: inline-flex;
+  width: 100%;
 }
 
 table {
