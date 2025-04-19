@@ -2221,6 +2221,7 @@ function TestScraperPipeline:testValidMastodonLinks()
     )
 end
 
+--[[
 function TestScraperPipeline:testDeviantArt()
     local case1 =
         "https://www.deviantart.com/teonocturnal/art/Game-day-1062228118"
@@ -2290,6 +2291,7 @@ function TestScraperPipeline:testDeviantArt()
         mocks
     )
 end
+]]
 
 function TestScraperPipeline:testWeasyl()
     local case1 =

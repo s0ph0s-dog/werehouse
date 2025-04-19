@@ -23,24 +23,37 @@ local function dA_login()
     }
     local auth_status, auth_headers, auth_body = Fetch(auth_url)
     if auth_status ~= 200 then
-        return auth_status, auth_headers, auth_body
+        Log(
+            kLogWarn,
+            "Failed to log in to DeviantArt: status=%s; headers=%s; body='%s'"
+                % {
+                    auth_status,
+                    EncodeJson(auth_headers),
+                    tostring(auth_body),
+                }
+        )
+        return false, auth_status, auth_headers, auth_body
     end
     local body_json = DecodeJson(auth_body)
     if not body_json then
-        return nil, "Invalid JSON from DeviantArt"
+        return false, 400, "Invalid JSON from DeviantArt"
     end
     if body_json.status ~= "success" then
-        return nil, body_json.error
+        return false, 400, body_json.error
     end
     if not body_json.access_token then
-        return nil, "No access_token in DeviantArt login response"
+        return false, 400, "No access_token in DeviantArt login response"
     end
     DA_BEARER_TOKEN = body_json.access_token
+    return true
 end
 
 local function DAFetch(url, options)
     if not DA_BEARER_TOKEN then
-        dA_login()
+        local login_ok, l_status, l_headers, l_body = dA_login()
+        if not login_ok then
+            return l_status, l_headers, l_body
+        end
     end
     if not options then
         options = {}
@@ -57,7 +70,10 @@ local function DAFetch(url, options)
             return resp_status, resp_headers
         end
         if resp_status == 401 then
-            dA_login()
+            local login_ok, l_status, l_headers, l_body = dA_login()
+            if not login_ok then
+                return l_status, l_headers, l_body
+            end
         elseif resp_status ~= 200 then
             return resp_status, resp_headers, resp_body
         else
@@ -188,16 +204,23 @@ local function process_uri(uri)
     local dev_status, dev_headers, dev_json =
         FetchAndCheck(DAFetch, deviation_url)
     if not dev_status then
-        return dev_headers
+        return nil, dev_headers
     end
     local phase1 = process_deviation(dev_json, uri)
     local download_url =
         encode_da_url("/deviation/download" .. post_id_with_slash)
     local dl_status, dl_headers, dl_json = FetchAndCheck(DAFetch, download_url)
     if not dl_status then
-        return dl_headers
+        return nil, dl_headers
     end
     local phase2 = process_download(dl_json, phase1)
+    --[[
+    dA is disabled because in order to download deviations, you must pass the
+    bearer token *in the Authorization header* when fetching the deviation media
+    URL.  I don't want to bother to fix this right now because dA is going
+    all-in on AI slop and altering the pipeline to support that is a pain in the
+    ass.
+    --]]
     local post_id = post_id_with_slash:sub(2)
     local metadata_url = encode_da_url("/deviation/metadata", {
         { "deviationids", post_id },
@@ -207,7 +230,7 @@ local function process_uri(uri)
     local meta_status, meta_headers, meta_json =
         FetchAndCheck(DAFetch, metadata_url)
     if not meta_status then
-        return meta_headers
+        return nil, meta_headers
     end
     local phase3 = process_metadata(meta_json, phase2)
     return { phase3 }

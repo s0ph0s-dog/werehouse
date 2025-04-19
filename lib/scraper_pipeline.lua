@@ -16,7 +16,7 @@ local scrapers_by_name = {
     itakuee = require_only("scrapers.itakuee"),
     inkbunny = require_only("scrapers.inkbunny"),
     mastodon = require_only("scrapers.mastodon"),
-    deviantart = require_only("scrapers.deviantart"),
+    -- deviantart = require_only("scrapers.deviantart"),
     weasyl = require_only("scrapers.weasyl"),
     telegram = require_only("scrapers.telegram"),
 }
