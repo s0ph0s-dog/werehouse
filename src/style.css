@@ -12,6 +12,9 @@
     --secondary-bg: #E6E6E6;
   }
 }
+@view-transition {
+  navigation: auto;
+}
 * {
   box-sizing: border-box;
 }
