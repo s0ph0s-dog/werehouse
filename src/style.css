@@ -269,6 +269,15 @@ footer {
   gap: 0.25em;
 }
 
+.zstack {
+    display: grid;
+    grid-template-rows: 100% 1fr;
+    grid-template-columns: 100% 1fr;
+}
+.zstack * {
+    grid-area: 1/1/2/2;
+}
+
 .main-image {
   grid-area: main;
 }

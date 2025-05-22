@@ -633,6 +633,10 @@ local queries = {
                 kind, file_size, mime_type
             FROM images
             WHERE image_id = ?;]],
+        get_first_thumbnail_by_image_id = [[SELECT
+            first_thumbnail_id
+            FROM images_for_gallery
+            WHERE image_id = ?;]],
         get_artists_for_image = [[SELECT artists.artist_id, artists.name, artists.manually_confirmed
             FROM artists INNER JOIN image_artists
             ON image_artists.artist_id = artists.artist_id
@@ -1370,6 +1374,14 @@ end
 
 function Model:getImageById(image_id)
     return fetchOneExactly(self.conn, queries.model.get_image_by_id, image_id)
+end
+
+function Model:getFirstThumbnailByImageId(image_id)
+    return fetchOneExactly(
+        self.conn,
+        queries.model.get_first_thumbnail_by_image_id,
+        image_id
+    )
 end
 
 function Model:getAllImagesForSizeCheck()

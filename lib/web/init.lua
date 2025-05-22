@@ -457,6 +457,12 @@ local function render_image_internal(r, user_record)
         Log(kLogInfo, tostring(image_err))
         return Fm.serve404()
     end
+    local image_with_thumb, iwt_err = Model:getFirstThumbnailByImageId(image_id)
+    if not image_with_thumb then
+        Log(kLogInfo, tostring(iwt_err))
+        return Fm.serve500()
+    end
+    image.first_thumbnail_id = image_with_thumb.first_thumbnail_id
     local artists, artists_err = Model:getArtistsForImage(image_id)
     if not artists then
         Log(kLogInfo, artists_err)
