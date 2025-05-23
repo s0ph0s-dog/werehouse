@@ -38,7 +38,7 @@
     >Delete</button>
 </li>
 {% end end end %}
-{% function emit_row(kind, id, nickname_value, value, uncommitted_ptag_list, uncommitted_ntag_list, username_placeholder, nickname_type) %}
+{% function emit_row(kind, id, nickname_value, value, enabled, uncommitted_ptag_list, uncommitted_ntag_list, username_placeholder, nickname_type) %}
 <li>
   <div class="input-cell">
     <input type="hidden" name="{%& kind %}_ids[]" value="{%& id %}" />
@@ -68,6 +68,19 @@
     >Delete</button>
   </div>
   <ul>
+    {% if kind == "entry" then %}
+    <li>
+        <label class="inline">
+            <input
+                type="checkbox"
+                name="enable_{%& kind %}_handles[]"
+                {% if enabled == nil or enabled then %}checked{% end %}
+                value="{%& id %}" />
+            Ping this person.  (Uncheck to temporarily stop pinging someone who
+            would find it unwelcome, without deleting all their tag preferences.)
+        </label>
+    </li>
+    {% end %}
     <li>
       Ping this person if the shared post has any of these tags:
       <ul>
@@ -204,11 +217,12 @@
     </div>
     <ul>
       {% if entries and #entries > 0 then for e_idx = 1, #entries do local entry = entries[e_idx] %}
-      {% emit_row("entry", entry.spl_entry_id, entry.nickname, entry.handle, entry_positive_tags, entry_negative_tags, username_placeholder, nickname_type) %}
+      {% emit_row("entry", entry.spl_entry_id, entry.nickname, entry.handle,
+      entry.enabled, entry_positive_tags, entry_negative_tags, username_placeholder, nickname_type) %}
       {% end end %}
       {% if pending_handles and #pending_handles > 0 then for h_idx = 1,
       #pending_handles do %}
-      {% emit_row("pending", h_idx, pending_nicknames[h_idx], pending_handles[h_idx], pending_positive_tags, pending_negative_tags, username_placeholder, nickname_type) %}
+      {% emit_row("pending", h_idx, pending_nicknames[h_idx], pending_handles[h_idx], false, pending_positive_tags, pending_negative_tags, username_placeholder, nickname_type) %}
       {% end end %}
       <li>
         <input

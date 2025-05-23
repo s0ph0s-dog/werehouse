@@ -31,6 +31,7 @@
     {%& entry.handle %}
 		{% end %}
     <ul>
+        <li>{% if entry.enabled then %}Enabled ✅{% else %}Disabled 🚫{% end %}</li>
       <li>
         Ping this person if a shared record has any of these tags:
         <ul>

@@ -332,6 +332,47 @@ local function parse_delete_coords(coords)
     return nil
 end
 
+local function rename_entries(
+    entries,
+    entry_ids,
+    entry_handles,
+    entry_nicknames
+)
+    for dbidx = 1, #entries do
+        local entry = entries[dbidx]
+        for reqidx = 1, #entry_ids do
+            local eid = entry_ids[reqidx]
+            --Log(kLogDebug, "Does %s match %s?" % {entry.spl_entry_id, eid})
+            if tonumber(entry.spl_entry_id) == tonumber(eid) then
+                --Log(kLogDebug, "Changing handle for %s to %s..." % {entry.handle, entry_handles[reqidx]})
+                entry.handle = entry_handles[reqidx]
+                entry.nickname = entry_nicknames[reqidx]
+            end
+        end
+    end
+    return entries
+end
+
+local function apply_enabled_entries(entries, enabled_ids)
+    for dbidx = 1, #entries do
+        local entry = entries[dbidx]
+        local found = false
+        for reqidx = 1, #enabled_ids do
+            local eid = enabled_ids[reqidx]
+            Log(kLogDebug, "Does %s equal %s?" % { entry.spl_entry_id, eid })
+            if tonumber(entry.spl_entry_id) == tonumber(eid) then
+                Log(kLogDebug, "Marking %s as enabled..." % { entry.handle })
+                found = true
+                entry.enabled = true
+            end
+        end
+        if not found then
+            entry.enabled = false
+        end
+    end
+    return entries
+end
+
 local function accept_add_share_ping_list(
     r,
     _,
@@ -504,6 +545,7 @@ local function accept_edit_share_ping_list(
     delete_entry_positive_tags,
     pending_pos,
     pending_neg,
+    entries,
     entry_pos,
     entry_neg,
     pending_handles,
@@ -588,8 +630,8 @@ local function accept_edit_share_ping_list(
         return Fm.serve500()
     end
     -- Add new entries.
+    local reformatter = reformat_username[service]
     for i = 1, #pending_handles do
-        local reformatter = reformat_username[service]
         local h_ok, h_err = Model:createSPLEntryWithTags(
             spl_id,
             reformatter(pending_handles[i]),
@@ -599,6 +641,21 @@ local function accept_edit_share_ping_list(
         )
         if not h_ok then
             Log(kLogInfo, tostring(h_err))
+            Model:rollback(SP)
+            return Fm.serve500()
+        end
+    end
+    -- Update existing entries.
+    for i = 1, #entries do
+        local entry = entries[i]
+        local u_ok, u_err = Model:updateSharePingListEntry(
+            entry.spl_entry_id,
+            reformatter(entry.handle),
+            entry.nickanme,
+            entry.enabled
+        )
+        if not u_ok then
+            Log(kLogInfo, tostring(u_err))
             Model:rollback(SP)
             return Fm.serve500()
         end
@@ -640,10 +697,22 @@ local render_edit_share_ping_list = WebUtility.login_required(function(r, _)
             % { EncodeLua(pending_pos), EncodeLua(pending_neg) }
     )
     local entry_pos, entry_neg = reorganize_tags("entry", r)
+    local entry_ids = table.filter(r.params.entry_ids, WebUtility.not_emptystr)
+    local entry_handles =
+        table.filter(r.params.entry_handles, WebUtility.not_emptystr)
+    local entry_nicknames =
+        table.filter(r.params.entry_nicknames, WebUtility.not_emptystr)
+    local entry_enabled =
+        table.filter(r.params.enable_entry_handles, WebUtility.not_emptystr)
+    --Log(kLogDebug, "entry_handles: %s; entry_nicknames: %s" % {EncodeJson(entry_handles), EncodeJson(entry_nicknames)})
     local pending_handles =
         table.filter(r.params.pending_handles, WebUtility.not_emptystr)
     local pending_nicknames =
         table.filter(r.params.pending_nicknames, WebUtility.not_emptystr)
+    entries = rename_entries(entries, entry_ids, entry_handles, entry_nicknames)
+    if #entry_enabled > 0 then
+        entries = apply_enabled_entries(entries, entry_enabled)
+    end
     if
         r.params.dummy_submit
         or r.params.service_reload
@@ -708,6 +777,7 @@ local render_edit_share_ping_list = WebUtility.login_required(function(r, _)
             delete_entry_positive_tags,
             pending_pos,
             pending_neg,
+            entries,
             entry_pos,
             entry_neg,
             pending_handles,

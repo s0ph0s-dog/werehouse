@@ -257,6 +257,7 @@ local user_setup = [[
         "spl_entry_id" INTEGER NOT NULL UNIQUE,
         "handle" TEXT NOT NULL,
         "nickname" TEXT,
+        "enabled" INTEGER NOT NULL DEFAULT 1,
         "spl_id" INTEGER NOT NULL,
         PRIMARY KEY("spl_entry_id"),
         FOREIGN KEY ("spl_id") REFERENCES "share_ping_list"("spl_id")
@@ -837,6 +838,7 @@ local queries = {
             where
                 image_tags.image_id = ?
                 and share_ping_list_entry.spl_id = ?
+                and share_ping_list_entry.enabled = 1
                 and pl_entry_positive_tags.spl_entry_id not in (
                     select pl_entry_negative_tags.spl_entry_id
                     from image_tags
@@ -858,6 +860,7 @@ local queries = {
             where
                 images_in_group.ig_id = ?
                 and share_ping_list_entry.spl_id = ?
+                and share_ping_list_entry.enabled = 1
                 and pl_entry_positive_tags.spl_entry_id not in (
                     select pl_entry_negative_tags.spl_entry_id
                     from images_in_group
@@ -875,7 +878,7 @@ local queries = {
                 share_data,
                 send_with_attribution
             FROM share_ping_list WHERE spl_id = ?;]],
-        get_entries_for_ping_list_by_id = [[SELECT spl_entry_id, handle, nickname, spl_id
+        get_entries_for_ping_list_by_id = [[SELECT spl_entry_id, handle, nickname, enabled, spl_id
             FROM share_ping_list_entry WHERE spl_id = ?;]],
         get_all_positive_tags_for_all_entries_in_ping_list_by_id = [[SELECT
                 pl_entry_positive_tags.spl_entry_id,
@@ -991,8 +994,9 @@ local queries = {
         insert_spl_entry = [[INSERT INTO share_ping_list_entry (
             handle,
             nickname,
+            enabled,
             spl_id
-        ) VALUES (?, ?, ?)
+        ) VALUES (?, ?, ?, ?)
         RETURNING spl_entry_id;]],
         insert_positive_tag = [[INSERT OR IGNORE INTO pl_entry_positive_tags
             (spl_entry_id, tag_id) VALUES (?, ?);]],
@@ -1108,8 +1112,11 @@ local queries = {
             SET "shared_at" = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
             WHERE "share_id" = ?;]],
         update_spl_entry_metadata = [[UPDATE "share_ping_list"
-            SET "name" = ?, "share_data" = ?, "send_witH_attribution" = ?
+            SET "name" = ?, "share_data" = ?, "send_with_attribution" = ?
             WHERE "spl_id" = ?;]],
+        update_spl_entry_by_id = [[UPDATE "share_ping_list_entry"
+            SET "handle" = ?, "nickname" = ?, "enabled" = ?
+            WHERE "spl_entry_id" = ?;]],
     },
 }
 
@@ -2677,6 +2684,21 @@ function Model:updateSharePingListMetadata(
     )
 end
 
+function Model:updateSharePingListEntry(spl_entry_id, handle, nickname, enabled)
+    if enabled == true then
+        enabled = 1
+    else
+        enabled = 0
+    end
+    return self.conn:execute(
+        queries.model.update_spl_entry_by_id,
+        handle,
+        nickname,
+        enabled,
+        spl_entry_id
+    )
+end
+
 function Model:getAllSharePingLists()
     local result, err =
         self.conn:fetchAll(queries.model.get_all_share_ping_lists)
@@ -2817,6 +2839,8 @@ function Model:getEntriesForSPLById(spl_id)
         local entry = entries[i]
         positive_tags_regrouped[entry.spl_entry_id] = {}
         negative_tags_regrouped[entry.spl_entry_id] = {}
+        -- Also change enabled from int to bool
+        entry.enabled = (entry.enabled == 1)
     end
     for i = 1, #positive_tags do
         local tag = positive_tags[i]
