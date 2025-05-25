@@ -24,14 +24,14 @@ local accounts_setup = [[
         "password" TEXT NOT NULL,
         "invites_available" INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY("user_id")
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "telegram_accounts" (
         "user_id" TEXT NOT NULL,
         "tg_userid" INTEGER NOT NULL UNIQUE,
         "tg_username" TEXT,
         PRIMARY KEY("tg_userid", "user_id")
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "sessions" (
         "session_id" TEXT NOT NULL UNIQUE,
@@ -44,7 +44,7 @@ local accounts_setup = [[
         PRIMARY KEY("session_id"),
         FOREIGN KEY ("user_id") REFERENCES "users"("user_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "invites" (
         "invite_id" TEXT NOT NULL UNIQUE,
@@ -56,7 +56,7 @@ local accounts_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("invitee") REFERENCES "users"("user_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "telegram_link_requests" (
         "request_id" TEXT NOT NULL UNIQUE,
@@ -65,7 +65,7 @@ local accounts_setup = [[
         "tg_userid" INTEGER NOT NULL,
         "created_at" INTEGER NOT NULL,
         PRIMARY KEY("request_id")
-    );
+    ) STRICT;
 
     CREATE TRIGGER IF NOT EXISTS invitee_write_once
         BEFORE UPDATE OF "invitee" ON "invites"
@@ -90,7 +90,7 @@ local user_setup = [[
         "width" INTEGER NOT NULL,
         "file_size" INTEGER NOT NULL,
         PRIMARY KEY("image_id")
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "image_gradienthashes" (
         "image_id" INTEGER NOT NULL UNIQUE,
@@ -101,14 +101,14 @@ local user_setup = [[
         PRIMARY KEY ("image_id", "h1", "h2", "h3", "h4"),
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "tags" (
         "tag_id" INTEGER NOT NULL UNIQUE,
         "name" TEXT NOT NULL UNIQUE,
         "description" TEXT NOT NULL,
         PRIMARY KEY("tag_id")
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "incoming_tags" (
         "itid" INTEGER NOT NULL UNIQUE,
@@ -121,7 +121,7 @@ local user_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("image_tag_id") REFERENCES "image_tags"("image_tag_id")
         ON UPDATE CASCADE ON DELETE SET NULL
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "image_tags" (
         "image_tag_id" INTEGER NOT NULL,
@@ -132,7 +132,7 @@ local user_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE UNIQUE INDEX IF NOT EXISTS "no_duplicate_tags_on_images" ON "image_tags"
         ("image_id", "tag_id");
@@ -150,7 +150,7 @@ local user_setup = [[
         PRIMARY KEY("tag_rule_id"),
         FOREIGN KEY("tag_id") REFERENCES "tags"("tag_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE VIEW IF NOT EXISTS "incoming_tags_now_matched_by_tag_rules" (
         itid,
@@ -179,7 +179,7 @@ local user_setup = [[
         PRIMARY KEY("source_id"),
         FOREIGN KEY ("image_id") REFERENCES "images"("image_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE UNIQUE INDEX IF NOT EXISTS "unique_sources_per_image" ON "sources"
         ("image_id", "link");
@@ -189,7 +189,7 @@ local user_setup = [[
         "manually_confirmed" INTEGER NOT NULL DEFAULT 0,
         "name" TEXT NOT NULL UNIQUE COLLATE NOCASE,
         PRIMARY KEY("artist_id")
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "artist_handles" (
         "handle_id" INTEGER NOT NULL,
@@ -200,7 +200,7 @@ local user_setup = [[
         PRIMARY KEY("handle_id"),
         FOREIGN KEY ("artist_id") REFERENCES "artists"("artist_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "image_artists" (
         "image_id" INTEGER NOT NULL,
@@ -210,7 +210,7 @@ local user_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("artist_id") REFERENCES "artists"("artist_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE VIEW IF NOT EXISTS "images_for_gallery" (
         image_id,
@@ -251,7 +251,7 @@ local user_setup = [[
         "share_data" TEXT NOT NULL,
         "send_with_attribution" INTEGER NOT NULL DEFAULT 1,
         PRIMARY KEY("spl_id")
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "share_ping_list_entry" (
         "spl_entry_id" INTEGER NOT NULL UNIQUE,
@@ -262,7 +262,7 @@ local user_setup = [[
         PRIMARY KEY("spl_entry_id"),
         FOREIGN KEY ("spl_id") REFERENCES "share_ping_list"("spl_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "pl_entry_positive_tags" (
         "spl_entry_id" INTEGER NOT NULL,
@@ -272,7 +272,7 @@ local user_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("tag_id") REFERENCES "tags"("tag_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "pl_entry_negative_tags" (
         "spl_entry_id" INTEGER NOT NULL,
@@ -282,13 +282,13 @@ local user_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("tag_id") REFERENCES "tags"("tag_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "image_group" (
         "ig_id" INTEGER NOT NULL UNIQUE,
         "name" TEXT,
         PRIMARY KEY("ig_id")
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "images_in_group" (
         "image_id" INTEGER NOT NULL,
@@ -299,7 +299,7 @@ local user_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("ig_id") REFERENCES "image_group"("ig_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "thumbnails" (
         "thumbnail_id" INTEGER NOT NULL UNIQUE,
@@ -330,7 +330,7 @@ local user_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("thumbnail_id") REFERENCES "thumbnails"("thumbnail_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE TRIGGER IF NOT EXISTS update_selected_thumbnail
         AFTER INSERT ON "thumbnails"
@@ -383,7 +383,7 @@ local user_setup = [[
         "tg_message_id" INTEGER,
         "tg_source_link" TEXT,
         PRIMARY KEY ("qid")
-    );
+    ) STRICT;
 
     CREATE INDEX IF NOT EXISTS queue2_added_on ON queue2 (added_on);
     CREATE INDEX IF NOT EXISTS queue2_status_added_on ON queue2(status, added_on);
@@ -397,7 +397,7 @@ local user_setup = [[
         "image_height" INTEGER NOT NULL,
         FOREIGN KEY ("qid") REFERENCES "queue2"("qid")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "queue_gradienthashes" (
         "qid" INTEGER NOT NULL UNIQUE,
@@ -408,7 +408,7 @@ local user_setup = [[
         PRIMARY KEY ("qid", "h1", "h2", "h3", "h4"),
         FOREIGN KEY ("qid") REFERENCES "queue2"("qid")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE TABLE IF NOT EXISTS "share_records" (
         "share_id" TEXT NOT NULL UNIQUE,
@@ -421,7 +421,7 @@ local user_setup = [[
         ON UPDATE CASCADE ON DELETE CASCADE,
         FOREIGN KEY ("ig_id") REFERENCES "image_group"("ig_id")
         ON UPDATE CASCADE ON DELETE CASCADE
-    );
+    ) STRICT;
 
     CREATE TRIGGER IF NOT EXISTS share_record_use_once
         BEFORE UPDATE OF "shared_at" ON "share_records"
@@ -445,7 +445,7 @@ local tg_forward_cache_setup = [[
         "media" TEXT NOT NULL,
         "cached_at" INTEGER,
         PRIMARY KEY ("cache_id")
-    );
+    ) STRICT;
 
     CREATE UNIQUE INDEX IF NOT EXISTS cache_by_username_message_id
         ON cache (username, message_id);
@@ -460,7 +460,7 @@ local query_stats_setup = [[
         "query" TEXT NOT NULL,
         "duration" REAL NOT NULL,
         "timestamp" INTEGER NOT NULL
-    );
+    ) STRICT;
 
     CREATE INDEX IF NOT EXISTS query_stats_by_query ON query_stats (query);
 ]]
