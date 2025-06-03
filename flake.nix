@@ -322,6 +322,9 @@
           services.nginx.virtualHosts.${cfg.publicDomainName} = {
             forceSSL = true;
             enableACME = true;
+            quic = true;
+            http2 = true;
+            http3 = true;
             locations."/" = {
               proxyPass = let
                 port = toString (builtins.head cfg.ports);
@@ -333,6 +336,7 @@
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection "Upgrade";
                 client_max_body_size 100m;
+                add_header Alt-Svc 'h3=":443"; ma=86400';
               '';
             };
           };
