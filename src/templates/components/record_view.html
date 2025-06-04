@@ -6,7 +6,7 @@
 		width="{%& record.width == 0 and "100%" or record.width %}"
 		height="{%& record.height == 0 and "100%" or record.height %}"
         />
-    <picture>
+    <picture class="height-limit">
         <source srcset="/preview-file/{%& record.file %}.jxl" type="image/jxl" />
         <img
             src="/preview-file/{%& record.file %}.webp"
