@@ -3,7 +3,6 @@ QueueStatus = {
     ToDo = 0,
     Error = 1,
     Archived = 2,
-    ToDoAgain = 3,
     RetryLimitReached = 4,
     Discarded = 5,
 }

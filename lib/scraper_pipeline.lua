@@ -135,7 +135,7 @@ local function p_deserialize(model, queue_entry, _)
     if queue_entry.retry_count > 2 then
         return nil,
             {
-                kind = 2,
+                type = PipelineErrorType.RetryLimitReached,
                 description = "I tried to scrape this 3 times without succeeding, so I'm giving up.",
             }
     elseif queue_entry.help_ask and queue_entry.help_answer then
@@ -147,7 +147,7 @@ local function p_deserialize(model, queue_entry, _)
             )
     elseif
         queue_entry.status == QueueStatus.ToDo
-        or queue_entry.status == QueueStatus.ToDoAgain
+        or (queue_entry.help_ask ~= nil and queue_entry.help_answer ~= nil)
     then
         model:incrementQueueItemRetryCount(queue_entry.qid)
         return make_scrape_task_from_queue_entry(model, queue_entry)
@@ -952,12 +952,12 @@ end
 ---@param queue_entry ActiveQueueEntry
 ---@param error PipelineError
 local function handle_queue_error(model, queue_entry, error)
-    local model_function = model.setQueueItemStatusAndDescription
-    if error.type == PipelineErrorType.RetryLimitReached then
-        model_function = model.setQueueItemStatusOnly
-    end
-    local status_result, errmsg2 =
-        model_function(model, queue_entry.qid, error.type, error.description)
+    Log(kLogDebug, "error to be handled: %s" % { EncodeJson(error) })
+    local status_result, errmsg2 = model:setQueueItemStatusAndDescription(
+        queue_entry.qid,
+        error.type,
+        error.description
+    )
     if not status_result then
         Log(kLogWarn, "While processing queue for user %d, item %d: %s" % {
             model.user_id,
@@ -1060,6 +1060,7 @@ end
 
 return {
     process_all_queues = process_all_queues,
+    process_entry = process_entry,
     scraper = scrapers_by_name,
     can_process_uri = can_process_uri,
     normalize_uri = normalize_uri,

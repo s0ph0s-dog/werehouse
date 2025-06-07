@@ -7,6 +7,7 @@ local pipeline = require("scraper_pipeline")
 Nu = require("network_utils")
 HtmlParser = require("third_party.htmlparser")
 Multipart = require("third_party.multipart")
+NanoID = require("nanoid")
 local bot = require("tg_bot")
 
 TestFunctools = {}
@@ -261,7 +262,7 @@ end
 ---@param test_data ProcessEntryTest[]
 ---@param mocks MockData[]
 local function process_entry_framework_generic(func, test_data, mocks)
-    local original = fetch_mock(mocks)
+    fetch_mock(mocks)
     local results = {}
     for _, test in ipairs(test_data) do
         local result, errmsg = func(test.input)
@@ -271,8 +272,6 @@ local function process_entry_framework_generic(func, test_data, mocks)
             output = { result, errmsg },
         })
     end
-    -- Must do this before asserting so that I don't leave global state messed up
-    Fetch = original
     for _, result in ipairs(results) do
         luaunit.assertEquals(
             result.output[2],
@@ -298,28 +297,136 @@ end
 
 TestScraperPipeline = {}
 
---[[
-function TestScraperPipeline:testExampleLinkPermanentFailureShouldError()
-    local input = { "test://shouldFailPermanently" }
-    TestScraperProcessUri = function()
-        return nil, PipelineErrorPermanent("404")
+function TestScraperPipeline:setUp()
+    -- Make temporary directory for test execution.  This allows tests to do
+    -- database operations and file download operations without polluting global
+    -- state (in a way that can't be easily cleaned up).
+    -- Lua offers no `mkdtemp` function, so hack around it by using tmpname and
+    -- then deleting the file it made.  This is probably a TOCTOU bug, but I'll
+    -- deal with that when I get there.
+    self.tmpdir = os.tmpname()
+    unix.unlink(self.tmpdir)
+    unix.mkdir(self.tmpdir, 0755)
+    -- Change the working directory into this new temporary directory.  The rest
+    -- of the code assumes that it can use the cwd as storage for databases,
+    -- files, etc.
+    self.original_cwd = unix.getcwd()
+    unix.chdir(self.tmpdir)
+    self.user_id = DbUtil.make_user_id()
+    DbUtil.mkdir()
+    self.model = DbUtil.Model:new(nil, self.user_id)
+    self.original_fetch = Fetch
+end
+
+function TestScraperPipeline:tearDown()
+    -- This shouldn't be necessary because close is the destructor function for
+    -- the connection. I'm just superstitious.
+    self.model.conn:close()
+    Fetch = self.original_fetch
+    unix.chdir(self.original_cwd)
+    unix.rmrf(self.tmpdir)
+end
+
+function TestScraperPipeline:process_entry_helper(tests, mocks)
+    fetch_mock(mocks)
+    local results = {}
+    for _, test in ipairs(tests) do
+        local qid, err = self.model:enqueueExactRowForTesting(test.input)
+        if not qid or err then
+            luaunit.assertError("error setting up test", err)
+            return
+        end
+        qid = qid.qid
+        local row, err2 = self.model:getQueueEntryById(qid)
+        if not row or err2 then
+            luaunit.assertError("error setting up test", err2)
+            return
+        end
+        local ok, err3 = pcall(pipeline.process_entry, self.model, row)
+        if ok then
+            local after_row = self.model:getQueueEntryById(qid)
+            table.insert(results, {
+                input = test.input,
+                expected = test.expected,
+                output = after_row,
+            })
+        else
+            table.insert(results, {
+                input = test.input,
+                expected = test.expected,
+                output = err3,
+            })
+        end
+        self.model:deleteFromQueue { qid }
     end
-    local original = fetch_mock {
+    for _, result in ipairs(results) do
+        if type(result.output) == "table" then
+            result.output.qid = nil
+        end
+        luaunit.assertEquals(
+            result.output,
+            result.expected,
+            "result mismatch for input: %s" % { result.input }
+        )
+    end
+end
+
+function TestScraperPipeline:testRetryLimit()
+    local example_date = "1970-01-01T00:00:00.00000"
+    local mocks = {
         {
-            whenCalledWith = "test://shouldFailPermanently",
-            thenReturn = { 200, {}, "" },
+            whenCalledWith = "https://e621.net/posts/3211824.json",
+            thenReturn = { 502, {}, "Bad Gateway" },
         },
     }
-    local result, error = pipeline.scrape_sources(input)
-    Fetch = original
-    luaunit.assertIsNil(result)
-    luaunit.assertNotIsNil(error)
-    ---@cast error PipelineError
-    luaunit.assertEquals(error.type, 1)
+    local tests = {
+        {
+            input = {
+                link = "https://e621.net/posts/3211824",
+                added_on = example_date,
+                description = "",
+                status = QueueStatus.ToDo,
+                retry_count = 0,
+            },
+            expected = {
+                added_on = example_date,
+                description = '[{"description":"502","type":1}]',
+                link = "https://e621.net/posts/3211824",
+                retry_count = 1,
+                status = QueueStatus.Error,
+            },
+        },
+        {
+            input = {
+                link = "https://e621.net/posts/3211824",
+                added_on = example_date,
+                description = "",
+                status = QueueStatus.ToDo,
+                retry_count = 3,
+            },
+            expected = {
+                added_on = example_date,
+                description = "I tried to scrape this 3 times without succeeding, so I'm giving up.",
+                link = "https://e621.net/posts/3211824",
+                retry_count = 3,
+                status = QueueStatus.RetryLimitReached,
+            },
+        },
+    }
+    self:process_entry_helper(tests, mocks)
 end
-]]
 
-function TestScraperPipeline:testValidBskyLinks()
+TestScrapers = {}
+
+function TestScrapers:setUp()
+    self.original_fetch = Fetch
+end
+
+function TestScrapers:tearDown()
+    Fetch = self.original_fetch
+end
+
+function TestScrapers:testValidBskyLinks()
     local input =
         "https://bsky.app/profile/did:plc:4gjc5765wbtvrkdxysyvaewz/post/3kphxqgx6iv2b"
     local input_handle =
@@ -397,7 +504,7 @@ function TestScraperPipeline:testValidBskyLinks()
     )
 end
 
-function TestScraperPipeline:testBskyLinkWithNoAspectRatio()
+function TestScrapers:testBskyLinkWithNoAspectRatio()
     local input =
         "https://bsky.app/profile/did:plc:bkq6i3w4hg7zkzuf5phyfdxg/post/3kb4ebxmabw2v"
     local mocks = {
@@ -442,7 +549,7 @@ function TestScraperPipeline:testBskyLinkWithNoAspectRatio()
     )
 end
 
-function TestScraperPipeline:testBskyVideo()
+function TestScrapers:testBskyVideo()
     local input =
         "https://bsky.app/profile/did:plc:2dwd4zvjtr3fob2pv2pwuf3t/post/3l3vpkeq4lr2j"
     local mocks = {
@@ -490,7 +597,7 @@ function TestScraperPipeline:testBskyVideo()
     )
 end
 
-function TestScraperPipeline:testValidTwitterLinks()
+function TestScrapers:testValidTwitterLinks()
     local tweetTrackingParams =
         "https://twitter.com/thatFunkybun/status/1778885919572979806?s=19"
     local tweetVxtwitter =
@@ -665,7 +772,7 @@ function TestScraperPipeline:testValidTwitterLinks()
     )
 end
 
-function TestScraperPipeline:testValidFuraffinityLinks()
+function TestScrapers:testValidFuraffinityLinks()
     local inputRegular = "https://www.furaffinity.net/view/36328438"
     local regularWithFull = "https://www.furaffinity.net/full/36328438"
     local inputFx = "https://www.fxfuraffinity.net/view/36328438"
@@ -745,7 +852,7 @@ function TestScraperPipeline:testValidFuraffinityLinks()
     )
 end
 
-function TestScraperPipeline:testValidE6Links()
+function TestScrapers:testValidE6Links()
     local inputRegular = "https://e621.net/posts/4366241"
     local inputQueryParams =
         "https://e621.net/posts/4366241?q=filetype%3Ajpg+order%3Ascore"
@@ -1808,7 +1915,7 @@ function TestScraperPipeline:testValidE6Links()
     )
 end
 
-function TestScraperPipeline:testValidCohostLinks()
+function TestScrapers:testValidCohostLinks()
     local inputSFW =
         "https://cohost.org/TuxedoDragon/post/5682670-something-something"
     local inputNSFW =
@@ -2036,7 +2143,7 @@ function TestScraperPipeline:testValidCohostLinks()
     )
 end
 
-function TestScraperPipeline:testItakuEEWorks()
+function TestScrapers:testItakuEEWorks()
     local input_nsfw = "https://itaku.ee/images/164381"
     local tests = {
         {
@@ -2115,7 +2222,7 @@ function TestScraperPipeline:testItakuEEWorks()
     )
 end
 
-function TestScraperPipeline:testValidMastodonLinks()
+function TestScrapers:testValidMastodonLinks()
     local input_image = "https://gulp.cafe/@greedygulo/112300431726424371"
     local input_gifv = "https://thicc.horse/@QuanZillan/112697596954622744"
     local tests = {
@@ -2222,7 +2329,7 @@ function TestScraperPipeline:testValidMastodonLinks()
 end
 
 --[[
-function TestScraperPipeline:testDeviantArt()
+function TestScrapers:testDeviantArt()
     local case1 =
         "https://www.deviantart.com/teonocturnal/art/Game-day-1062228118"
     local tests = {
@@ -2293,7 +2400,7 @@ function TestScraperPipeline:testDeviantArt()
 end
 ]]
 
-function TestScraperPipeline:testWeasyl()
+function TestScrapers:testWeasyl()
     local case1 =
         "https://www.weasyl.com/~koorivlf/submissions/1912485/koor-dress-me"
     local case2 = "https://www.weasyl.com/submission/1912485"
@@ -2365,7 +2472,7 @@ function TestScraperPipeline:testWeasyl()
     )
 end
 
-function TestScraperPipeline:testInkbunny()
+function TestScrapers:testInkbunny()
     local input = "https://inkbunny.net/s/3388744-p2-#pictop"
     local tests = {
         {
@@ -2449,7 +2556,7 @@ function TestScraperPipeline:testInkbunny()
     )
 end
 
-function TestScraperPipeline:testTelegramWorks()
+function TestScrapers:testTelegramWorks()
     local input_image = "https://t.me/outsidewolves/1004"
     local input_album = "https://t.me/momamo_art/994"
     local input_video = "https://t.me/techcrimes/12101"

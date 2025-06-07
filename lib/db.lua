@@ -601,7 +601,10 @@ local queries = {
                 queue2.description,
                 queue2.help_ask,
                 queue2.help_answer,
-                queue2.tg_source_link
+                queue2.tg_chat_id,
+                queue2.tg_message_id,
+                queue2.tg_source_link,
+                queue2.retry_count
             FROM queue2
             LEFT NATURAL JOIN queue_images
             WHERE queue2.qid = ?;]],
@@ -934,6 +937,20 @@ local queries = {
                 "image_width",
                 "image_height"
             ) VALUES (?, ?, ?, ?, ?);]],
+        insert_row_into_queue = [[INSERT INTO
+            "queue2" (
+                "link",
+                "added_on",
+                "status",
+                "description",
+                "retry_count",
+                "help_ask",
+                "help_answer",
+                "tg_chat_id",
+                "tg_message_id",
+                "tg_source_link"
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING "qid";]],
         insert_image_into_images = [[INSERT INTO
             "images" ("file", "mime_type", "width", "height", "kind", "rating", "file_size", "saved_at")
             VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
@@ -1052,9 +1069,17 @@ local queries = {
             SET "status" = 0, "retry_count" = 0, "help_ask" = NULL, "help_answer" = NULL
             WHERE qid = ?;]],
         update_queue_item_help_ask = [[UPDATE "queue2"
-            SET "help_ask" = ? WHERE qid = ?;]],
+            SET
+                "help_ask" = ?,
+                "status" = 0,
+                "help_answer" = NULL
+            WHERE qid = ?;]],
         update_queue_item_help_answer = [[UPDATE "queue2"
-            SET "help_answer" = ? WHERE qid = ?;]],
+            SET
+                "help_answer" = ?,
+                "status" = 0,
+                "description" = ''
+            WHERE qid = ?;]],
         update_queue_item_telegram_ids = [[UPDATE "queue2"
             SET "tg_chat_id" = ?, "tg_message_id" = ? WHERE qid = ?;]],
         update_queue_item_telegram_link = [[UPDATE "queue2"
@@ -1517,6 +1542,29 @@ function Model:enqueueImage(mime_type, image_data)
     return q_record
 end
 
+function Model:enqueueExactRowForTesting(row)
+    local ok, result, errmsg = pcall(
+        self.conn.fetchOne,
+        self.conn,
+        queries.model.insert_row_into_queue,
+        row.link,
+        row.added_on,
+        row.status,
+        row.description,
+        row.retry_count,
+        row.help_ask,
+        row.help_answer,
+        row.tg_chat_id,
+        row.tg_message_id,
+        row.tg_source_link
+    )
+    if not ok then
+        print(result)
+        return nil, "Link already in queue"
+    end
+    return result, errmsg
+end
+
 function Model:updateQueueItemTelegramIds(qid, chat_id, message_id)
     return self.conn:execute(
         queries.model.update_queue_item_telegram_ids,
@@ -1551,34 +1599,38 @@ function Model:resetQueueItemStatus(queue_ids)
     return #queue_ids
 end
 
-function Model:setQueueItemStatusOnly(queue_id, tombstone)
+function Model:setQueueItemStatusOnly(queue_id, status)
     return self.conn:execute(
         queries.model.update_queue_item_status_only,
-        tombstone,
+        status,
         queue_id
     )
 end
 
-function Model:setQueueItemStatusAndDescription(queue_id, tombstone, new_status)
+function Model:setQueueItemStatusAndDescription(
+    queue_id,
+    status,
+    new_description
+)
     return self:setQueueItemsStatusAndDescription(
         { queue_id },
-        tombstone,
-        new_status
+        status,
+        new_description
     )
 end
 
 function Model:setQueueItemsStatusAndDescription(
     queue_ids,
-    tombstone,
-    new_status
+    status,
+    new_description
 )
     local SP_QSTATUS = "set_queue_status"
     self:create_savepoint(SP_QSTATUS)
     for _, qid in ipairs(queue_ids) do
         local ok, err = self.conn:execute(
             queries.model.update_queue_item_status,
-            new_status,
-            tombstone,
+            new_description,
+            status,
             qid
         )
         if not ok then
@@ -3110,8 +3162,12 @@ function Accounts:makeInviteForUser(user_id)
     )
 end
 
+local function make_user_id()
+    return NanoID.simple_with_prefix(IdPrefixes.user)
+end
+
 function Accounts:acceptInvite(invite_id, username, password_hash)
-    local user_id = NanoID.simple_with_prefix(IdPrefixes.user)
+    local user_id = make_user_id()
     local SP = "accept_invite"
     self:create_savepoint(SP)
     local user_ok, user_err = self.conn:execute(
@@ -3594,6 +3650,7 @@ end)
 
 return {
     mkdir = mkdir,
+    make_user_id = make_user_id,
     get_query_stats = get_query_stats,
     Accounts = Accounts,
     Model = Model,
