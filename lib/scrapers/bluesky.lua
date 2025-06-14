@@ -1,6 +1,6 @@
 local BSKY_URI_EXP = assert(
     re.compile(
-        [[^(https?://)?(bsky|cbsky|psky|fxbsky|bskye)\.app/profile/([^/#?]+)/post/([a-z0-9]+)]]
+        [[^(https?://)?(bsky|cbsky|psky|fxbsky|bskye|vxbsky|bbsky)\.app/profile/([^/#?]+)/post/([a-z0-9]+)]]
     )
 )
 local CANONICAL_DOMAIN = "bsky.app"
