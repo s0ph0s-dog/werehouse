@@ -293,7 +293,8 @@ footer {
 }
 
 .main-image input:checked ~ div .height-limit,
-.main-image input:checked ~ div picture .height-limit
+.main-image input:checked ~ div picture .height-limit,
+.main-image input:checked ~ img.height-limit
 {
   max-height: 95vh;
   width: auto;
