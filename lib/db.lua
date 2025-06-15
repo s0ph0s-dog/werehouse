@@ -678,6 +678,8 @@ local queries = {
             WHERE ig_id = ?;]],
         get_all_artists = [[SELECT artist_id, name FROM artists;]],
         get_artist_entry_count = [[SELECT COUNT(*) AS count FROM artists;]],
+        get_artist_entry_count_search = [[SELECT COUNT(*) AS count FROM artists
+            WHERE artists.name LIKE '%'||?||'%';]],
         get_artist_entries_paginated = [[SELECT
                 artists.artist_id,
                 artists.name,
@@ -695,6 +697,24 @@ local queries = {
             ORDER BY artists.name COLLATE NOCASE
             LIMIT ?
             OFFSET ?;]],
+        get_artist_entries_paginated_search = [[SELECT
+                artists.artist_id,
+                artists.name,
+                artists.manually_confirmed,
+                COUNT(artist_handles.domain) AS handle_count,
+                ifnull(image_count, 0) AS image_count
+            FROM artists
+            LEFT JOIN artist_handles ON artists.artist_id = artist_handles.artist_id
+            LEFT JOIN (
+                SELECT artist_id AS artist_id_for_count, COUNT(*) as image_count
+                FROM image_artists
+                GROUP BY artist_id
+            ) ON artists.artist_id = artist_id_for_count
+            WHERE artists.name LIKE '%'||?||'%'
+            GROUP BY artists.artist_id
+            ORDER BY artists.name COLLATE NOCASE
+            LIMIT ?
+            OFFSET ?;]],
         get_tag_entries_paginated = [[SELECT
                 tags.tag_id,
                 tags.name,
@@ -702,6 +722,18 @@ local queries = {
                 COUNT(image_tags.image_id) AS image_count
             FROM tags
             LEFT JOIN image_tags ON image_tags.tag_id = tags.tag_id
+            GROUP BY tags.tag_id
+            ORDER BY tags.name COLLATE NOCASE
+            LIMIT ?
+            OFFSET ?;]],
+        get_tag_entries_paginated_search = [[SELECT
+                tags.tag_id,
+                tags.name,
+                tags.description,
+                COUNT(image_tags.image_id) AS image_count
+            FROM tags
+            LEFT JOIN image_tags ON image_tags.tag_id = tags.tag_id
+            WHERE tags.name LIKE '%'||?||'%'
             GROUP BY tags.tag_id
             ORDER BY tags.name COLLATE NOCASE
             LIMIT ?
@@ -746,6 +778,8 @@ local queries = {
             LIMIT ?;]],
         get_all_images_for_size_check = [[SELECT image_id, file, file_size FROM images;]],
         get_image_group_count = [[SELECT COUNT(*) AS count FROM image_group;]],
+        get_image_group_count_search = [[SELECT COUNT(*) AS count FROM image_group
+            WHERE image_group.name LIKE '%'||?||'%';]],
         get_image_groups_paginated = [[SELECT
                 image_group.ig_id,
                 image_group.name,
@@ -754,6 +788,17 @@ local queries = {
             LEFT NATURAL JOIN images_in_group
             GROUP BY image_group.ig_id
             ORDER BY image_group.ig_id
+            LIMIT ?
+            OFFSET ?;]],
+        get_image_groups_paginated_search = [[SELECT
+                image_group.ig_id,
+                image_group.name,
+            COUNT(images_in_group.image_id) AS image_count
+            FROM image_group
+            LEFT NATURAL JOIN images_in_group
+            WHERE image_group.name LIKE '%'||?||'%'
+            GROUP BY image_group.ig_id
+            ORDER BY image_group.name
             LIMIT ?
             OFFSET ?;]],
         get_tag_rules_paginated = [[SELECT
@@ -821,7 +866,9 @@ local queries = {
                 AND images_in_group.image_id = ?
                 AND (siblings."order" = (images_in_group."order" + 1)
                     OR siblings."order" = (images_in_group."order" - 1));]],
-        get_tag_entry_count = [[SELECT COUNT(*) AS tag_count FROM tags;]],
+        get_tag_entry_count = [[SELECT COUNT(*) AS count FROM tags;]],
+        get_tag_entry_count_search = [[SELECT COUNT(*) AS count FROM tags
+            WHERE tags.name LIKE '%'||?||'%';]],
         get_tag_rule_count = [[SELECT COUNT(*) AS count FROM tag_rules;]],
         get_image_stats = [[SELECT kind, COUNT(kind) AS record_count FROM images
             GROUP BY kind
@@ -1229,16 +1276,36 @@ function Model:getImageStats()
     return self.conn:fetchAll(queries.model.get_image_stats)
 end
 
-function Model:_get_count(query)
-    local result, errmsg = self.conn:fetchOne(query)
+function Model:_get_count(query, search)
+    local fetchArgs = nil
+    if type(query) ~= "table" then
+        query = { query }
+    end
+    if search then
+        fetchArgs = { query[2], search }
+    else
+        fetchArgs = { query[1] }
+    end
+    local result, errmsg = self.conn:fetchOne(table.unpack(fetchArgs))
     if not result then
         return nil, errmsg
     end
     return result.count
 end
 
-function Model:_get_paginated(query, page_num, per_page)
-    return self.conn:fetchAll(query, per_page, (page_num - 1) * per_page)
+function Model:_get_paginated(query, page_num, per_page, search_term)
+    local offset = (page_num - 1) * per_page
+    local fetchArgs = { per_page, offset }
+    if type(query) ~= "table" then
+        query = { query }
+    end
+    if search_term then
+        table.insert(fetchArgs, 1, search_term)
+        table.insert(fetchArgs, 1, query[2])
+    else
+        table.insert(fetchArgs, 1, query[1])
+    end
+    return self.conn:fetchAll(table.unpack(fetchArgs))
 end
 
 local function rand_hex(n)
@@ -1885,8 +1952,22 @@ function Model:getTagCount()
     return result.tag_count
 end
 
+function Model:getTagCountForSearch(search_term)
+    return self:_get_count({
+        queries.model.get_tag_entry_count,
+        queries.model.get_tag_entry_count_search,
+    }, search_term)
+end
+
 function Model:getArtistCount()
     return self:_get_count(queries.model.get_artist_entry_count)
+end
+
+function Model:getArtistCountForSearch(search_term)
+    return self:_get_count({
+        queries.model.get_artist_entry_count,
+        queries.model.get_artist_entry_count_search,
+    }, search_term)
 end
 
 function Model:getAllArtists()
@@ -1901,12 +1982,26 @@ function Model:getPaginatedArtists(page_num, per_page)
     )
 end
 
+function Model:searchPaginatedArtists(page_num, per_page, search_term)
+    return self:_get_paginated({
+        queries.model.get_artist_entries_paginated,
+        queries.model.get_artist_entries_paginated_search,
+    }, page_num, per_page, search_term)
+end
+
 function Model:getPaginatedTags(page_num, per_page)
     return self:_get_paginated(
         queries.model.get_tag_entries_paginated,
         page_num,
         per_page
     )
+end
+
+function Model:searchPaginatedTags(page_num, per_page, search_term)
+    return self:_get_paginated({
+        queries.model.get_tag_entries_paginated,
+        queries.model.get_tag_entries_paginated_search,
+    }, page_num, per_page, search_term)
 end
 
 function Model:getArtistById(artist_id)
@@ -2252,12 +2347,27 @@ function Model:getImageGroupCount()
     return self:_get_count(queries.model.get_image_group_count)
 end
 
-function Model:getPaginatedImageGroups(page_num, per_page)
+function Model:getImageGroupCountForSearch(search)
+    return self:_get_count({
+        queries.model.get_image_group_count,
+        queries.model.get_image_group_count_search,
+    }, search)
+end
+
+function Model:getPaginatedImageGroups(page_num, per_page, query)
     return self:_get_paginated(
         queries.model.get_image_groups_paginated,
         page_num,
-        per_page
+        per_page,
+        query
     )
+end
+
+function Model:searchPaginatedImageGroups(page_num, per_page, query)
+    return self:_get_paginated({
+        queries.model.get_image_groups_paginated,
+        queries.model.get_image_groups_paginated_search,
+    }, page_num, per_page, query)
 end
 
 function Model:renameImageGroup(ig_id, new_name)

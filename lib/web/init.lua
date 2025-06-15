@@ -1286,7 +1286,8 @@ end)
 
 local render_artists = WebUtility.login_required(function(r, _)
     local per_page = 50
-    local artist_count, count_errmsg = Model:getArtistCount()
+    local query = r.params.search ~= "" and r.params.search or nil
+    local artist_count, count_errmsg = Model:getArtistCountForSearch(query)
     if not artist_count then
         Log(kLogDebug, tostring(count_errmsg))
         return Fm.serve500()
@@ -1296,7 +1297,7 @@ local render_artists = WebUtility.login_required(function(r, _)
         return Fm.serve400()
     end
     local artist_records, artist_errmsg =
-        Model:getPaginatedArtists(cur_page, per_page)
+        Model:searchPaginatedArtists(cur_page, per_page, query)
     if not artist_records then
         Log(kLogInfo, artist_errmsg)
         return Fm.serve500()
@@ -1309,7 +1310,9 @@ local render_artists = WebUtility.login_required(function(r, _)
     return Fm.serveContent("artists", {
         error = error,
         artist_records = artist_records,
+        page = cur_page,
         pages = pages,
+        search = query,
     })
 end)
 
@@ -1582,7 +1585,8 @@ end)
 
 local render_image_groups = WebUtility.login_required(function(r, _)
     local per_page = 50
-    local ig_count, count_errmsg = Model:getImageGroupCount()
+    local query = r.params.search ~= "" and r.params.search or nil
+    local ig_count, count_errmsg = Model:getImageGroupCountForSearch(query)
     if not ig_count then
         Log(kLogDebug, tostring(count_errmsg))
         return Fm.serve500()
@@ -1592,7 +1596,7 @@ local render_image_groups = WebUtility.login_required(function(r, _)
         return Fm.serve400()
     end
     local ig_records, ig_errmsg =
-        Model:getPaginatedImageGroups(cur_page, per_page)
+        Model:searchPaginatedImageGroups(cur_page, per_page, query)
     if not ig_records then
         Log(kLogInfo, ig_errmsg)
         return Fm.serve500()
@@ -1605,6 +1609,8 @@ local render_image_groups = WebUtility.login_required(function(r, _)
         error = error,
         ig_records = ig_records,
         pages = pages,
+        page = cur_page,
+        search = query,
     })
 end)
 
@@ -1941,7 +1947,8 @@ end)
 
 local render_tags = WebUtility.login_required(function(r, _)
     local per_page = 50
-    local tag_count, tagcount_errmsg = Model:getTagCount()
+    local query = r.params.search ~= "" and r.params.search or nil
+    local tag_count, tagcount_errmsg = Model:getTagCountForSearch(query)
     if not tag_count then
         Log(kLogDebug, tostring(tagcount_errmsg))
         return Fm.serve500()
@@ -1950,7 +1957,8 @@ local render_tags = WebUtility.login_required(function(r, _)
     if cur_page < 1 then
         return Fm.serve400()
     end
-    local tag_records, tag_errmsg = Model:getPaginatedTags(cur_page, per_page)
+    local tag_records, tag_errmsg =
+        Model:searchPaginatedTags(cur_page, per_page, query)
     if not tag_records then
         Log(kLogInfo, tostring(tag_errmsg))
         return Fm.serve500()
@@ -1963,6 +1971,8 @@ local render_tags = WebUtility.login_required(function(r, _)
         error = error,
         tag_records = tag_records,
         pages = pages,
+        page = cur_page,
+        search = query,
     })
 end)
 

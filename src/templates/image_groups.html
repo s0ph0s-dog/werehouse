@@ -5,13 +5,22 @@
 {% elseif #ig_records == 0 then %}
 <p>No record groups yet. You can create one by <a href="/image">selecting multiple records on the Records page</a> and clicking “New Group With Selection.”</p>
 {% else %}
+<form method="GET">
+    <input type="hidden" name="page" value="{%& page %}" />
+    <span class="buttons"><input
+            type="search"
+            placeholder="Simple Search Query"
+            value="{%& search %}"
+            name="search"
+            /><button>Search</button></span>
+</form>
 <form method="POST" hx-boost="true" hx-swap="show:none">
   {% if error and type(error) == "string" then %}
   <p class="error">{%& error %}</p>
   {% end %}
   <span class="buttons sticky-top"
-    ><input type="reset" value="Deselect All" /><button
-      type="button"
+        ><input type="reset" value="Deselect All"
+        /><button type="button"
       onclick="document.getElementsByName('ig_ids[]').forEach((e) => { e.checked=true; })"
     >
       Select All</button

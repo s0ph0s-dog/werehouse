@@ -8,6 +8,15 @@
 {% elseif #artist_records == 0 then %}
 <p>No artists yet.</p>
 {% else %}
+<form method="GET">
+    <input type="hidden" name="page" value="{%& page %}" />
+    <span class="buttons"><input
+          type="search"
+          placeholder="Simple Search Query"
+          value="{%& search %}"
+          name="search"
+          /><button>Search</button></span>
+</form>
 <form method="POST" hx-boost="true" hx-swap="show:none">
   {% if error and type(error) == "string" then %}
   <p class="error">{%& error %}</p>
