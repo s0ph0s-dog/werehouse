@@ -1284,11 +1284,29 @@ local accept_images = WebUtility.login_required(function(r, _)
     return redirect
 end)
 
-local render_artists = WebUtility.login_required(function(r, _)
-    local per_page = 50
+---Render a list view for non-image items.
+---@param r any The request context.
+---@param model Model A Model object to use for DB queries.
+---@param settings {kind: string, title: string, singular: string, plural: string, add_link: string|nil} Settings which control how the page is rendered.  Each supported kind has a slightly different layout.  Title is the page title. Singular and Plural are the singular and plural forms of the word for whatever's being listed. Singular should be title cased, plural should be lowercase.  URL path to the "add" page for the kind of item being listed. May be omitted if the add page doesn't exist (e.g. for record groups).
+---@param per_page integer The number of records to show per page.
+---@param count_fn function Function on the model object which counts the total number of results. This should match `get*CountForSearch`.
+---@param search_fn function Function on the model object which actually does
+---the search. This should match `searchPaginated*`.
+---@return any # Rendered page output.
+local function render_generic_list(
+    r,
+    model,
+    settings,
+    per_page,
+    count_fn,
+    search_fn
+)
     local query = r.params.search ~= "" and r.params.search or nil
-    local artist_count, count_errmsg = Model:getArtistCountForSearch(query)
-    if not artist_count then
+    if query then
+        query = query:trim()
+    end
+    local count, count_errmsg = count_fn(model, query)
+    if not count then
         Log(kLogDebug, tostring(count_errmsg))
         return Fm.serve500()
     end
@@ -1300,27 +1318,44 @@ local render_artists = WebUtility.login_required(function(r, _)
     -- page parameter from where they *were* may be on a page that doesn't exist
     -- for where they're *going*.  Reset them to the first page, which probably
     -- matches their intent.
-    if query and ((cur_page * per_page) - artist_count) > per_page then
+    if query and ((cur_page * per_page) - count) > per_page then
         cur_page = 1
     end
-    local artist_records, artist_errmsg =
-        Model:searchPaginatedArtists(cur_page, per_page, query)
-    if not artist_records then
-        Log(kLogInfo, artist_errmsg)
+    local records, rec_errmsg = search_fn(model, cur_page, per_page, query)
+    if not records then
+        Log(kLogInfo, rec_errmsg)
         return Fm.serve500()
     end
-    local pages =
-        pagination_data(cur_page, artist_count, per_page, #artist_records)
+    local pages = pagination_data(cur_page, count, per_page, #records)
     local error = r.session.error
     r.session.error = nil
     set_after_dialog_action(r)
-    return Fm.serveContent("artists", {
+    return Fm.serveContent("generic_list", {
         error = error,
-        artist_records = artist_records,
-        page = cur_page,
+        settings = settings,
+        records = records,
         pages = pages,
+        page = cur_page,
         search = query,
     })
+end
+
+local render_artists = WebUtility.login_required(function(r, _)
+    local settings = {
+        kind = "artist",
+        title = "Artists",
+        singular = "Artist",
+        plural = "artists",
+        add_link = "/artist/add",
+    }
+    return render_generic_list(
+        r,
+        Model,
+        settings,
+        50,
+        Model.getArtistCountForSearch,
+        Model.searchPaginatedArtists
+    )
 end)
 
 local accept_artists = WebUtility.login_required(function(r)
@@ -1591,41 +1626,20 @@ local accept_add_artist = WebUtility.login_required(function(r)
 end)
 
 local render_image_groups = WebUtility.login_required(function(r, _)
-    local per_page = 50
-    local query = r.params.search ~= "" and r.params.search or nil
-    local ig_count, count_errmsg = Model:getImageGroupCountForSearch(query)
-    if not ig_count then
-        Log(kLogDebug, tostring(count_errmsg))
-        return Fm.serve500()
-    end
-    local cur_page = tonumber(r.params.page or "1")
-    if cur_page < 1 then
-        return Fm.serve400()
-    end
-    -- When someone adds a search query while they're far into the list, the
-    -- page parameter from where they *were* may be on a page that doesn't exist
-    -- for where they're *going*.  Reset them to the first page, which probably
-    -- matches their intent.
-    if query and ((cur_page * per_page) - ig_count) > per_page then
-        cur_page = 1
-    end
-    local ig_records, ig_errmsg =
-        Model:searchPaginatedImageGroups(cur_page, per_page, query)
-    if not ig_records then
-        Log(kLogInfo, ig_errmsg)
-        return Fm.serve500()
-    end
-    local pages = pagination_data(cur_page, ig_count, per_page, #ig_records)
-    local error = r.session.error
-    r.session.error = nil
-    set_after_dialog_action(r)
-    return Fm.serveContent("image_groups", {
-        error = error,
-        ig_records = ig_records,
-        pages = pages,
-        page = cur_page,
-        search = query,
-    })
+    local settings = {
+        kind = "ig",
+        title = "Image Groups",
+        singular = "Group",
+        plural = "groups",
+    }
+    return render_generic_list(
+        r,
+        Model,
+        settings,
+        50,
+        Model.getImageGroupCountForSearch,
+        Model.searchPaginatedImageGroups
+    )
 end)
 
 local accept_image_groups = WebUtility.login_required(function(r)
@@ -1960,41 +1974,21 @@ local accept_telegram_link = WebUtility.login_required(function(r, user_record)
 end)
 
 local render_tags = WebUtility.login_required(function(r, _)
-    local per_page = 50
-    local query = r.params.search ~= "" and r.params.search or nil
-    local tag_count, tagcount_errmsg = Model:getTagCountForSearch(query)
-    if not tag_count then
-        Log(kLogDebug, tostring(tagcount_errmsg))
-        return Fm.serve500()
-    end
-    local cur_page = tonumber(r.params.page or "1")
-    if cur_page < 1 then
-        return Fm.serve400()
-    end
-    -- When someone adds a search query while they're far into the list, the
-    -- page parameter from where they *were* may be on a page that doesn't exist
-    -- for where they're *going*.  Reset them to the first page, which probably
-    -- matches their intent.
-    if query and ((cur_page * per_page) - tag_count) > per_page then
-        cur_page = 1
-    end
-    local tag_records, tag_errmsg =
-        Model:searchPaginatedTags(cur_page, per_page, query)
-    if not tag_records then
-        Log(kLogInfo, tostring(tag_errmsg))
-        return Fm.serve500()
-    end
-    local pages = pagination_data(cur_page, tag_count, per_page, #tag_records)
-    local error = r.session.error
-    r.session.error = nil
-    set_after_dialog_action(r)
-    return Fm.serveContent("tags", {
-        error = error,
-        tag_records = tag_records,
-        pages = pages,
-        page = cur_page,
-        search = query,
-    })
+    local settings = {
+        kind = "tag",
+        title = "Tags",
+        singular = "Tag",
+        plural = "tags",
+        add_link = "/tag/add",
+    }
+    return render_generic_list(
+        r,
+        Model,
+        settings,
+        50,
+        Model.getTagCountForSearch,
+        Model.searchPaginatedTags
+    )
 end)
 
 local accept_tags = WebUtility.login_required(function(r)

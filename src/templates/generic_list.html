@@ -1,0 +1,103 @@
+{% function artist_record(settings, item) %}
+<strong
+	><a href="/artist/{%& item.artist_id %}"
+		>{%& item.name %}</a
+	></strong
+>
+<p>
+	{% render("components/artist_verified", {artist = item}) %}, 📇: {%&
+	item.handle_count %}, 🖼️: {%& item.image_count %}
+</p>
+{% end %}
+{% function ig_record(settings, item) %}
+<strong
+	><a href="/image-group/{%& item.ig_id %}"
+		>{%& item.name %}</a
+	></strong
+>
+<p>🖼️: {%& item.image_count %}</p>
+{% end %}
+{% function tag_record(settings, item) %}
+<strong
+	><a href="/tag/{%& item.tag_id %}">{%& item.name %}</a></strong
+>
+<p>
+	🖼️: {%& item.image_count %} {% if item.description and
+	#item.description > 0 then %}| {%& item.description %}{% end %}
+</p>
+{% end %}
+{% local record_fn_map = {
+	artist = artist_record,
+	ig = ig_record,
+  tag = tag_record,
+} %}
+{% function block.content() %}
+<h1>{%& settings.title %}</h1>
+{% if settings.add_link then %}
+<p>
+	<a
+		href="{%& settings.add_link %}"
+		hx-get="{%& settings.add_link %}"
+		hx-target="#dialog"
+	>Add {%& settings.singular %}…</a>
+</p>
+{% end %}
+{% if pages.current > 1 and #records == 0 then %}
+<p>You've fallen off the end of the page counter!</p>
+{% elseif #records == 0 then %}
+<p>No {%& settings.plural %} yet.</p>
+{% else %}
+<form method="GET">
+    <input type="hidden" name="page" value="{%& page %}" />
+    <span class="buttons"><input
+          type="search"
+          placeholder="Simple Search Query"
+          value="{%& search %}"
+          name="search"
+          /><button>Search</button></span>
+</form>
+<form method="POST" hx-boost="true" hx-swap="show:none">
+  {% if error and type(error) == "string" then %}
+  <p class="error">{%& error %}</p>
+  {% end %}
+  <span class="buttons sticky-top"
+    ><input type="reset" value="Deselect All" /><button
+      type="button"
+      onclick="document.getElementsByName('qids[]').forEach((e) => { e.checked=true; })"
+    >
+      Select All</button
+    ><input
+      type="submit"
+      name="delete"
+      value="Delete"
+      data-confirm-nicely /><input
+      type="submit"
+      name="merge"
+      value="Merge"
+      data-confirm-nicely
+  /></span>
+	{% local record_fn = record_fn_map[settings.kind]
+		 local name_key = settings.kind .. "_ids[]"
+	   local id_key = settings.kind .. "_id"
+	%}
+  <ul class="checkbox-bullets" hx-boost="false">
+    {% for i = 1, #records do local item = records[i] %}
+    <li>
+      <label class="checkbox-bullet">
+        <input
+          type="checkbox"
+					name="{%& name_key %}"
+          value="{%& item[id_key] %}"
+        />
+        <div>
+				{% record_fn(settings, item) %}
+				</div>
+			</label>
+		</li>
+    {% end %}
+  </ul>
+  {% render("components/pagination_controls", { pages = pages, kind_plural =
+  settings.plural }) %}
+</form>
+{% end %}{% end %}{% render("layouts/main", { title = settings.title })
+%}
