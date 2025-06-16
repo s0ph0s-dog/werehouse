@@ -68,10 +68,10 @@ end
 function TestFunctools:testReduceWorks()
     local seq = { "you ", "ass", "hole" }
     local cat = function(acc, next)
-        return (acc or "") .. next
+        return acc .. next
     end
     local expected = "you asshole"
-    local result = table.reduce(seq, cat)
+    local result = table.reduce(seq, "", cat)
     luaunit.assertEquals(result, expected)
 end
 

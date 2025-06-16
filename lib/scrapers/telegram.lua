@@ -187,15 +187,11 @@ local function map_cache_video(author, post, uri)
 end
 
 local function map_cache_image(author, post, uri)
-    local largest = table.reduce(post.media, function(acc, next)
-        if acc then
-            if next.width > acc.width and next.height > acc.height then
-                return next
-            else
-                return acc
-            end
-        else
+    local largest = table.reduce(post.media, post.media[1], function(acc, next)
+        if next.width > acc.width and next.height > acc.height then
             return next
+        else
+            return acc
         end
     end)
     if not largest then
@@ -286,7 +282,7 @@ local function try_from_web_preview(uri, norm_uri)
     end
     local original_params = ParseUrl(uri).params
     assert(original_params ~= nil)
-    local was_single = table.reduce(original_params, function(acc, next)
+    local was_single = table.reduce(original_params, false, function(acc, next)
         return acc or (next[1] == "single")
     end)
     local parts = ParseUrl(norm_uri)

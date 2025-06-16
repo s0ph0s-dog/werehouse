@@ -35,12 +35,9 @@ local function process_attachment_blocks(post)
         table.filter(post.blocks, function(item)
             return item.type == "attachment-row"
         end),
+        {},
         function(acc, next)
-            if not acc then
-                return next.attachments
-            else
-                return table.extend(acc, next.attachments)
-            end
+            return table.extend(acc, next.attachments)
         end
     )
     table.extend(attachments, row_attachments)

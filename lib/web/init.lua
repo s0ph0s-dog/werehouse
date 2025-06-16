@@ -688,9 +688,13 @@ local accept_edit_image = WebUtility.login_required(function(r, user_record)
         return Fm.serveError(400, nil, "Bad rating")
     end
     r.params.rating = rating
-    local categories = table.reduce(r.params.category or {}, function(acc, next)
-        return (acc or 0) | (tonumber(next) or 0)
-    end)
+    local categories = table.reduce(
+        r.params.category or {},
+        0,
+        function(acc, next)
+            return acc | (tonumber(next) or 0)
+        end
+    )
     if not categories and r.params.category then
         return Fm.serveError(400, nil, "Bad categories")
     end

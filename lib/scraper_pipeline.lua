@@ -546,6 +546,7 @@ local function p_decide(model, queue_entry, task)
     if max_results == 1 then
         local largest_source = table.reduce(
             table.flatten(data),
+            nil,
             ---@param acc ScrapedSourceData?
             ---@param next ScrapedSourceData
             ---@return ScrapedSourceData
@@ -769,9 +770,23 @@ local function do_archive(model, task)
     assert(subtasks, "subtasks was nil, task is " .. EncodeJson(task))
     local group = nil
     Log(kLogInfo, "#subtasks: %d" % { #subtasks })
-    if #subtasks > 1 then
+    -- Count the number of subtasks where st.archive is non-nil, so that we can
+    -- avoid making a group that only actually has one record in it.  This can
+    -- occur when the scraper processes a Bluesky link with four images, the
+    -- first three of which have already been archived from elsewhere (FA), but
+    -- the fourth one is new.
+    local archive_subtask_count = table.reduce(
+        table.map(subtasks, function(st)
+            return st.archive
+        end),
+        0,
+        function(acc, next)
+            return next and acc + 1 or acc
+        end
+    )
+    if archive_subtask_count > 1 then
         local name = "Untitled group by "
-            .. table.reduce(subtasks[1].authors, function(acc, next)
+            .. table.reduce(subtasks[1].authors, nil, function(acc, next)
                 if acc == nil then
                     return next.display_name
                 else
@@ -940,8 +955,9 @@ local function decode_errors(errdesc)
                     return item.description
                 end
             ),
+            "",
             function(acc, next)
-                return (acc or "") .. "\n" .. next
+                return acc .. "\n" .. next
             end
         ) or "unable to process error message"
     end
