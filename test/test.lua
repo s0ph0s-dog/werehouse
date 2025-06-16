@@ -73,6 +73,11 @@ function TestFunctools:testReduceWorks()
     local expected = "you asshole"
     local result = table.reduce(seq, "", cat)
     luaunit.assertEquals(result, expected)
+    local expected2 = 10
+    local result2 = table.reduce({}, 10, function(acc, next)
+        return acc + next
+    end)
+    luaunit.assertEquals(result2, expected2)
 end
 
 function TestFunctools:testFlattenWorks()

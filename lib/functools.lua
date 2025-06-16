@@ -146,14 +146,14 @@ end
 ---@generic T : any, U : any
 ---@param sequence (T[])
 ---@param init U
----@param operator (fun(accumulator: U?, next: T): U?)
----@return (U?)
+---@param operator (fun(accumulator: U, next: T): U)
+---@return (U)
 function table.reduce(sequence, init, operator)
     if not sequence then
         return {}
     end
     if #sequence == 0 then
-        return nil
+        return init
     end
     local result = init
     for i = 1, #sequence do
