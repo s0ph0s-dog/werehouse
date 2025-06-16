@@ -180,7 +180,7 @@ local function import_tags(other_args)
 
     local line = io.stdin:read("l*")
     while line do
-        local line_clean = line:strip()
+        local line_clean = line:trim()
         insert_stmt:reset()
         insert_stmt:bind_values(line_clean)
         local step_result = insert_stmt:step()

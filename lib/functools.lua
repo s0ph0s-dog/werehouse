@@ -32,10 +32,6 @@ function string.endswith(s, suffix)
     return suffix == maybe_suffix
 end
 
-function string.strip(s)
-    return s:gsub("^%s+", ""):gsub("%s+$", "")
-end
-
 --- Given a UTF16 code unit count, return the corresponding index into the string.
 ---@param s string
 ---@param utf16i integer
@@ -77,7 +73,7 @@ function string.linecount(s)
 end
 
 function string.trim(s)
-    return s:match("^%s*(.*)%s*$")
+    return string.match(s, "^%s*(.-)%s*$")
 end
 
 ---@generic T : any, U : any

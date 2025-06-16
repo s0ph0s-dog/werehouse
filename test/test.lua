@@ -223,6 +223,30 @@ function TestFunctools:testSearchWorksOnRealData()
     luaunit.assertEquals(result, expected)
 end
 
+function TestFunctools:testTrim()
+    local tests = {
+        -- Leading spaces.
+        { " asdf", "asdf" },
+        -- Trailing spaces.
+        { "asdf ", "asdf" },
+        -- Both.
+        { " foo ", "foo" },
+        -- Don't mangle strings with no spaces.
+        { "untouched", "untouched" },
+        -- Don't mangle strings with spaces in the middle somewhere.
+        { "untouched middle", "untouched middle" },
+        -- Remove non-space characters too.
+        { "\nfoo\t", "foo" },
+    }
+    for i = 1, #tests do
+        local test = tests[i]
+        local input = test[1]
+        local expected = test[2]
+        local result = input:trim()
+        luaunit.assertEquals(result, expected)
+    end
+end
+
 ---@alias MockData {whenCalledWith: string, thenReturn: any[]}
 
 ---@param data MockData[]

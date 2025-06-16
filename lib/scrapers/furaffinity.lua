@@ -85,7 +85,7 @@ local function scrape_image_data(root)
         return nil, PipelineErrorPermanent("No rating for this post")
     end
     local rating_text = maybe_rating:getcontent()
-    rating_text = rating_text:strip()
+    rating_text = rating_text:trim()
     local rating = RATING_MAP[rating_text]
     if not rating then
         Log(kLogWarn, "Unknown rating from FA: %s" % { rating_text })
