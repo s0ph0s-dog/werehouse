@@ -1296,6 +1296,13 @@ local render_artists = WebUtility.login_required(function(r, _)
     if cur_page < 1 then
         return Fm.serve400()
     end
+    -- When someone adds a search query while they're far into the list, the
+    -- page parameter from where they *were* may be on a page that doesn't exist
+    -- for where they're *going*.  Reset them to the first page, which probably
+    -- matches their intent.
+    if query and ((cur_page * per_page) - artist_count) > per_page then
+        cur_page = 1
+    end
     local artist_records, artist_errmsg =
         Model:searchPaginatedArtists(cur_page, per_page, query)
     if not artist_records then
@@ -1594,6 +1601,13 @@ local render_image_groups = WebUtility.login_required(function(r, _)
     local cur_page = tonumber(r.params.page or "1")
     if cur_page < 1 then
         return Fm.serve400()
+    end
+    -- When someone adds a search query while they're far into the list, the
+    -- page parameter from where they *were* may be on a page that doesn't exist
+    -- for where they're *going*.  Reset them to the first page, which probably
+    -- matches their intent.
+    if query and ((cur_page * per_page) - ig_count) > per_page then
+        cur_page = 1
     end
     local ig_records, ig_errmsg =
         Model:searchPaginatedImageGroups(cur_page, per_page, query)
@@ -1956,6 +1970,13 @@ local render_tags = WebUtility.login_required(function(r, _)
     local cur_page = tonumber(r.params.page or "1")
     if cur_page < 1 then
         return Fm.serve400()
+    end
+    -- When someone adds a search query while they're far into the list, the
+    -- page parameter from where they *were* may be on a page that doesn't exist
+    -- for where they're *going*.  Reset them to the first page, which probably
+    -- matches their intent.
+    if query and ((cur_page * per_page) - tag_count) > per_page then
+        cur_page = 1
     end
     local tag_records, tag_errmsg =
         Model:searchPaginatedTags(cur_page, per_page, query)
