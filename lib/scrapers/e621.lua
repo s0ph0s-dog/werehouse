@@ -4,6 +4,7 @@ local ALLOWED_EXTS = {
     png = true,
     gif = true,
     webm = true,
+    mp4 = true,
 }
 local RATING_MAP = {
     s = DbUtil.k.Rating.General,
@@ -12,6 +13,7 @@ local RATING_MAP = {
 }
 local EXT_TO_KIND_MAP = {
     webm = DbUtil.k.ImageKind.Video,
+    mp4 = DbUtil.k.ImageKind.Video,
     jpg = DbUtil.k.ImageKind.Image,
     png = DbUtil.k.ImageKind.Image,
     jpeg = DbUtil.k.ImageKind.Image,
