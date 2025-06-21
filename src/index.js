@@ -265,6 +265,28 @@ function telegram_slow_alert(content) {
   });
 }
 
+function delete_thumbnail_when_fullsize_loads(content) {
+  content.querySelectorAll("[data-delete-onload").forEach((elt) => {
+    console.log("Processing delete-onload handler for", elt);
+    const toDeleteSelector = elt.getAttribute("data-delete-onload");
+    const toDeleteElt = document.querySelector(toDeleteSelector);
+    if (!toDeleteElt) {
+      return;
+    }
+    console.log("will delete", toDeleteElt);
+    if (elt.complete) {
+      console.log("image was already loaded, deleting now")
+      toDeleteElt.remove();
+    } else {
+      console.log("image is still loading, binding delete event for later");
+      elt.addEventListener("load", (event) => {
+        toDeleteElt.remove();
+        console.log("delete event happened for", toDeleteElt);
+      })
+    }
+  });
+}
+
 htmx.onLoad((content) => {
   close_dialog_when_cancel_clicked(content);
   setup_taggers(content);
@@ -273,6 +295,7 @@ htmx.onLoad((content) => {
   indicate_save_opens_dialog_when_incoming_tags_checked(content);
   reorder_group(content);
   telegram_slow_alert(content);
+  delete_thumbnail_when_fullsize_loads(content);
 });
 
 // Remove dialogs from the page before saving history, so that they don't end

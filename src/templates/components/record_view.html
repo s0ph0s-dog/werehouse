@@ -1,6 +1,7 @@
 {% if record.kind == kind.Image and not vars.rv_fullsize then %}
 <div class="zstack">
     <img
+        id="preview-thumb"
         src="/thumbnail-file/{%& record.first_thumbnail_id %}"
 		class="height-limit"
 		width="{%& record.width == 0 and "100%" or record.width %}"
@@ -9,6 +10,7 @@
     <picture class="height-limit">
         <source srcset="/preview-file/{%& record.file %}.jxl" type="image/jxl" />
         <img
+            data-delete-onload="#preview-thumb"
             src="/preview-file/{%& record.file %}.webp"
             class="height-limit"
             width="{%& record.width == 0 and "100%" or record.width %}"
