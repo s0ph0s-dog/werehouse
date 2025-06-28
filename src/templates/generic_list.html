@@ -59,7 +59,7 @@
   <span class="buttons sticky-top"
     ><input type="reset" value="Deselect All" /><button
       type="button"
-      onclick="document.getElementsByName('qids[]').forEach((e) => { e.checked=true; })"
+      onclick="document.getElementsByName('{%& settings.kind %}_ids[]').forEach((e) => { e.checked=true; })"
     >
       Select All</button
     ><input
