@@ -1,5 +1,5 @@
-{% function block.add_breaks(text) return string.gsub(text, "([._])",
-function(m) return "<wbr />" .. m end) end %} {% function block.content() %}
+{% function block.add_breaks(text) return string.gsub(text, "([._])", function(m) return "<wbr />" .. m end) end %}
+{% function block.content() %}
 <h1>Tag Rules</h1>
 <p>
   <a href="/tag-rule/add" hx-get="/tag-rule/add" hx-target="#dialog"
@@ -62,8 +62,6 @@ function(m) return "<wbr />" .. m end) end %} {% function block.content() %}
     </tr>
     {% end %}
   </table>
-  {% render("components/pagination_controls", { pages = pages, kind_plural =
-  "rules" }) %}
+  {% render("components/pagination_controls", { pages = pages, kind_plural = "rules" }) %}
 </form>
-{% end %}{% end %}{% render("layouts/main", { title = "Tag Rules"
-}) %}
+{% end %}{% end %}{% render("layouts/main", { title = "Tag Rules" }) %}

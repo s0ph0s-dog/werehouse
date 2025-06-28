@@ -38,8 +38,7 @@
           >{%& image.width %} by {%& image.height %} • {%& image.mime_type %}
            • Posted by {%& #image.authors > 0 and image.authors[1].handle or "(unknown)" %}</span>
         <ul>
-          {% for dupe_idx = 1, #image.duplicates do local duplicate =
-          image.duplicates[dupe_idx] %}
+          {% for dupe_idx = 1, #image.duplicates do local duplicate = image.duplicates[dupe_idx] %}
           <li>
             Might be a duplicate of
             <a href="/image/{%& duplicate.duplicate_of %}"
@@ -48,8 +47,8 @@
             <ul>
               {% if duplicate.similarity then %}
               <li>Content hash: {%& duplicate.similarity %}% similar</li>
-              {% end %} {% for ms_idx = 1, #duplicate.matched_sources do local ms
-              = duplicate.matched_sources[ms_idx] %}
+              {% end %}
+              {% for ms_idx = 1, #duplicate.matched_sources do local ms = duplicate.matched_sources[ms_idx] %}
               <li>Matched source: <a target="_blank" href="{%& ms %}">{%& ms %}</a></li>
               {% end %}
             </ul>
@@ -82,5 +81,5 @@
       hx-target="body"
   /></span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Provide Help",
-dialog_width = "36em" }) %}
+{% end %}
+{% render("layouts/dialog", { title = "Provide Help", dialog_width = "36em" }) %}

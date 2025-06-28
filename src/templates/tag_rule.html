@@ -11,5 +11,5 @@
   from <b>{%& tag_rule.incoming_domain %}</b>, it will add
   <b>{%& tag_rule.tag_name %}</b> to the record in your archive.
 </p>
-{% end %}{% render("layouts/main", { title = "Tag Rule: %s on %s" %
-{tag_rule.incoming_name, tag_rule.incoming_domain} }) %}
+{% end %}
+{% render("layouts/main", { title = "Tag Rule: %s on %s" % {tag_rule.incoming_name, tag_rule.incoming_domain} }) %}

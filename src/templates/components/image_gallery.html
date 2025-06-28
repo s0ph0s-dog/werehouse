@@ -26,10 +26,14 @@
       </a>
       <figcaption>
         <label>
-          <span
-            >{%& fn.kind_str(image.kind) %}<br />by {% if image.artists then
-            %}{%& image.artists %}{% else %}(Missing artist info){% end %}</span
-          >
+          <span>
+              {%& fn.kind_str(image.kind) %}<br />
+              by {% if image.artists then %}
+              {%& image.artists %}
+              {% else %}
+              (Missing artist info)
+              {% end %}
+          </span>
           {% if editable then %}
           <input
             type="checkbox"
@@ -42,7 +46,6 @@
     </figure>
     {% end %}
   </div>
-  {% render("components/pagination_controls", { pages = pages, kind_plural =
-  "records" }) %}{% end %}{% if editable then %}
-</form>
+  {% render("components/pagination_controls", { pages = pages, kind_plural = "records" }) %}
 {% end %}
+{% if editable then %}</form>{% end %}

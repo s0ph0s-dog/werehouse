@@ -13,9 +13,7 @@
     />
   </label>
   <label class="inline">
-    <input type="checkbox" name="confirmed" value="true" {% if
-    manually_confirmed == "true" or manually_confirmed == 1 then %}checked {%
-    end %} /> This account is an artist (not just a commissioner)
+    <input type="checkbox" name="confirmed" value="true" {% if manually_confirmed == "true" or manually_confirmed == 1 then %}checked {% end %} /> This account is an artist (not just a commissioner)
   </label>
   <div id="deleted_handle_container">
     {% if delete_handles then for i = 1, #delete_handles do %}
@@ -137,5 +135,5 @@
     <input type="submit" name="update" value="Update" />
   </span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Edit Artist: " .. artist.name,
-dialog_width = "30em" }) %}
+{% end %}
+{% render("layouts/dialog", { title = "Edit Artist: " .. artist.name, dialog_width = "30em" }) %}

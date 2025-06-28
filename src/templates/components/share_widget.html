@@ -26,8 +26,11 @@
 <ul>
   {% for i = 1, #share_records do local sr = share_records[i] %}
   <li>
-    {% if sr.shared_at then %}Sent: {%& sr.shared_to %} ({%& sr.shared_at %}){%
-    else %}Unsent: {%& sr.shared_to %}{% end %}
+    {% if sr.shared_at then %}
+        Sent: {%& sr.shared_to %} ({%& sr.shared_at %})
+    {% else %}
+        Unsent: {%& sr.shared_to %}
+    {% end %}
   </li>
   {% end %}
 </ul>

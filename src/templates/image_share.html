@@ -23,9 +23,10 @@
     type="hidden"
     name="to_user"
     value="{%& to_user %}"
-  />{% end %} {% for i = 1, #images do local image =
-  images[i] %}{% block.record_view(image, image.sources_text,
-  image.sources_text_size) %}{% end %}
+  />{% end %}
+  {% for i = 1, #images do local image = images[i] %}
+    {% block.record_view(image, image.sources_text, image.sources_text_size) %}
+  {% end %}
   {% if ping_text then %}
   <label>Reply to First Media:
   <textarea name="ping_text" rows="{%& ping_text_size %}">
@@ -43,5 +44,5 @@
     />
   </span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Share " .. (ig_id or
-image_id) }) %}
+{% end %}
+{% render("layouts/dialog", { title = "Share " .. (ig_id or image_id) }) %}

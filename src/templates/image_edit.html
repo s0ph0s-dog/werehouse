@@ -11,8 +11,7 @@
   <div class="main-image">
     <input id="fit-to-screen" type="checkbox" />
     <label for="fit-to-screen"> Fit to screen</label>
-    {% render("components/record_view", {record = image, kind =
-    DbUtilK.ImageKind}) %}
+    {% render("components/record_view", {record = image, kind = DbUtilK.ImageKind}) %}
   </div>
   <div class="sidebar">
     <form method="POST" id="edit-form" action="{%& form_path %}">
@@ -24,8 +23,7 @@
           <span class="baseline">
             Categories:
             <select name="category[]" multiple="true" size="{%& #DbUtilK.CategoryLoopable %}">
-              {% local cs = DbUtilK.CategoryLoopable for i = 1, #cs do local c =
-              cs[i] %}
+              {% local cs = DbUtilK.CategoryLoopable for i = 1, #cs do local c = cs[i] %}
               <option value="{%& c[1] %}"{% if ((category or 0) & c[1]) == c[1] then %} selected{% end %}>{%& c[2] %}</option>
               {% end %}
             </select>
@@ -162,5 +160,5 @@
     </form>
   </div>
 </div>
-{% end %}{% render("layouts/main", { title = "Editing Record " ..
-tostring(image.image_id) }) %}
+{% end %}
+{% render("layouts/main", { title = "Editing Record " .. tostring(image.image_id) }) %}

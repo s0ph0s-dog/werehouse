@@ -56,7 +56,7 @@
       type="text"
       name="{%& kind %}_handles[]"
       value="{%& value %}"
-			placeholder="{%& username_placeholder %}"
+      placeholder="{%& username_placeholder %}"
       autocomplete="off"
     />
     <button
@@ -87,8 +87,7 @@
         {% if kind ~= "pending" then %}
         {% tag_list(id, "positive", positive_tags) %}
         {% end %}
-        {% editable_tag_list(id, kind, "positive", "Paws",
-        uncommitted_ptag_list) %}
+        {% editable_tag_list(id, kind, "positive", "Paws", uncommitted_ptag_list) %}
         <li>
           <input
             type="text"
@@ -115,8 +114,7 @@
         {% if kind ~= "pending" then %}
         {% tag_list(id, "negative", negative_tags) %}
         {% end %}
-        {% editable_tag_list(id, kind, "negative", "Maws",
-        uncommitted_ntag_list) %}
+        {% editable_tag_list(id, kind, "negative", "Maws", uncommitted_ntag_list) %}
         <li>
           <input
             type="text"
@@ -139,7 +137,9 @@
     </li>
   </ul>
 </li>
-{% end %}{% function block.content() %}
+{% end %}
+
+{% function block.content() %}
 <form class="vbox" method="POST" action="{%& form_path %}">
   <input type="submit" name="dummy_submit" value="dummy_submit" class="hidden" />
   <label
@@ -164,8 +164,7 @@
       {% end %}
     </select>
   </label>
-	{% local username_placeholder = "Username"
-	   local nickname_type = "hidden" %}
+	{% local username_placeholder = "Username" local nickname_type = "hidden" %}
   {% if not selected_service or selected_service == "Telegram" then %}
 	{% username_placeholder = "@Username" %}
   <label
@@ -175,8 +174,7 @@
     <input required type="number" name="chat_id" value="{%& chat_id %}" />
   </label>
   {% elseif selected_service == "Discord" then %}
-	{% username_placeholder = "User ID (about 20 digits)"
-	   nickname_type = "text" %}
+	{% username_placeholder = "User ID (about 20 digits)" nickname_type = "text" %}
   <label
     >Webhook URL:
 		<input required type="url" name="webhook" value="{%& webhook %}"/>
@@ -192,8 +190,7 @@
   <label class="inline">
     <input type="checkbox" name="attribution" value="true" {% if attribution == "true" or attribution == 1 then %}checked {% end %} /> Include <q>Shared by {%& vars.user.username %}</q> in the shared post?
   </label>
-  <details {% if (pending_handles and #pending_handles>
-    0) or (entries and #entries> 0) then %}open{% end %}>
+  <details {% if (pending_handles and #pending_handles> 0) or (entries and #entries> 0) then %}open{% end %}>
     <summary>Include a ping list…</summary>
     <datalist id="all-tags">
       {% for i = 1, #alltags do %}
@@ -217,11 +214,9 @@
     </div>
     <ul>
       {% if entries and #entries > 0 then for e_idx = 1, #entries do local entry = entries[e_idx] %}
-      {% emit_row("entry", entry.spl_entry_id, entry.nickname, entry.handle,
-      entry.enabled, entry_positive_tags, entry_negative_tags, username_placeholder, nickname_type) %}
+      {% emit_row("entry", entry.spl_entry_id, entry.nickname, entry.handle, entry.enabled, entry_positive_tags, entry_negative_tags, username_placeholder, nickname_type) %}
       {% end end %}
-      {% if pending_handles and #pending_handles > 0 then for h_idx = 1,
-      #pending_handles do %}
+      {% if pending_handles and #pending_handles > 0 then for h_idx = 1, #pending_handles do %}
       {% emit_row("pending", h_idx, pending_nicknames[h_idx], pending_handles[h_idx], false, pending_positive_tags, pending_negative_tags, username_placeholder, nickname_type) %}
       {% end end %}
       <li>
@@ -262,5 +257,5 @@
     <input type="submit" name="add" value="Update" />
   </span>
 </form>
-{% end %}{% render("layouts/dialog", { title = "Edit Share Option: " .. spl.name, dialog_width
-= "30em" }) %}
+{% end %}
+{% render("layouts/dialog", { title = "Edit Share Option: " .. spl.name, dialog_width = "30em" }) %}

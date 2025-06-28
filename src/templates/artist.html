@@ -1,7 +1,6 @@
 {% function block.content() %}
 <h1>
-  {%& artist.name %} {% render("components/artist_verified", { artist = artist
-  }) %}
+  {%& artist.name %} {% render("components/artist_verified", { artist = artist }) %}
 </h1>
 <p>
   <a
@@ -26,5 +25,6 @@
 </ul>
 {% end %}
 <h1>Records</h1>
-{% render("components/image_gallery", { image_records = images, fn = fn }) %}{%
-end %}{% render("layouts/main", { title = artist.name }) %}
+{% render("components/image_gallery", { image_records = images, fn = fn }) %}
+{% end %}
+{% render("layouts/main", { title = artist.name }) %}

@@ -4,8 +4,7 @@
   width="{%& record.first_thumbnail_width %}"
   height="{%& record.first_thumbnail_height %}"
 />
-{% elseif record.kind == fn.kind.Image or (record.kind == fn.kind.Animation and
-record.mime_type == "image/gif") then %}
+{% elseif record.kind == fn.kind.Image or (record.kind == fn.kind.Animation and record.mime_type == "image/gif") then %}
 <img
   src="/image-file/{%& record.file %}"
   width="{%& record.width %}"

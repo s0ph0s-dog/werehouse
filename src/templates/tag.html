@@ -7,9 +7,13 @@
   >Edit…</a
 >
 <p>
-  {% if tag.description and #tag.description > 0 then %}{%& tag.description %}{%
-  else %}(No description yet){% end %}
+  {% if tag.description and #tag.description > 0 then %}
+    {%& tag.description %}
+  {% else %}
+    (No description yet)
+  {% end %}
 </p>
 <h1>Recently Archived Records</h1>
-{% render("components/image_gallery", { image_records = images, fn = fn }) %}{%
-end %}{% render("layouts/main", { title = tag.name }) %}
+{% render("components/image_gallery", { image_records = images, fn = fn }) %}
+{% end %}
+{% render("layouts/main", { title = tag.name }) %}

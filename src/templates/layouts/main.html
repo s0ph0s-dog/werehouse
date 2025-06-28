@@ -59,18 +59,18 @@
     <script src="/htmx@2.0.1.min.js"></script>
     <script src="/index.js"></script>
     <noscript>
-      <style>
-      .htmx-indicator { display: none; }
-      </style>
+      <style>.htmx-indicator { display: none; }</style>
     </noscript>
   </head>
   <body hx-indicator="#loader">
     <div class="content">
       <div id="loader" class="sticky-top htmx-indicator ignore-safe-area"></div>
-      {% if not hide_header then %}{% block.navbar() %}{% end %}{% function
-      block.content() %}This page was configured incorrectly and no page content
-      was provided.{% end %}{% block.content() %}{% if not hide_footer then %}{%
-      block.footer() %}{% end %}
+      {% if not hide_header then %}{% block.navbar() %}{% end %}
+      {% function block.content() %}
+        This page was configured incorrectly and no page content was provided.
+      {% end %}
+      {% block.content() %}
+      {% if not hide_footer then %}{% block.footer() %}{% end %}
     </div>
     <dialog
       id="dialog"

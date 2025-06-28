@@ -3,7 +3,7 @@
 <p>Your account stores:</p>
 <ul>
   {% for i = 1, #image_stats do local row = image_stats[i] %}
-  <li>{%& row.record_count %} {%& DbUtil.k.ImageKindLoopable[row.kind] %}s</li>
+  <li>{%& row.record_count %}&nbsp;{%& DbUtil.k.ImageKindLoopable[row.kind] %}s</li>
   {% end %}
   <li>{%& artist_count %} artists</li>
   <li>{%& tag_count %} tags</li>
@@ -48,8 +48,7 @@
 </p>
 {% if share_ping_lists and #share_ping_lists > 0 then %}
 <ul>
-  {% for i = 1, #share_ping_lists do local share_ping_list = share_ping_lists[i]
-  %}
+  {% for i = 1, #share_ping_lists do local share_ping_list = share_ping_lists[i] %}
   <li>
     {%& share_ping_list.share_data.type %}:
     <a href="/share-ping-list/{%& share_ping_list.spl_id %}"
@@ -94,16 +93,7 @@
     <input
       type="submit"
       name="make-invite"
-      {%
-      if
-      vars.user.invites_available
-      <
-      1
-      then
-      %}disabled
-      {%
-      end
-      %}value="Make Invite Link"
+      {% if vars.user.invites_available < 1 then %}disabled {% end %}value="Make Invite Link"
     />
   </p>
 </form>

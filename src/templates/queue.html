@@ -28,8 +28,7 @@
       value="Clean Up"
       title="Delete queue entries that have been archived, or which you've marked as a duplicate."
   /></span>
-  {% render("components/queue_records", {queue_records = queue_records, editable
-  = true}) %}{% render("components/pagination_controls", { pages = pages,
-  kind_plural = "entries" }) %}
+  {% render("components/queue_records", {queue_records = queue_records, editable = true}) %}
+  {% render("components/pagination_controls", { pages = pages, kind_plural = "entries" }) %}
 </form>
 {% end %}{% end %}{% render("layouts/main", { title = "Queue" }) %}

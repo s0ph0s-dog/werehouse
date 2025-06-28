@@ -170,7 +170,7 @@ $(SRV_DIR)/.lua/%.lua: lib/%.lua | $$(@D)/.
 	cp $< $@
 
 $(SRV_DIR)/%.html: src/%.html | $$(@D)/.
-	cp $< $@
+	python3 fm_min.py $< $@
 
 $(SRV_DIR)/usr/share/ssl/root/%.pem: src/usr/share/ssl/root/%.pem | $$(@D)/.
 	cp $< $@

@@ -47,6 +47,9 @@
           cosmo.packages.${final.pkgs.stdenv.hostPlatform.system}.default
           final.zip
           final.gnumake
+          (final.python312.withPackages (ps: [
+            ps.htmlmin
+          ]))
         ];
 
         dontCheck = true;
