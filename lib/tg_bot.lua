@@ -501,13 +501,13 @@ end
 local function check_rules(media)
     if media.kind == DbUtil.k.ImageKind.Image then
         if
-            media.file_size > 10 * 1000 * 1000
+            media.file_size > 10485760
             or (media.width + media.height) > 10000
         then
             local ok = resize_image(media)
             if not ok then
                 return false,
-                    "I couldn't resize this image to fit within Telegram's limits (size < 50 MB and width + height < 10,000 px): "
+                    "I couldn't resize this image to fit within Telegram's limits (size < 10,485,760 bytes and width + height < 10,000 px): "
                         .. ok
             end
         end
