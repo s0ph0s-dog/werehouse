@@ -33,7 +33,7 @@ function api.request(endpoint, parameters, files)
         local file_data, err
         if type(file_name) == "table" and file_name.data then
             file_data = file_name.data
-            file_name = "C:\\fakepath\\image.jpg"
+            file_name = file_key
         else
             file_data, err = Slurp(file_name)
         end

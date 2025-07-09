@@ -393,24 +393,62 @@ local TYPE_MAP = {
     [DbUtil.k.ImageKind.Animation] = "animation",
 }
 
+local function clone_media_table(t)
+    local t2 = {}
+    for k, v in pairs(t) do
+        if type(v) == "string" and string.len(v) > 100 then
+            t2[k] = "[redacted long string]"
+        elseif type(v) == "table" then
+            t2[k] = clone_media_table(v)
+        else
+            t2[k] = v
+        end
+    end
+    return t2
+end
+
+local ALLOWED_MEDIA_KEYS = {
+    type = true,
+    media = true,
+    caption = true,
+    parse_mode = true,
+    caption_entities = true,
+    show_caption_above_media = true,
+    has_spoiler = true,
+    thumbnail = true,
+    cover = true,
+    start_timestamp = true,
+    width = true,
+    height = true,
+    duration = true,
+    supports_streaming = true,
+    performer = true,
+    title = true,
+    disable_content_type_detection = true,
+}
+
+---Remove any keys from a media object which are not used by the Telegram API.
+---I forgot to scrub the `file` key which contained a complete copy of the
+---original data, so this will prevent similar mistakes in the future.
+---@param media table
+local function filter_keys(media)
+    for key, _ in pairs(media) do
+        if not ALLOWED_MEDIA_KEYS[key] then
+            Log(kLogDebug, "Removed disallowed key: " .. key)
+            media[key] = nil
+        end
+    end
+end
+
 function bot.post_media_group(to_chat, media_list, follow_up)
     assert(media_list)
     assert(#media_list > 0)
     if #media_list < 2 then
         local media = media_list[1]
-        if media.kind == DbUtil.k.ImageKind.Image and media.resized then
-            local f = { data = media.resized }
+        if media.kind == DbUtil.k.ImageKind.Image then
             bot.post_image(
                 to_chat,
-                f,
-                media.sources_text,
-                follow_up,
-                media.spoiler
-            )
-        elseif media.kind == DbUtil.k.ImageKind.Image then
-            bot.post_image(
-                to_chat,
-                media.file_path,
+                media.resized and { data = media.resized } or media.file_path,
                 media.sources_text,
                 follow_up,
                 media.spoiler
@@ -441,7 +479,8 @@ function bot.post_media_group(to_chat, media_list, follow_up)
             has_spoiler = item.spoiler,
             media = "attach://" .. item.file,
             file = item.file,
-            file_path = item.file_path,
+            file_path = item.resized and { data = item.resized }
+                or item.file_path,
         }
     end)
     local batches = table.batch(api_media_list, 10)
@@ -456,6 +495,7 @@ function bot.post_media_group(to_chat, media_list, follow_up)
         for j = 1, #batch do
             local media = batch[j]
             media_upload[media.file] = media.file_path
+            filter_keys(media)
         end
         media_group_result, mg_err =
             api.send_media_group(to_chat, batch, media_upload)
@@ -536,6 +576,52 @@ local function check_rules(media)
     else
         return false, "Telegram doesn't support this kind of file"
     end
+end
+
+---Version of the function below which tries to resize all of the media files in
+---a batch if the sum of their sizes is too large for a POST request. This isn't
+---used currently, but I didn't want to throw the code away if I need it in the
+---future.
+local function share_media_check_batch(chat_id, media_list, follow_up)
+    local errors = {}
+    local batches = table.batch(media_list, 10)
+    if not batches then
+        return nil, "Unable to divide media list into batches of 10."
+    end
+    for i = 1, #batches do
+        local batch = batches[i]
+        local batch_size = 0
+        for j = 1, #batch do
+            local media = batch[j]
+            local ok, err = check_rules(media)
+            if not ok then
+                errors[#errors + 1] = "Image %d: %s" % { media.image_id, err }
+            end
+            batch_size = batch_size
+                + (media.resized and media.resized:len() or media.file_size)
+        end
+        if batch_size > 10 * 1000 * 1000 then
+            batch_size = 0
+            for j = 1, #batch do
+                local media = batch[j]
+                local ok, err = resize_image(media)
+                if not ok then
+                    errors[#errors + 1] = "Image %d: %s"
+                        % { media.image_id, err }
+                end
+                batch_size = batch_size + media.resized:len()
+            end
+            if batch_size > 10 * 1000 * 1000 then
+                errors[#errors + 1] =
+                    "Could not resize images to a small enough size to upload to Telegram."
+            end
+        end
+    end
+    if #errors > 0 then
+        return nil, errors
+    end
+    bot.post_media_group(chat_id, media_list, follow_up)
+    return true
 end
 
 function bot.share_media(chat_id, media_list, follow_up)
