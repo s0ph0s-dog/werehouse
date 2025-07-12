@@ -647,7 +647,7 @@ local function accept_edit_share_ping_list(
         local u_ok, u_err = Model:updateSharePingListEntry(
             entry.spl_entry_id,
             reformatter(entry.handle),
-            entry.nickanme,
+            entry.nickname,
             entry.enabled
         )
         if not u_ok then
