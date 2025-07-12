@@ -44,8 +44,10 @@ body {
 }
 .vbox label,
 .vbox label * {
-  display: block;
   margin-bottom: 0.5em;
+}
+.vbox label {
+  display: block;
 }
 .error {
   color: red;
