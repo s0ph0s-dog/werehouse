@@ -2969,6 +2969,7 @@ function Model:getSharePingListById(spl_id, skip_decode)
             return nil, json_err
         end
         result.share_data = json
+        result.send_with_attribution = result.send_with_attribution == 1
     end
     return result
 end

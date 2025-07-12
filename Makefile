@@ -116,6 +116,8 @@ SRCS_OUT := $(patsubst src/%,$(SRV_DIR)/%,$(SRCS))
 LIBS_OUT := $(patsubst lib/%,$(SRV_DIR)/.lua/%,$(LIBS))
 TEST_LIBS_OUT := $(patsubst lib/%,$(SRV_DIR)/.lua/%,$(TEST_LIBS))
 CSSO_PATH := $(shell which csso)
+FM_MIN_CMD := $(shell python3 fm_min_check.py)
+
 
 build: $(OUTPUT)
 
@@ -170,7 +172,7 @@ $(SRV_DIR)/.lua/%.lua: lib/%.lua | $$(@D)/.
 	cp $< $@
 
 $(SRV_DIR)/%.html: src/%.html | $$(@D)/.
-	python3 fm_min.py $< $@
+	$(FM_MIN_CMD) $< $@
 
 $(SRV_DIR)/usr/share/ssl/root/%.pem: src/usr/share/ssl/root/%.pem | $$(@D)/.
 	cp $< $@

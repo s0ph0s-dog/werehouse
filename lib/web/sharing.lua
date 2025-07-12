@@ -158,17 +158,13 @@ local function prep_form_data(r, user_record, group, images, data, getPings)
     if data.spl and data.spl.send_with_attribution then
         ping_text = ping_text .. "\n\n" .. attribution
     end
-    -- local form_sources_text = r.params.sources_text
     local form_ping_text = r.params.ping_text or ping_text
-    local param_attribution = r.params.attribution
-        or (data.spl and data.spl.send_with_attribution)
     local params = {
         group = group,
         ig_id = r.params.ig_id,
         image_id = r.params.image_id,
         images = images,
         share_ping_list = data.spl,
-        attribution = param_attribution,
         ping_text = form_ping_text,
         ping_text_size = form_ping_text:linecount(),
         share_id = r.params.t,
