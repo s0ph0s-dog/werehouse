@@ -7,8 +7,7 @@
 </label>
 {% local ta_name = "sources_text_record_" .. tostring(record.image_id) %}
 <label>Media Caption:
-<textarea name="{%& ta_name %}" rows="{%& sources_text_size %}">
-{%& sources_text %}</textarea
+<textarea name="{%& ta_name %}" rows="{%& sources_text_size %}">{%& sources_text %}</textarea
 ></label>
 {% end %}{% function block.content() %}
 <form
@@ -29,8 +28,7 @@
   {% end %}
   {% if ping_text then %}
   <label>Reply to First Media:
-  <textarea name="ping_text" rows="{%& ping_text_size %}">
-{%& ping_text %}</textarea
+  <textarea name="ping_text" rows="{%& ping_text_size %}">{%& ping_text %}</textarea
   ></label>
   {% end %}
   <span class="buttons reverse">
