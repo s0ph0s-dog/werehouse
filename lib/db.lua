@@ -2928,6 +2928,7 @@ function Model:createSPLEntryWithTags(
         queries.model.insert_spl_entry,
         handle,
         nickname,
+        true,
         spl_id
     )
     if not entry then
