@@ -1949,7 +1949,7 @@ function Model:getTagCount()
     if not result then
         return nil, errmsg
     end
-    return result.tag_count
+    return result.count
 end
 
 function Model:getTagCountForSearch(search_term)
