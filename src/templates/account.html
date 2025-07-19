@@ -169,18 +169,25 @@
 <h2>Your Data</h2>
 <form class="vbox" method="POST">
   <span>
-    <input type="submit" name="export" value="Export Data" />
-    You'll receive a zip file containing all of the data for your account, once
+    <input type="submit" name="export" disabled value="Export Data" />
+    <s>You'll receive a zip file containing all of the data for your account, once
     the archiving job finishes. If you rename this file to .com instead of .zip
     (or mark it as executable on Linux/macOS), you can run it to open a
-    stand-alone, read-only copy of this application with all your data!
+    stand-alone, read-only copy of this application with all your data!</s>
+    This is not implemented yet.  Your instance administrator can give you a
+    copy of the database for your account, but this does not include the
+    image/video/animation files.  The developer is working on it.
   </span>
   <span>
-    <input type="submit" name="delete" value="Delete Account" />
-    This action is irreversible (but you will be prompted for confirmation
+    <input type="submit" name="delete" disabled value="Delete Account" />
+    <s>This action is irreversible (but you will be prompted for confirmation
     first). Images/videos saved by both you
     <i>and at least one other person</i> will not be deleted. Your data will
-    cycle out of the backups after approximately 30 days.
+    cycle out of the backups after approximately 30 days.</s> This is not
+implemented yet.  Your instance administrator can remove your database
+and manually remove your row in the accounts database.  When the daily cleanup
+task runs, all image/video/animation files for archived by you
+<em>and not also by anyone else</em> will be deleted.
   </span>
 </form>
 {% end %}{% render("layouts/main", { title = "Profile" }) %}
