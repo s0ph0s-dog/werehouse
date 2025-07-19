@@ -163,26 +163,6 @@
                 description = "A Telegram bot API key.  If provided, this enables users to enqueue links/images by sending them to the bot, and to share records from their archives to Telegram chats.";
               };
             
-              deviantArt = lib.mkOption {
-                description = "API credentials for DeviantArt, to enable archiving artwork posted there.";
-                type = lib.types.submodule {
-                  options = {
-                    clientId = lib.mkOption {
-                      type = lib.types.nullOr lib.types.str;
-                      default = null;
-                      example = "12345";
-                      description = "The DeviantArt API client ID.";
-                    };
-                    clientSecret = lib.mkOption {
-                      type = lib.types.nullOr lib.types.str;
-                      default = null;
-                      example = "abcdef0123456789abcdef0123456789";
-                      description = "The DeviantArt API client secret.";
-                    };
-                  };
-                };
-              };
-            
               weasyl = lib.mkOption {
                 type = lib.types.nullOr lib.types.str;
                 default = null;
