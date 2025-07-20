@@ -69,7 +69,7 @@ function OnWorkerStart()
     assert(unix.unveil(".", "rwc"))
     assert(unix.unveil("/tmp", "rwc"))
     assert(unix.unveil("/var/tmp", "rwc"))
-    assert(unix.unveil("/etc", "r"))
+    assert(unix.unveil("/etc/resolv.conf", "r"))
     assert(unix.unveil(nil, nil))
 end
 function OnWorkerStop()
