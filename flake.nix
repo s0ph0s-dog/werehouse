@@ -85,7 +85,7 @@
     });
 
     # A NixOS module, if applicable (e.g. if the package provides a system service).
-    nixosModules.werehouse = {
+    nixosModules.default = {
       lib,
       pkgs,
       config,
@@ -314,7 +314,6 @@
               in "https://127.0.0.1:${port}";
               recommendedProxySettings = true;
               extraConfig = ''
-                proxy_http_version 1.1;
                 proxy_buffering off;
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection "Upgrade";
