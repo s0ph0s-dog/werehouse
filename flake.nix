@@ -301,19 +301,17 @@
                 message = "if enableNginxVhost is set, you must provide publicDomainName";
               }
             ];
-            services.nginx.virtualHosts.${cfg.publicDomainName} = {
-              forceSSL = let
-                ngxSSL = config.services.nginx.virtualHosts.${cfg.publicDomainName};
-              in
-                !(ngxSSL.onlySSL || ngxSSL.addSSL || ngxSSL.rejectSSL);
+            services.nginx.virtualHosts.${cfg.publicDomainName} = let
+              ngxSSL = config.services.nginx.virtualHosts.${cfg.publicDomainName};
+              forceSSL = !(ngxSSL.onlySSL || ngxSSL.addSSL || ngxSSL.rejectSSL);
+              ngxPkgName = config.services.nginx.package;
+              ngxHasQuic = ngxPkgName == "nginxQuic" || ngxPkgName == "angieQuic";
+            in {
+              forceSSL = forceSSL;
               enableACME = true;
-              quic = true;
+              quic = ngxHasQuic;
               http2 = true;
-              http3 = let
-                ngxPkgName = config.services.nginx.package;
-                ngxHasQuic = ngxPkgName == "nginxQuic" || ngxPkgName == "angieQuic";
-              in
-                ngxHasQuic;
+              http3 = ngxHasQuic;
               locations."/" = {
                 proxyPass = let
                   port = toString (builtins.head cfg.ports);
