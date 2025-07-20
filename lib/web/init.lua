@@ -96,10 +96,14 @@ local function check_password_breach(password)
     local prefix = sha1:sub(1, 5)
     local suffix = sha1:sub(6)
     suffix = suffix:upper()
-    local status, _, body =
+    local status, headers, body =
         Fetch("https://api.pwnedpasswords.com/range/" .. prefix)
+    if not status then
+        return nil,
+            "Unable to query pwnedpasswords.com: " .. EncodeJson(headers)
+    end
     if status ~= 200 then
-        return nil, "HTTP error " .. status
+        return nil, "HTTP error " .. tostring(status)
     end
     for result in body:gmatch("(%x+):%d+") do
         if result == suffix then
