@@ -328,8 +328,6 @@
                 recommendedProxySettings = true;
                 extraConfig = ''
                   proxy_buffering off;
-                  proxy_set_header Upgrade $http_upgrade;
-                  proxy_set_header Connection "Upgrade";
                   client_max_body_size 100m;
                   ${
                     # This also adds the header even if someone disables quic, but
