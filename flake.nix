@@ -195,8 +195,8 @@
             
               e621 = lib.mkOption {
                 description = "API credentials for e621.net, to enable archiving artworks posted there with tags on the default (logged-out) block list. Most posts will be visible without this.";
-                type = lib.types.submodule {
                 default = {};
+                type = lib.types.submodule {
                   options = {
                     username = lib.mkOption {
                       type = lib.types.nullOr lib.types.str;
