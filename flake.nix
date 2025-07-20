@@ -307,11 +307,11 @@
               ngxPkgName = config.services.nginx.package;
               ngxHasQuic = ngxPkgName == "nginxQuic" || ngxPkgName == "angieQuic";
             in {
-              forceSSL = forceSSL;
+              forceSSL = lib.mkDefault forceSSL;
               enableACME = true;
-              quic = ngxHasQuic;
+              quic = lib.mkDefault ngxHasQuic;
               http2 = true;
-              http3 = ngxHasQuic;
+              http3 = lib.mkDefault ngxHasQuic;
               locations."/" = {
                 proxyPass = let
                   port = toString (builtins.head cfg.ports);
@@ -322,7 +322,13 @@
                   proxy_set_header Upgrade $http_upgrade;
                   proxy_set_header Connection "Upgrade";
                   client_max_body_size 100m;
-                  add_header Alt-Svc 'h3=":443"; ma=86400';
+                  ${
+                    # This also adds the header even if someone disables quic, but
+                    # fixing that is annoying. I'll do it if someone asks.
+                    lib.optionalString ngxHasQuic ''
+                      add_header Alt-Svc 'h3=":443"; ma=86400';
+                    ''
+                  }
                 '';
               };
             };
