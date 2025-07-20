@@ -262,13 +262,6 @@
                 FA_AUTH_COOKIES = "a=${cfg.apiKeys.furAffinity.a}; b=${cfg.apiKeys.furAffinity.b}";
               })
               (lib.mkIf (
-                (cfg.apiKeys.deviantArt.clientId != null) &&
-                (cfg.apiKeys.deviantArt.clientSecret != null)
-              ) {
-                DA_CLIENT_ID = cfg.apiKeys.deviantArt.clientId;
-                DA_CLIENT_SECRET = cfg.apiKeys.deviantArt.clientSecret;
-              })
-              (lib.mkIf (
                 (cfg.apiKeys.inkbunny.username != null) &&
                 (cfg.apiKeys.inkbunny.password != null)
               ) {
