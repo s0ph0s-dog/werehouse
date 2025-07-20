@@ -240,7 +240,7 @@
               description = "service account for Werehouse art archiving tool";
             };
             systemd.tmpfiles.rules = [
-              "d ${cfg.dataDir} 0775 werehouse werehouse"
+              "d ${cfg.dataDir} 0770 werehouse werehouse"
             ];
             systemd.services.werehouse = {
               path = [pkgs.werehouse];
