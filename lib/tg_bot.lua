@@ -670,7 +670,7 @@ function bot.run()
             bot.api.run(10)
         else
             Log(
-                kLogWarn,
+                kLogFatal,
                 "Not starting Telegram bot because no token provided."
             )
         end
