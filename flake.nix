@@ -237,6 +237,9 @@
           };
         };
         config = lib.mkMerge [
+          {
+            nixpkgs.overlays = [self.overlays.default];
+          }
           (lib.mkIf cfg.createUserAndGroup {
             users.groups.werehouse = {};
             users.users.werehouse = {
@@ -249,8 +252,6 @@
             ];
           })
           (lib.mkIf cfg.enable {
-            nixpkgs.overlays = [self.overlays.default];
-
             systemd.services.werehouse = {
               path = [pkgs.werehouse];
               environment = lib.mkMerge [
