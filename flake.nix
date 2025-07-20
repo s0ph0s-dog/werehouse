@@ -303,11 +303,17 @@
             }
           ];
           services.nginx.virtualHosts.${cfg.publicDomainName} = {
-            forceSSL = true;
+            forceSSL = let
+              ngxSSL = config.services.nginx.virtualHosts.${cfg.publicDomainName} ;
+              in
+                !(ngxSSL.onlySSL || ngxSSL.addSSL || ngxSSL.rejectSSL);
             enableACME = true;
             quic = true;
             http2 = true;
-            http3 = true;
+            http3 = let
+                ngxPkgName = config.services.nginx.package;
+                ngxHasQuic = ngxPkgName == "nginxQuic" || ngxPkgName == "angieQuic";
+            in ngxHasQuic;
             locations."/" = {
               proxyPass = let
                 port = toString (builtins.head cfg.ports);
