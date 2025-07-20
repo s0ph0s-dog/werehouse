@@ -107,6 +107,13 @@
             description = "Where to keep the databases and archived artwork files.";
           };
 
+          createUserAndGroup = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            example = false;
+            description = "Suppress creation of the werehouse user and group. This is not useful unless you're doing something funky like DynamicUser in the systemd unit.";
+          };
+
           verboseLevel = lib.mkOption {
             type = lib.types.ints.between 0 2;
             default = 0;
