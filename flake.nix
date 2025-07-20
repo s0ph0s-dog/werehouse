@@ -313,7 +313,7 @@
             services.nginx.virtualHosts.${cfg.publicDomainName} = let
               ngxSSL = config.services.nginx.virtualHosts.${cfg.publicDomainName};
               forceSSL = !(ngxSSL.onlySSL || ngxSSL.addSSL || ngxSSL.rejectSSL);
-              ngxPkgName = config.services.nginx.package;
+              ngxPkgName = config.services.nginx.package.pname;
               ngxHasQuic = ngxPkgName == "nginxQuic" || ngxPkgName == "angieQuic";
             in {
               forceSSL = lib.mkDefault forceSSL;
