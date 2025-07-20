@@ -76,7 +76,7 @@ local change_password_validator = Fm.makeValidator {
 
 local function hash_password(password)
     return argon2.hash_encoded(password, GetRandomBytes(32), {
-        variant = "id",
+        variant = argon2.variants.argon2_id,
         m_cost = 65536,
         t_cost = 16,
         parallelism = 4,
