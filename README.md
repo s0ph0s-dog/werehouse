@@ -25,11 +25,10 @@ Check [Releases](/s0ph0s-2/werehouse/releases) for pre-built binaries.
 3. Run `make` to zip the project files into `werehouse.com`
 4. Set the following environment variables:
    - `TZ=UTC` — The code assumes that SQLite's `strftime('', 'now')` function will produce times in UTC, which is only the case when TZ variable is set to UTC.
+   - `SESSION_KEY=(32 random bytes, base64 encoded)` — A key to use for encrypting session cookies. If you don't provide one, Werehouse will generate a new one on each run, which invalidates everyone's session cookies. Run Werehouse once to make it print a key to the log for you, or generate one with `dd if=/dev/urandom bs=32 count=1 status=none | base64`
    - `FUZZYSEARCH_API_KEY=(API key for FuzzySearch, if you have one)` — Enable looking up image URLs and raw image files with [FuzzySearch](https://fuzzysearch.net), the backend that powers [FoxBot](https://syfaro.net/blog/foxbot/).
    - `FA_AUTH_COOKIES="a=(a cookie); b=(b cookie)"` — Enable scraping from [FurAffinity](https://www.furaffinity.net).
    - `TG_BOT_TOKEN=(Telegram bot token, if you have one)` — Enable a [Telegram](https://telegram.org) bot for enqueuing images and sharing records.
-   - `DA_CLIENT_ID=(DeviantArt API client ID)` — Set this and `DA_CLIENT_SECRET` to enable archiving from DeviantArt.  You can get these values from [the DeviantArt developer portal](https://www.deviantart.com/developers/) by clicking the “Register your Application” button.
-   - `DA_CLIENT_SECRET=(DeviantArt API client secret)` — Set this and `DA_CLIENT_ID` to enable archiving from DeviantArt.
    - `WEASYL_API_KEY=(Weasyl API key)` — Set this to enable archiving from Weasyl. You can obtain an API key by going to [Weasyl’s API key settings page](https://www.weasyl.com/control/apikeys), which requires an account.
    - `IB_USERNAME=(Inkbunny username)` — Your Inkbunny username. Set this to enable archiving from Inkbunny.  Before this will work, you need to go to [your Inkbunny account settings page](https://inkbunny.net/account.php) and check “Enable API Access.”
    - `IB_PASSWORD=(Inkbunny password)` — Your Inkbunny password. Set this to enable archiving from Inkbunny.
