@@ -127,6 +127,7 @@
 
         apiKeys = lib.mkOption {
           description = "API keys for various services.  For more information on how to get these, see the README: https://github.com/s0ph0s-dog/werehouse/blob/main/README.md";
+          default = {};
           type = lib.types.submodule {
             options = {
               fuzzySearch = lib.mkOption {
@@ -138,6 +139,7 @@
               
               furAffinity = lib.mkOption {
                 description = "Login cookies for FurAffinity.net, to enable archiving Adult/Explicit posts.";
+                default = {};
                 type = lib.types.submodule {
                   options = {
                     a = lib.mkOption {
@@ -172,6 +174,7 @@
             
               inkbunny = lib.mkOption {
                 description = "API credentials for Inkbunny.net, to enable archiving artwork posted there.";
+                default = {};
                 type = lib.types.submodule {
                   options = {
                     username = lib.mkOption {
@@ -193,6 +196,7 @@
               e621 = lib.mkOption {
                 description = "API credentials for e621.net, to enable archiving artworks posted there with tags on the default (logged-out) block list. Most posts will be visible without this.";
                 type = lib.types.submodule {
+                default = {};
                   options = {
                     username = lib.mkOption {
                       type = lib.types.nullOr lib.types.str;
