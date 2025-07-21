@@ -3,7 +3,7 @@
 
   # Nixpkgs / NixOS version to use.
   inputs = {
-    nixpkgs.url = "nixpkgs/nixos-24.11";
+    nixpkgs.url = "nixpkgs/nixos-25.05";
     cosmo = {
       url = "github:s0ph0s-dog/cosmopolitan/s0ph0s-patches";
       inputs.nixpkgs.follows = "nixpkgs";
