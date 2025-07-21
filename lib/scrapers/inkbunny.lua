@@ -7,8 +7,8 @@ local RATING_MAP = {
     [2] = DbUtil.k.Rating.Explicit,
 }
 
-local IB_USERNAME = os.getenv("IB_USERNAME")
-local IB_PASSWORD = os.getenv("IB_PASSWORD")
+local IB_USERNAME = os.getenv("IB_USERNAME") or "guest"
+local IB_PASSWORD = os.getenv("IB_PASSWORD") or ""
 
 local CANONICAL_DOMAIN = "inkbunny.net"
 
@@ -147,9 +147,10 @@ end
 ---@type ScraperProcess
 local function process_uri(uri)
     if not IB_USERNAME or not IB_PASSWORD then
-        return PipelineErrorPermanent(
-            "This instance has no Inkbunny credentials. Ask your administrator to provide the IB_USERNAME and IB_PASSWORD environment variables."
-        )
+        return nil,
+            PipelineErrorPermanent(
+                "This instance has no Inkbunny credentials. Ask your administrator to provide the IB_USERNAME and IB_PASSWORD environment variables."
+            )
     end
     local submission_id = extract_submission_id(uri)
     local api_url_parts = {
@@ -165,9 +166,15 @@ local function process_uri(uri)
         return nil, PipelineErrorPermanent(err)
     end
     if not json.submissions or #json.submissions ~= 1 then
-        return PipelineErrorPermanent(
-            "This Inkbunny submission is not visible to you. It may have been deleted."
-        )
+        local suffix = " It may have been deleted."
+        if IB_USERNAME == "guest" then
+            suffix =
+                " This instance is using guest Inkbunny credentials, so the submission may only be visible to logged-in users. It may also have been deleted."
+        end
+        return nil,
+            PipelineErrorPermanent(
+                "This Inkbunny submission is not visible to you." .. suffix
+            )
     end
     local result, p_err = process_json(json.submissions[1])
     if result then
