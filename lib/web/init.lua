@@ -398,22 +398,13 @@ local render_preview_file = WebUtility.login_required(function(r)
     if not source_filename then
         return Fm.serve400()
     end
-    local preview_path = "previews/%s/%s/%s"
-        % {
-            preview_filename:sub(1, 1),
-            preview_filename:sub(2, 2),
-            preview_filename,
-        }
+    local _, preview_path =
+        FsTools.make_preview_path_from_filename(nil, preview_filename)
     SetHeader("Cache-Control", "private, max-age=31536000")
     if unix.access(preview_path, unix.R_OK) then
         return Fm.serveAsset(preview_path)
     end
-    local real_path = "images/%s/%s/%s"
-        % {
-            source_filename:sub(1, 1),
-            source_filename:sub(2, 2),
-            source_filename,
-        }
+    local _, real_path = FsTools.make_image_path_from_filename(source_filename)
     local preview, preview_err = make_preview(source_filename, ext, real_path)
     if not preview then
         Log(kLogInfo, "Unable to generate preview: " .. preview_err)
@@ -426,12 +417,7 @@ local render_image_file = WebUtility.login_required(function(r)
     if not r.params.filename then
         return Fm.serve400()
     end
-    local path = "images/%s/%s/%s"
-        % {
-            r.params.filename:sub(1, 1),
-            r.params.filename:sub(2, 2),
-            r.params.filename,
-        }
+    local _, path = FsTools.make_image_path_from_filename(r.params.filename)
     SetHeader("Cache-Control", "private, max-age=31536000")
     return Fm.serveAsset(path)
 end)
