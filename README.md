@@ -18,9 +18,9 @@ A personal, web-based art archiving tool built on [Redbean](https://redbean.dev)
 
 # Setup
 
-Check [Releases](/s0ph0s-2/werehouse/releases) for pre-built binaries.
+Check [Releases](https://github.com/s0ph0s-dog/werehouse/releases) for pre-built binaries.
 
-1. Clone a copy of [my fork of the Cosmopolitan repository](https://github.com/s0ph0s-2/cosmopolitan). Check out the branch `s0ph0s-patches`. Build `o//tool/net/redbean`.  I have added additional functionality to Redbean to support encoding/decoding image files and performing image content hash calculations.  If you don't want to use these features, you can edit the Makefile to use `redbean-3.0.com` instead, and it will automatically download the latest release for you.
+1. Clone a copy of [my fork of the Cosmopolitan repository](https://github.com/s0ph0s-dog/cosmopolitan). Check out the branch `s0ph0s-patches`. Build `o//tool/net/redbean`.  I have added additional functionality to Redbean to support encoding/decoding image files and performing image content hash calculations.  If you don't want to use these features, you can edit the Makefile to use `redbean-3.0.com` instead, and it will automatically download the latest release for you.
 2. Copy the compiled `redbean` to the checkout of this repository as `./redbean-3.0beta.com`
 3. Run `make` to zip the project files into `werehouse.com`
 4. Set the following environment variables:
@@ -36,6 +36,46 @@ Check [Releases](/s0ph0s-2/werehouse/releases) for pre-built binaries.
    - `E621_API_KEY=(e621 API key)` — Your e621 API key.  Generate this by going to [the e621 control panel](https://e621.net/users/home) and clicking “Manage API Access.”
 5. Run `./werehouse.com -D . -p 8082`.
 6. Use the URL printed to the console on startup to register the first account.
+
+# Nix Flake Setup
+
+Use of a secrets management tool like [sops-nix](https://github.com/Mic92/sops-nix) (shown below) or [age-nix](https://github.com/ryantm/agenix) is highly recommended, but you can also set your apikeys in `systemd.services.werehouse.environment={}`
+
+```nix
+{
+  inputs.werehouse.url = "github:s0ph0s-dog/werehouse";
+  inputs.werehouse.inputs.nixpkgs.follows = "nixpkgs";
+
+  outputs = { self, nixpkgs, werehouse }: {
+    nixosConfigurations.yourhost = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        sops-nix.nixosModules.sops
+        {config, ...}: {
+          services.werehouse = {
+            enable = true;
+            dataDir = "/var/lib/werehouse";
+            enableNginxVhost = true;
+            publicDomainName = "werehouse.s0ph0s.dog";
+            # port = 8082;
+            # verboseLevel = 2;
+          };
+          systemd.services.werehouse.serviceConfig = config.sops.secrets."werehouse.env".path;
+          sops.secrets."werehouse.env".sopsFile = secrets/werehouse.yaml;
+        }
+      ];
+    };
+  };
+}
+```
+
+`$ sops secrets/werehouse.yaml`
+```yaml
+werehouse.env: |-
+  SESSION_KEY=abcDEFghiJKL=
+  TG_BOT_TOKEN=1234567890:AaBbCcDd_EeFfGgHh
+  # etc
+```
 
 # Contributing
 
