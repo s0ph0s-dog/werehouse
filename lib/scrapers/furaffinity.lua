@@ -181,6 +181,28 @@ local function process_uri(uri)
                 "FA has turned on Cloudflare's 'under attack' mode, which blocks bots."
             )
     end
+    local maybe_section_body = first(root:select(".section-body"))
+    if maybe_section_body then
+        local body_text = maybe_section_body:getcontent()
+        if body_text and body_text:match("not in our database") then
+            return nil,
+                PipelineErrorPermanent(
+                    "This submission has been deleted from FurAffinity."
+                )
+        end
+        if
+            body_text
+            and (
+                body_text:match("you must log in")
+                or body_text:match("registered users only")
+            )
+        then
+            return nil,
+                PipelineErrorPermanent(
+                    "This submission is only visible to logged-in FurAffinity users.  This instance has expired FA credentials, or none at all."
+                )
+        end
+    end
     local data, errmsg = scrape_image_data(root)
     if not data then
         return nil, errmsg

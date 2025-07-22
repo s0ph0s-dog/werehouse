@@ -881,6 +881,46 @@ function TestScrapers:testValidFuraffinityLinks()
     )
 end
 
+function TestScrapers:testInvalidFuraffinityLinks()
+    local inputDeleted = "https://www.furaffinity.net/view/29262198/"
+    local inputMatureLoggedOut = "https://www.furaffinity.net/view/61646569/"
+    local expectedDeleted = {
+        type = PipelineErrorType.Permanent,
+        description = "This submission has been deleted from FurAffinity.",
+    }
+    local expectedLoggedOut = {
+        type = PipelineErrorType.Permanent,
+        description = "This submission is only visible to logged-in FurAffinity users.  This instance has expired FA credentials, or none at all.",
+    }
+    local mocks = {
+        fetch_mock_head_html_200(inputDeleted),
+        fetch_mock_head_html_200(inputMatureLoggedOut),
+        {
+            whenCalledWith = "https://www.furaffinity.net/full/29262198",
+            thenReturn = { 200, nil, Slurp("test/fa_deleted.html") },
+        },
+        {
+            whenCalledWith = "https://www.furaffinity.net/full/61646569",
+            thenReturn = { 200, nil, Slurp("test/fa_mature.html") },
+        },
+    }
+    local tests = {
+        {
+            input = inputDeleted,
+            expected = { nil, expectedDeleted },
+        },
+        {
+            input = inputMatureLoggedOut,
+            expected = { nil, expectedLoggedOut },
+        },
+    }
+    process_entry_framework_generic(
+        pipeline.scraper.furaffinity.process_uri,
+        tests,
+        mocks
+    )
+end
+
 function TestScrapers:testValidE6Links()
     local inputRegular = "https://e621.net/posts/4366241"
     local inputQueryParams =
