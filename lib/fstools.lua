@@ -20,7 +20,7 @@ local MIME_TO_KIND = {
 }
 
 local function make_image_path_from_filename(filename)
-    local parent_dir = "./images/%s/%s/"
+    local parent_dir = "images/%s/%s/"
         % {
             filename:sub(1, 1),
             filename:sub(2, 2),
@@ -30,7 +30,7 @@ local function make_image_path_from_filename(filename)
 end
 
 local function make_queue_path_from_filename(filename, user_id)
-    local parent_dir = "./queue/%s/%s/"
+    local parent_dir = "queue/%s/%s/"
         % {
             user_id,
             filename:sub(1, 1),
