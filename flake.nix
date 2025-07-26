@@ -236,7 +236,7 @@
             description = "The public hostname for the nginx virtual host and TLS certificates";
           };
         };
-        config = lib.mkMerge [
+        config = lib.mkIf cfg.enable (lib.mkMerge [
           (lib.mkIf cfg.createUserAndGroup {
             users.groups.werehouse = {};
             users.users.werehouse = {
@@ -248,7 +248,7 @@
               "d ${cfg.dataDir} 0770 werehouse werehouse"
             ];
           })
-          (lib.mkIf cfg.enable {
+          {
             nixpkgs.overlays = [self.overlays.default];
 
             systemd.services.werehouse = {
@@ -302,8 +302,8 @@
                 WorkingDirectory = cfg.dataDir;
               };
             };
-          })
-          (lib.mkIf (cfg.enable && cfg.enableNginxVhost) {
+          }
+          (lib.mkIf cfg.enableNginxVhost {
             assertions = [
               {
                 assertion = cfg.publicDomainName != null;
@@ -340,7 +340,7 @@
               };
             };
           })
-        ];
+        ]);
       };
     in {
       werehouse = module;
