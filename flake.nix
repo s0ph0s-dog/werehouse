@@ -18,9 +18,6 @@
     # to work with older version of flakes
     lastModifiedDate = self.lastModifiedDate or self.lastModified or "19700101";
 
-    # Generate a user-friendly version number.
-    version = "1.2.1";
-
     # System types to support.
     supportedSystems = ["x86_64-linux" "x86_64-darwin"]; #"aarch64-linux" "aarch64-darwin" ];
 
@@ -37,56 +34,18 @@
     formatter = forAllSystems (
       system: nixpkgs.legacyPackages.${system}.alejandra
     );
-    # A Nixpkgs overlay.
+
     overlays.default = final: prev: {
-      werehouse = final.stdenv.mkDerivation rec {
-        pname = "werehouse";
-        inherit version;
-
-        src = ./.;
-
-        nativeBuildInputs = [
-          cosmo.packages.${final.pkgs.stdenv.hostPlatform.system}.default
-          final.zip
-          final.gnumake
-          (final.python312.withPackages (ps: [
-            ps.htmlmin
-          ]))
-        ];
-
-        dontCheck = true;
-        dontPatch = true;
-        dontConfigure = true;
-        dontFixup = true;
-
-        buildPhase = ''
-          runHook preBuild
-
-          cp "${cosmo.packages.${final.pkgs.stdenv.hostPlatform.system}.default}/bin/redbean" ./redbean-3.0beta.com
-          ls .
-          make build
-
-          runHook postBuild
-        '';
-
-        installPhase = ''
-          runHook preInstall
-
-          mkdir -p $out/bin
-          install werehouse.com $out/bin
-
-          runHook postInstall
-        '';
+      werehouse = final.callPackage ./package.nix {
+        cosmopolitan = cosmo.packages.${final.stdenv.hostPlatform.system}.s0ph0s-cosmopolitan;
       };
     };
 
-    # Provide some binary packages for selected system types.
     packages = forAllSystems (system: {
       inherit (nixpkgsFor.${system}) werehouse;
       default = self.packages.${system}.werehouse;
     });
 
-    # A NixOS module, if applicable (e.g. if the package provides a system service).
     nixosModules = let
       module = {
         lib,
