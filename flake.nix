@@ -204,7 +204,11 @@
               description = "service account for Werehouse art archiving tool";
             };
             systemd.tmpfiles.rules = [
-              "d ${cfg.dataDir} 0770 werehouse werehouse"
+              "d ${cfg.dataDir} 0750 werehouse nginx"
+              "d ${cfg.dataDir}/images 2750 werehouse nginx"
+              "d ${cfg.dataDir}/queue 2750 werehouse nginx"
+              "d ${cfg.dataDir}/previews 2750 werehouse nginx"
+              "d ${cfg.dataDir}/db 0700 werehouse werehouse"
             ];
           })
           {
