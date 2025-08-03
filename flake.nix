@@ -217,7 +217,10 @@
             systemd.services.werehouse = {
               path = [pkgs.werehouse];
               environment = lib.mkMerge [
-                {TZ = "UTC";}
+                {
+                    TZ = "UTC";
+                    ENABLE_X_ACCEL_REDIRECT = "1";
+                }
                 (lib.mkIf (cfg.sessionKey != null) {
                   SESSION_KEY = cfg.sessionKey;
                 })

@@ -243,10 +243,10 @@ local render_home = WebUtility.login_required(function(r, _)
     })
 end)
 
-local function serveFromDisk(r, path)
+local function serveFromDisk(path)
     SetHeader("Cache-Control", "private, max-age=31536000")
-    local isBehindProxy = r.headers["X-Forwarded-Proto"] == "https"
-    if isBehindProxy then
+    local shouldEnable = os.getenv("ENABLE_X_ACCEL_REDIRECT") == "1"
+    if shouldEnable then
         SetHeader("X-Accel-Redirect", "/accel/" .. path)
         return ""
     else
@@ -260,7 +260,7 @@ local render_queue_image = WebUtility.login_required(function(r, _)
     if not path then
         return Fm.serve404()
     end
-    return serveFromDisk(r, path)
+    return serveFromDisk(path)
 end)
 
 local render_thumbnail_file = WebUtility.login_required(function(r, _)
@@ -408,7 +408,7 @@ local render_preview_file = WebUtility.login_required(function(r)
     local _, preview_path =
         FsTools.make_preview_path_from_filename(nil, preview_filename)
     if unix.access(preview_path, unix.R_OK) then
-        return serveFromDisk(r, preview_path)
+        return serveFromDisk(preview_path)
     end
     local _, real_path = FsTools.make_image_path_from_filename(source_filename)
     local preview, preview_err = make_preview(source_filename, ext, real_path)
@@ -416,7 +416,7 @@ local render_preview_file = WebUtility.login_required(function(r)
         Log(kLogInfo, "Unable to generate preview: " .. preview_err)
         return Fm.serve500()
     end
-    return serveFromDisk(r, preview)
+    return serveFromDisk(preview)
 end)
 
 local render_image_file = WebUtility.login_required(function(r)
@@ -424,7 +424,7 @@ local render_image_file = WebUtility.login_required(function(r)
         return Fm.serve400()
     end
     local _, path = FsTools.make_image_path_from_filename(r.params.filename)
-    return serveFromDisk(r, path)
+    return serveFromDisk(path)
 end)
 
 local function render_share_widget(user_id, params)

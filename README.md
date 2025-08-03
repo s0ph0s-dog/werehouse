@@ -25,6 +25,7 @@ Check [Releases](https://github.com/s0ph0s-dog/werehouse/releases) for pre-built
 3. Run `make` to zip the project files into `werehouse.com`
 4. Set the following environment variables:
    - `TZ=UTC` — The code assumes that SQLite's `strftime('', 'now')` function will produce times in UTC, which is only the case when TZ variable is set to UTC.
+   - `ENABLE_X_ACCEL_REDIRECT=1` — If you are putting Werehouse behind a reverse proxy server which supports X-Accel-Redirect, set this variable to tell it that it can ask the reverse proxy to serve files from disk, which improves latency.
    - `SESSION_KEY=(32 random bytes, base64 encoded)` — A key to use for encrypting session cookies. If you don't provide one, Werehouse will generate a new one on each run, which invalidates everyone's session cookies. Run Werehouse once to make it print a key to the log for you, or generate one with `dd if=/dev/urandom bs=32 count=1 status=none | base64`
    - `FUZZYSEARCH_API_KEY=(API key for FuzzySearch, if you have one)` — Enable looking up image URLs and raw image files with [FuzzySearch](https://fuzzysearch.net), the backend that powers [FoxBot](https://syfaro.net/blog/foxbot/).
    - `FA_AUTH_COOKIES="a=(a cookie); b=(b cookie)"` — Enable scraping from [FurAffinity](https://www.furaffinity.net).
