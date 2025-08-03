@@ -283,7 +283,7 @@
               locations."/" = {
                 proxyPass = let
                   port = toString (builtins.head cfg.ports);
-                in "https://127.0.0.1:${port}";
+                in "http://127.0.0.1:${port}";
                 recommendedProxySettings = true;
                 extraConfig = ''
                   proxy_buffering off;
