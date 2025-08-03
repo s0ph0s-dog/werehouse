@@ -243,17 +243,24 @@ local render_home = WebUtility.login_required(function(r, _)
     })
 end)
 
+local function serveFromDisk(r, path)
+    SetHeader("Cache-Control", "private, max-age=31536000")
+    local isBehindProxy = r.headers["X-Forwarded-Proto"] == "https"
+    if isBehindProxy then
+        SetHeader("X-Accel-Redirect", "/accel/" .. path)
+        return ""
+    else
+        return Fm.serveAsset(path)
+    end
+end
+
 local render_queue_image = WebUtility.login_required(function(r, _)
-    local content_type = Nu.guess_mime_from_url(r.params.filename)
-        or "application/octet-stream"
-    local image_data = FsTools.load_queue(r.params.filename, Model.user_id)
-    if not image_data then
+    local _, path =
+        FsTools.make_queue_path_from_filename(r.params.filename, Model.user_id)
+    if not path then
         return Fm.serve404()
     end
-    return Fm.serveResponse(200, {
-        ContentType = content_type,
-        ["Cache-Control"] = "private, max-age=31536000",
-    }, image_data)
+    return serveFromDisk(r, path)
 end)
 
 local render_thumbnail_file = WebUtility.login_required(function(r, _)
@@ -400,9 +407,8 @@ local render_preview_file = WebUtility.login_required(function(r)
     end
     local _, preview_path =
         FsTools.make_preview_path_from_filename(nil, preview_filename)
-    SetHeader("Cache-Control", "private, max-age=31536000")
     if unix.access(preview_path, unix.R_OK) then
-        return Fm.serveAsset(preview_path)
+        return serveFromDisk(r, preview_path)
     end
     local _, real_path = FsTools.make_image_path_from_filename(source_filename)
     local preview, preview_err = make_preview(source_filename, ext, real_path)
@@ -410,7 +416,7 @@ local render_preview_file = WebUtility.login_required(function(r)
         Log(kLogInfo, "Unable to generate preview: " .. preview_err)
         return Fm.serve500()
     end
-    return Fm.serveAsset(preview)
+    return serveFromDisk(r, preview)
 end)
 
 local render_image_file = WebUtility.login_required(function(r)
@@ -418,8 +424,7 @@ local render_image_file = WebUtility.login_required(function(r)
         return Fm.serve400()
     end
     local _, path = FsTools.make_image_path_from_filename(r.params.filename)
-    SetHeader("Cache-Control", "private, max-age=31536000")
-    return Fm.serveAsset(path)
+    return serveFromDisk(r, path)
 end)
 
 local function render_share_widget(user_id, params)

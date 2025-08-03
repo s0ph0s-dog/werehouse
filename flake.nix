@@ -280,6 +280,10 @@
               quic = lib.mkDefault ngxHasQuic;
               http2 = true;
               http3 = lib.mkDefault ngxHasQuic;
+              locations."/accel/" = {
+                alias = "${cfg.dataDir}/";
+                extraConfig = "internal;";
+              };
               locations."/" = {
                 proxyPass = let
                   port = toString (builtins.head cfg.ports);
