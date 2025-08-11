@@ -180,8 +180,17 @@ end
 
 local function message_is_saveable(message)
     if message.text or message.caption then
-        return true
-    elseif message.photo then
+        local entity_list = message.caption_entities or message.entities or {}
+        local url_entities = table.filter(entity_list, function(e)
+            return e.type == "url"
+        end)
+        if #url_entities > 0 then
+            return true
+        end
+        Log(kLogDebug, "No URLs in message text/caption, falling through")
+        -- Intentionally fall through to images/files/etc.
+    end
+    if message.photo then
         return true
     elseif message.document then
         local mime_type = message.document.mime_type
@@ -196,12 +205,13 @@ local function message_is_saveable(message)
         return true
     elseif message.video then
         return false,
-            "I can’t find sources for a video, so I can’t save this."
+            "I can’t put video files into the queue yet, so I can’t save this."
     elseif message.animation then
         return false,
-            "I can’t find sources for a video-pretending-to-be-a-GIF, so I can’t save this."
+            "I can’t put videos-pretending-to-be-GIFs into the queue yet, so I can’t save this."
     else
-        return false, "I can’t find anything to save in this message."
+        return false,
+            "I can’t find anything to save in this message. (It has no links, images, or files.)"
     end
 end
 
@@ -220,6 +230,10 @@ local function handle_enqueue(message)
         return
     end
     local is_saveable, why_not = message_is_saveable(message)
+    Log(
+        kLogDebug,
+        "is_saveable: %s, %s" % { tostring(is_saveable), tostring(why_not) }
+    )
     if not is_saveable then
         api.reply_to_message(message, why_not)
         return
@@ -304,7 +318,7 @@ local function handle_enqueue(message)
     end
     api.reply_to_message(
         message,
-        "I encountered an error while trying to add this to the queue."
+        "I can't find anything to save in this message. (None of the links are supported, and it has no images or files.)"
     )
 end
 
